@@ -6,6 +6,27 @@
   "use strict";
 
   const cfg = window.MAKONG_CONFIG;
+  const THEME_KEY = "makong_theme";
+
+  function currentTheme() {
+    const stored = document.documentElement.getAttribute("data-theme");
+    if (stored === "light" || stored === "dark") return stored;
+    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  }
+
+  function wireThemeToggle() {
+    const btn = document.getElementById("themeToggle");
+    if (!btn) return;
+    btn.addEventListener("click", () => {
+      const next = currentTheme() === "dark" ? "light" : "dark";
+      document.documentElement.setAttribute("data-theme", next);
+      try {
+        localStorage.setItem(THEME_KEY, next);
+      } catch (err) {
+        /* private-browsing storage block — theme just won't persist */
+      }
+    });
+  }
 
   function wireFooterAndNavLinks() {
     const map = {
@@ -91,6 +112,7 @@
   }
 
   document.addEventListener("DOMContentLoaded", () => {
+    wireThemeToggle();
     wireFooterAndNavLinks();
     wireMobileNav();
     wireCopyIp();

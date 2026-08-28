@@ -10,6 +10,14 @@ live player count/server info, and a store for ranks/coins with region-based che
 No build step — plain HTML/CSS/JS. Open `index.html` directly or serve the folder with
 any static host (GitHub Pages, Netlify, Vercel, nginx, etc).
 
+**Design:** a forest/river nature theme (rolling canopy skylines, a river-wave divider,
+drifting leaves, and hand-drawn nature icons — sprout, owl, bird, fish, dragonfly,
+butterfly) with a light/dark toggle in the navbar. The toggle stores its choice in
+`localStorage`; with no stored choice it follows the visitor's OS theme automatically.
+All colors are CSS custom properties in `css/style.css` (`:root` = light, `[data-theme="dark"]`
+= dark), so re-theming or adjusting the palette only means editing the variables at the
+top of that file.
+
 ## Structure
 
 ```

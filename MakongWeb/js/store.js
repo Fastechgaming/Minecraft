@@ -84,7 +84,9 @@
         <h3>${item.name}</h3>
         <div class="price">${formatKhr(item.priceKhr)}</div>
         <div class="price-sub">${approxUsd(item.priceKhr)}</div>
-        <ul>${item.perks.map((p) => `<li>${p}</li>`).join("")}</ul>
+        <ul>${item.perks
+          .map((p) => `<li><svg class="icon" aria-hidden="true"><use href="#icon-leaf"></use></svg>${p}</li>`)
+          .join("")}</ul>
         <button class="btn btn-primary btn-block" data-buy="${item.id}">Buy Now</button>
       </div>`
       )

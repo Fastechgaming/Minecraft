@@ -2,6 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem("makong_theme");
+        if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+      } catch (e) {}
+    })();
+  </script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Makong Network — Cambodia's #1 Minecraft Server</title>
   <meta name="description" content="Makong Network is Cambodia's #1 Minecraft community. Join play.makong.net for Survival, Skyblock, and a store that supports KHQR payments.">
@@ -16,10 +24,101 @@
 </head>
 <body>
 
+  <!-- Reusable nature icon sprite -->
+  <svg class="visually-hidden" aria-hidden="true" focusable="false">
+    <defs>
+      <symbol id="icon-tree-mark" viewBox="0 0 24 30">
+        <path d="M12 2 16 9H8Z" fill="currentColor"/>
+        <path d="M12 6.5 17.5 15H6.5Z" fill="currentColor"/>
+        <path d="M12 11.5 19 21H5Z" fill="currentColor"/>
+        <rect x="10.7" y="21" width="2.6" height="4" fill="currentColor"/>
+      </symbol>
+      <symbol id="icon-leaf" viewBox="0 0 24 24">
+        <path d="M4 20C4 10 10 4 20 4C20 14 14 20 4 20Z" fill="currentColor"/>
+      </symbol>
+      <symbol id="icon-sun" viewBox="0 0 24 24">
+        <g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+          <circle cx="12" cy="12" r="5"/>
+          <line x1="12" y1="1" x2="12" y2="3.4"/>
+          <line x1="12" y1="20.6" x2="12" y2="23"/>
+          <line x1="4.2" y1="4.2" x2="5.9" y2="5.9"/>
+          <line x1="18.1" y1="18.1" x2="19.8" y2="19.8"/>
+          <line x1="1" y1="12" x2="3.4" y2="12"/>
+          <line x1="20.6" y1="12" x2="23" y2="12"/>
+          <line x1="4.2" y1="19.8" x2="5.9" y2="18.1"/>
+          <line x1="18.1" y1="5.9" x2="19.8" y2="4.2"/>
+        </g>
+      </symbol>
+      <symbol id="icon-moon" viewBox="0 0 24 24">
+        <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+      </symbol>
+      <symbol id="icon-sprout" viewBox="0 0 24 24">
+        <g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 21V12"/>
+          <path d="M12 12C12 8 9 6 5 6c0 4 3 7 7 7Z"/>
+          <path d="M12 10C12 6.5 14.5 4 18 4c0 3.8-3 7-6 7Z"/>
+        </g>
+      </symbol>
+      <symbol id="icon-owl" viewBox="0 0 24 24">
+        <g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <ellipse cx="12" cy="14.5" rx="6" ry="6.8"/>
+          <circle cx="9" cy="10.5" r="2.2"/>
+          <circle cx="15" cy="10.5" r="2.2"/>
+          <path d="M6.3 6.8 9 8.6M17.7 6.8 15 8.6"/>
+        </g>
+        <circle cx="9" cy="10.5" r="0.6" fill="currentColor"/>
+        <circle cx="15" cy="10.5" r="0.6" fill="currentColor"/>
+        <path d="M12 12.3l-1.6 2h3.2Z" fill="currentColor"/>
+      </symbol>
+      <symbol id="icon-bird" viewBox="0 0 24 24">
+        <path d="M3 15c3 1.6 6.2 1.4 8-1.4 1.2 2.6 4.4 3.6 7 2.4-2.2 2.4-5.6 3.3-8.6 2.2-3.6-1.3-5.6-1.7-6.4-3.2Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M13.2 9.4c1.3-2 3.6-3 5.6-2.6-.8 1-1.2 1.8-1.1 2.8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="17.6" cy="8.4" r="0.6" fill="currentColor"/>
+      </symbol>
+      <symbol id="icon-fish" viewBox="0 0 24 24">
+        <g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <ellipse cx="10" cy="12" rx="7" ry="4.2"/>
+          <path d="M17 12 22 8V16Z"/>
+          <path d="M6 15.6c1 1 2.1 1.6 3.3 1.8M6 8.4c1-1 2.1-1.6 3.3-1.8"/>
+        </g>
+        <circle cx="6.6" cy="11" r="0.7" fill="currentColor"/>
+      </symbol>
+      <symbol id="icon-dragonfly" viewBox="0 0 24 24">
+        <g fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round">
+          <ellipse cx="6.5" cy="9" rx="5.4" ry="1.7" transform="rotate(-18 6.5 9)"/>
+          <ellipse cx="17.5" cy="9" rx="5.4" ry="1.7" transform="rotate(18 17.5 9)"/>
+          <ellipse cx="6.5" cy="13.3" rx="5.4" ry="1.7" transform="rotate(-12 6.5 13.3)"/>
+          <ellipse cx="17.5" cy="13.3" rx="5.4" ry="1.7" transform="rotate(12 17.5 13.3)"/>
+        </g>
+        <ellipse cx="12" cy="14" rx="1.2" ry="7.4" fill="currentColor"/>
+        <circle cx="12" cy="5" r="1.5" fill="currentColor"/>
+      </symbol>
+      <symbol id="icon-butterfly" viewBox="0 0 24 24">
+        <g fill="none" stroke="currentColor" stroke-width="1.4">
+          <ellipse cx="7.6" cy="9" rx="4.8" ry="5.8" transform="rotate(-18 7.6 9)"/>
+          <ellipse cx="16.4" cy="9" rx="4.8" ry="5.8" transform="rotate(18 16.4 9)"/>
+          <ellipse cx="8.1" cy="16.3" rx="3.4" ry="4.2" transform="rotate(-10 8.1 16.3)"/>
+          <ellipse cx="15.9" cy="16.3" rx="3.4" ry="4.2" transform="rotate(10 15.9 16.3)"/>
+        </g>
+        <line x1="12" y1="4" x2="12" y2="21" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+      </symbol>
+      <symbol id="icon-mail" viewBox="0 0 24 24">
+        <path d="M3 11 21 3l-6 18-4-7-8-3Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
+      </symbol>
+      <symbol id="icon-menu" viewBox="0 0 24 24">
+        <g stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+          <line x1="4" y1="7" x2="20" y2="7"/>
+          <line x1="4" y1="12" x2="20" y2="12"/>
+          <line x1="4" y1="17" x2="20" y2="17"/>
+        </g>
+      </symbol>
+    </defs>
+  </svg>
+
   <header class="navbar">
     <div class="container">
       <a href="index.html" class="brand">
-        <span class="brand-mark">MK</span>
+        <span class="brand-mark"><svg class="icon" width="20" height="25" aria-hidden="true"><use href="#icon-tree-mark"></use></svg></span>
         <span class="brand-name">Makong Network<span class="sub">play.makong.net</span></span>
       </a>
       <nav class="nav-links" id="navLinks">
@@ -30,18 +129,51 @@
         <a id="telegramLink" href="#" target="_blank" rel="noopener">Telegram</a>
       </nav>
       <div class="nav-cta">
+        <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle light/dark theme">
+          <svg class="icon icon-sun" aria-hidden="true"><use href="#icon-sun"></use></svg>
+          <svg class="icon icon-moon" aria-hidden="true"><use href="#icon-moon"></use></svg>
+        </button>
         <a href="store.html" class="btn btn-primary btn-sm">Visit Store</a>
-        <button class="nav-toggle" id="navToggle" aria-label="Toggle menu" aria-expanded="false">☰</button>
+        <button class="nav-toggle" id="navToggle" aria-label="Toggle menu" aria-expanded="false">
+          <svg class="icon" width="20" height="20" aria-hidden="true"><use href="#icon-menu"></use></svg>
+        </button>
       </div>
     </div>
   </header>
 
   <section class="hero">
-    <div class="container hero-grid">
+    <svg class="canopy-edge" viewBox="0 0 1440 100" preserveAspectRatio="none" style="position:absolute; top:0; left:0; width:100%; height:90px; color:var(--canopy-1); z-index:0;" aria-hidden="true">
+      <path d="M0,100 L0,55 Q90,10 180,50 T360,45 T540,55 T720,42 T900,52 T1080,44 T1260,54 T1440,46 L1440,100 Z" fill="currentColor" opacity="0.7"/>
+    </svg>
+    <svg class="canopy-edge" viewBox="0 0 1440 100" preserveAspectRatio="none" style="position:absolute; top:0; left:0; width:100%; height:66px; color:var(--canopy-2); z-index:0;" aria-hidden="true">
+      <path d="M0,100 L0,68 Q80,32 160,62 T320,58 T480,68 T640,56 T800,66 T960,58 T1120,68 T1280,60 T1440,66 L1440,100 Z" fill="currentColor" opacity="0.8"/>
+    </svg>
+
+    <svg class="tree-decor left" viewBox="0 0 160 220" width="130" height="180" aria-hidden="true">
+      <use href="#icon-tree-mark" width="24" height="30" transform="translate(0,90) scale(3.4)" style="color:var(--canopy-3)" opacity="0.5"/>
+      <use href="#icon-tree-mark" width="24" height="30" transform="translate(58,40) scale(4.4)" style="color:var(--leaf)" opacity="0.65"/>
+      <use href="#icon-tree-mark" width="24" height="30" transform="translate(12,10) scale(2.6)" style="color:var(--canopy-2)" opacity="0.45"/>
+    </svg>
+    <svg class="tree-decor right" viewBox="0 0 160 220" width="130" height="180" aria-hidden="true">
+      <use href="#icon-tree-mark" width="24" height="30" transform="translate(0,90) scale(3.4)" style="color:var(--canopy-3)" opacity="0.5"/>
+      <use href="#icon-tree-mark" width="24" height="30" transform="translate(58,40) scale(4.4)" style="color:var(--leaf)" opacity="0.65"/>
+      <use href="#icon-tree-mark" width="24" height="30" transform="translate(12,10) scale(2.6)" style="color:var(--canopy-2)" opacity="0.45"/>
+    </svg>
+
+    <div class="leaf-field" aria-hidden="true">
+      <span class="leaf-particle" style="left:8%; animation-duration:14s; animation-delay:0s; width:18px; height:18px;"><svg><use href="#icon-leaf"></use></svg></span>
+      <span class="leaf-particle" style="left:22%; animation-duration:18s; animation-delay:3s; width:14px; height:14px; color:var(--gold);"><svg><use href="#icon-leaf"></use></svg></span>
+      <span class="leaf-particle" style="left:48%; animation-duration:16s; animation-delay:6s;"><svg><use href="#icon-leaf"></use></svg></span>
+      <span class="leaf-particle" style="left:68%; animation-duration:20s; animation-delay:1s; width:16px; height:16px; color:var(--gold);"><svg><use href="#icon-leaf"></use></svg></span>
+      <span class="leaf-particle" style="left:84%; animation-duration:15s; animation-delay:8s;"><svg><use href="#icon-leaf"></use></svg></span>
+      <span class="leaf-particle" style="left:92%; animation-duration:22s; animation-delay:4s; width:12px; height:12px;"><svg><use href="#icon-leaf"></use></svg></span>
+    </div>
+
+    <div class="container hero-grid" style="padding-top:56px;">
       <div>
         <span class="hero-kicker">🇰🇭 Built for the Cambodian Minecraft community</span>
         <h1>Welcome to <span>Makong Network</span></h1>
-        <p class="lead">Survival, Skyblock, and a friendly Khmer-speaking staff team — join thousands of Cambodian players on our 24/7 server.</p>
+        <p class="lead">Survival, Skyblock, and a friendly Khmer-speaking staff team — join thousands of Cambodian players on our 24/7 server, deep in the Mekong forest.</p>
         <p class="khmer" lang="km">សូមស្វាគមន៍មកកាន់ ម៉ាខុង នេតវឺក — ម្ចាស់ផ្ទះម៉ាញ់ក្រាហ្វសំរាប់ជនជាតិខ្មែរ។</p>
         <div class="hero-actions">
           <a href="store.html" class="btn btn-primary">Visit the Store</a>
@@ -69,7 +201,11 @@
     </div>
   </section>
 
-  <section class="section">
+  <svg class="river-divider" viewBox="0 0 1440 90" preserveAspectRatio="none" style="color:var(--river); opacity:0.18;" aria-hidden="true">
+    <path d="M0,45 C120,80 240,10 360,45 C480,80 600,10 720,45 C840,80 960,10 1080,45 C1200,80 1320,10 1440,45 L1440,90 L0,90 Z" fill="currentColor"/>
+  </svg>
+
+  <section class="section" style="padding-top:44px;">
     <div class="container">
       <div class="section-head">
         <span class="eyebrow">Getting started</span>
@@ -104,32 +240,32 @@
       </div>
       <div class="features">
         <div class="feature-card">
-          <div class="feature-icon">⛏️</div>
+          <div class="feature-icon fi-1"><svg class="icon"><use href="#icon-sprout"></use></svg></div>
           <h3>Survival &amp; Skyblock</h3>
           <p>Classic land-claim survival plus a competitive skyblock economy.</p>
         </div>
         <div class="feature-card">
-          <div class="feature-icon">🛡️</div>
+          <div class="feature-icon fi-2"><svg class="icon"><use href="#icon-owl"></use></svg></div>
           <h3>Anti-cheat protected</h3>
           <p>Fair play enforced 24/7 so grinding your rank actually means something.</p>
         </div>
         <div class="feature-card">
-          <div class="feature-icon">🇰🇭</div>
+          <div class="feature-icon fi-3"><svg class="icon"><use href="#icon-bird"></use></svg></div>
           <h3>Khmer-speaking staff</h3>
           <p>Support in both Khmer and English, whenever you need help.</p>
         </div>
         <div class="feature-card">
-          <div class="feature-icon">💳</div>
+          <div class="feature-icon fi-4"><svg class="icon"><use href="#icon-fish"></use></svg></div>
           <h3>KHQR store payments</h3>
           <p>Pay locally with KHQR via Bakong-linked banking apps — no card needed.</p>
         </div>
         <div class="feature-card">
-          <div class="feature-icon">📨</div>
+          <div class="feature-icon fi-5"><svg class="icon"><use href="#icon-dragonfly"></use></svg></div>
           <h3>Telegram-approved delivery</h3>
           <p>Every local purchase is confirmed and delivered through our Telegram team.</p>
         </div>
         <div class="feature-card">
-          <div class="feature-icon">🌐</div>
+          <div class="feature-icon fi-6"><svg class="icon"><use href="#icon-butterfly"></use></svg></div>
           <h3>Global payments too</h3>
           <p>Outside Cambodia? Checkout securely through our Tebex store instead.</p>
         </div>
@@ -137,7 +273,7 @@
     </div>
   </section>
 
-  <section class="section">
+  <section class="section" style="padding-top:8px;">
     <div class="container">
       <div class="cta-banner">
         <h2>Ready to gear up?</h2>
@@ -147,12 +283,16 @@
     </div>
   </section>
 
+  <svg class="river-divider" viewBox="0 0 1440 90" preserveAspectRatio="none" style="color:var(--river); opacity:0.14;" aria-hidden="true">
+    <path d="M0,45 C120,80 240,10 360,45 C480,80 600,10 720,45 C840,80 960,10 1080,45 C1200,80 1320,10 1440,45 L1440,90 L0,90 Z" fill="currentColor"/>
+  </svg>
+
   <footer class="footer">
     <div class="container">
       <div class="footer-grid">
         <div class="footer-brand">
           <div class="brand" style="margin-bottom:10px;">
-            <span class="brand-mark">MK</span>
+            <span class="brand-mark"><svg class="icon" width="20" height="25" aria-hidden="true"><use href="#icon-tree-mark"></use></svg></span>
             <span class="brand-name">Makong Network</span>
           </div>
           <p>Cambodia's #1 Minecraft community. Not affiliated with Mojang or Microsoft.</p>
