@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Store — Makong Network</title>
+  <meta name="description" content="Buy ranks and coins on Makong Network. Cambodia: pay with KHQR and get Telegram-approved delivery. Global: checkout securely via Tebex.">
+  <link rel="icon" href="data:,">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=Noto+Sans+Khmer:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <header class="navbar">
+    <div class="container">
+      <a href="index.html" class="brand">
+        <span class="brand-mark">MK</span>
+        <span class="brand-name">Makong Network<span class="sub">play.makong.net</span></span>
+      </a>
+      <nav class="nav-links" id="navLinks">
+        <a href="index.html">Home</a>
+        <a href="store.html" class="active">Store</a>
+        <a href="index.html#features">Features</a>
+        <a id="discordLink" href="#" target="_blank" rel="noopener">Discord</a>
+        <a id="telegramLink" href="#" target="_blank" rel="noopener">Telegram</a>
+      </nav>
+      <div class="nav-cta">
+        <a href="store.html" class="btn btn-primary btn-sm">Visit Store</a>
+        <button class="nav-toggle" id="navToggle" aria-label="Toggle menu" aria-expanded="false">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <section class="section" style="padding-top:48px;">
+    <div class="container">
+      <div class="section-head">
+        <span class="eyebrow">Makong Store</span>
+        <h2>Ranks &amp; Coins</h2>
+        <p>Support the server and unlock perks. Prices shown in Riel (៛) for our Cambodia checkout.</p>
+      </div>
+
+      <div class="region-banner" id="regionBanner" hidden>
+        <span>Checking out as <strong id="regionLabel">Cambodia 🇰🇭</strong> — KHQR payment with Telegram-approved delivery.</span>
+        <button class="btn btn-outline btn-sm" id="changeRegionBtn" type="button">Change region</button>
+      </div>
+
+      <div class="store-tabs">
+        <button class="store-tab active" data-cat="ranks" type="button">Ranks</button>
+        <button class="store-tab" data-cat="coins" type="button">Coins</button>
+      </div>
+
+      <div class="store-grid" id="storeGrid"></div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <div class="brand" style="margin-bottom:10px;">
+            <span class="brand-mark">MK</span>
+            <span class="brand-name">Makong Network</span>
+          </div>
+          <p>Cambodia's #1 Minecraft community. Not affiliated with Mojang or Microsoft.</p>
+        </div>
+        <div class="footer-links">
+          <div class="footer-col">
+            <h4>Server</h4>
+            <a href="index.html">Home</a>
+            <a href="store.html">Store</a>
+            <a href="index.html#features">Features</a>
+          </div>
+          <div class="footer-col">
+            <h4>Community</h4>
+            <a id="footerDiscord" href="#" target="_blank" rel="noopener">Discord</a>
+            <a id="footerTelegram" href="#" target="_blank" rel="noopener">Telegram</a>
+            <a id="footerFacebook" href="#" target="_blank" rel="noopener">Facebook</a>
+          </div>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        &copy; <span id="year"></span> Makong Network. All rights reserved.
+      </div>
+    </div>
+  </footer>
+
+  <!-- ============ Region select modal ============ -->
+  <div class="modal-overlay" id="regionModal">
+    <div class="modal">
+      <div class="modal-head">
+        <h2>Select your region</h2>
+      </div>
+      <p class="modal-sub">This decides how you'll pay. You can change it anytime.</p>
+      <div class="region-choice">
+        <button class="region-btn" id="regionCambodia" type="button">
+          <span class="flag">🇰🇭</span>
+          <span class="rname">Cambodia</span>
+          <span class="rdesc">Pay with KHQR</span>
+        </button>
+        <button class="region-btn" id="regionGlobal" type="button">
+          <span class="flag">🌍</span>
+          <span class="rname">Global</span>
+          <span class="rdesc">Pay via Tebex</span>
+        </button>
+      </div>
+      <label class="region-remember">
+        <input type="checkbox" id="rememberRegion">
+        Remember my choice for this visit
+      </label>
+    </div>
+  </div>
+
+  <!-- ============ Checkout modal (Cambodia / KHQR flow) ============ -->
+  <div class="modal-overlay" id="checkoutModal" hidden>
+    <div class="modal modal-wide">
+      <div class="modal-head">
+        <h2 id="checkoutTitle">Checkout</h2>
+        <button class="modal-x" id="checkoutClose" type="button" aria-label="Close">✕</button>
+      </div>
+
+      <div class="step-indicator">
+        <div class="seg" data-step="1"></div>
+        <div class="seg" data-step="2"></div>
+        <div class="seg" data-step="3"></div>
+      </div>
+
+      <!-- Step 1: details -->
+      <div id="checkoutStepDetails">
+        <div class="checkout-summary" id="orderSummary"></div>
+        <div class="field">
+          <label for="ignInput">Minecraft username (IGN)</label>
+          <input type="text" id="ignInput" placeholder="e.g. Makong_Player01" autocomplete="off">
+          <div class="field-error" id="ignError">Please enter your in-game name.</div>
+        </div>
+        <div class="field">
+          <label for="telegramInput">Your Telegram username</label>
+          <input type="text" id="telegramInput" placeholder="@yourusername" autocomplete="off">
+          <div class="field-hint">We'll use this to confirm your payment and deliver your order.</div>
+          <div class="field-error" id="telegramError">Please enter your Telegram username.</div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-secondary" id="checkoutCancel" type="button">Cancel</button>
+          <button class="btn btn-primary" id="checkoutToPay" type="button">Generate KHQR</button>
+        </div>
+      </div>
+
+      <!-- Step 2: KHQR payment -->
+      <div id="checkoutStepPay" hidden>
+        <p class="demo-flag">⚠ Demo mode — this QR is a placeholder. Connect a real Bakong KHQR merchant API to accept live payments (see README).</p>
+        <div class="qr-wrap">
+          <div class="qr-box" id="qrBox"></div>
+          <div class="qr-timer" id="qrTimer">Expires in 03:00</div>
+          <div class="order-id" id="payOrderId"></div>
+        </div>
+        <p style="color:var(--text-dim); font-size:0.85rem; text-align:center; margin-bottom:20px;">
+          Scan with any Bakong-linked banking app, then confirm below.
+        </p>
+        <div class="modal-actions">
+          <button class="btn btn-secondary" id="payBack" type="button">Back</button>
+          <button class="btn btn-primary" id="payConfirm" type="button">I've Paid</button>
+        </div>
+      </div>
+
+      <!-- Step 3: Telegram delivery approval -->
+      <div id="checkoutStepDelivery" hidden>
+        <div class="order-status">
+          <div class="big-icon">📨</div>
+          <h3>Confirm on Telegram to get your order</h3>
+          <p>Tap the button below to send your Order ID and payment screenshot to our team on Telegram. An admin will verify your transaction and deliver your purchase in-game.</p>
+          <div class="order-id" id="deliveryOrderId"></div>
+        </div>
+        <div class="modal-actions">
+          <a class="btn btn-primary btn-block" id="telegramApproveBtn" href="#" target="_blank" rel="noopener">Send to Telegram for Approval</a>
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-secondary btn-block" id="deliveryDone" type="button">Done</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+  <script src="config.js"></script>
+  <script src="js/main.js"></script>
+  <script src="js/store.js"></script>
+</body>
+</html>
