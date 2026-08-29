@@ -4,8 +4,30 @@ import { createLogger } from '../services/logger';
 
 const log = createLogger('commands');
 
+/**
+ * Discord rejects the entire registration payload if any two commands share
+ * a name ([APPLICATION_COMMANDS_DUPLICATE_NAME]) — that failure is silent
+ * from the bot's perspective (registerCommandsForGuild just logs and moves
+ * on) and breaks slash commands for every guild at once. Fail loudly and
+ * immediately instead, so a colliding command name is caught at boot
+ * rather than discovered in production logs.
+ */
 export function buildCommandsJson() {
-  return modules.flatMap((mod) => (mod.commands ?? []).map((c) => c.data.toJSON()));
+  const commands = modules.flatMap((mod) => (mod.commands ?? []).map((c) => ({ mod: mod.name, json: c.data.toJSON() })));
+
+  const seen = new Map<string, string>();
+  for (const { mod, json } of commands) {
+    const owner = seen.get(json.name);
+    if (owner) {
+      throw new Error(
+        `Duplicate slash command name "/${json.name}" defined in both the "${owner}" and "${mod}" modules. ` +
+          'Command names must be unique across all modules — rename one of them.'
+      );
+    }
+    seen.set(json.name, mod);
+  }
+
+  return commands.map((c) => c.json);
 }
 
 function getRest(): REST | null {

@@ -34,7 +34,14 @@ const ctx: CommandContext = { client };
 function registerModules() {
   for (const mod of modules) {
     for (const command of mod.commands ?? []) {
-      commands.set(command.data.name, command);
+      const name = command.data.name;
+      if (commands.has(name)) {
+        throw new Error(
+          `Duplicate slash command name "/${name}" defined in both the "${commands.get(name)!.module}" and "${mod.name}" modules. ` +
+            'Command names must be unique across all modules — rename one of them.'
+        );
+      }
+      commands.set(name, command);
     }
     for (const route of mod.components ?? []) {
       componentRoutes.push(route);

@@ -43,7 +43,7 @@ export const coreModule: FeatureModule = {
             { name: '🤖 AI', value: '`/ai ask` `/ai image`', inline: false },
             { name: '🎮 Games & Fun', value: '`/game` `/ship` `/8ball` `/roast`', inline: false },
             { name: '📈 Community', value: '`/level` `/daily` `/leaderboard`', inline: false },
-            { name: '⛏️ Minecraft', value: '`/server` `/player`', inline: false }
+            { name: '⛏️ Minecraft', value: '`/mcstatus` `/player`', inline: false }
           )
           .setFooter({ text: 'Configure every system in the web dashboard — no code required.' });
         await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });

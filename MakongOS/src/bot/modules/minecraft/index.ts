@@ -30,7 +30,7 @@ export const minecraftModule: FeatureModule = {
   description: 'Java/Bedrock Minecraft server status, player lookup, and a live status panel.',
   commands: [
     {
-      data: new SlashCommandBuilder().setName('server').setDescription('Show configured Minecraft server status.'),
+      data: new SlashCommandBuilder().setName('mcstatus').setDescription('Show configured Minecraft server status.'),
       module: 'minecraft',
       execute: async (interaction) => {
         if (!interaction.guildId) return;
