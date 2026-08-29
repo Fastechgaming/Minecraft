@@ -19,15 +19,19 @@ export const welcomeModule: FeatureModule = {
       event: Events.GuildMemberAdd,
       handler: async (member) => {
         const settings = await getGuildSettings(member.guild.id);
-        await prisma.member.upsert({
-          where: { guildId_userId: { guildId: member.guild.id, userId: member.id } },
-          create: { guildId: member.guild.id, userId: member.id },
-          update: { leftAt: null }
-        });
+        // Member.userId has a foreign key to User.id, so the User row must
+        // exist before the Member upsert — otherwise a brand-new Discord
+        // user who has never interacted with the bot before violates
+        // members_userId_fkey.
         await prisma.user.upsert({
           where: { id: member.id },
           create: { id: member.id, username: member.user.username, avatar: member.user.avatar },
           update: { username: member.user.username, avatar: member.user.avatar }
+        });
+        await prisma.member.upsert({
+          where: { guildId_userId: { guildId: member.guild.id, userId: member.id } },
+          create: { guildId: member.guild.id, userId: member.id },
+          update: { leftAt: null }
         });
 
         if (settings.defaultRoleIds.length > 0) {

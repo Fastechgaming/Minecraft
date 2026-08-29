@@ -224,7 +224,8 @@ export const aiModule: FeatureModule = {
             new ActionRowBuilder<TextInputBuilder>().addComponents(
               new TextInputBuilder()
                 .setCustomId('category')
-                .setLabel(`Category (${KNOWLEDGE_CATEGORIES.join('/')})`)
+                .setLabel('Category')
+                .setPlaceholder(KNOWLEDGE_CATEGORIES.join('/'))
                 .setStyle(TextInputStyle.Short)
                 .setRequired(true)
                 .setValue('faq')
