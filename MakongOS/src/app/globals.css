@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  background-color: #1e1f22;
+  color: #f2f3f5;
+}
+
+* {
+  scrollbar-color: #4e5058 #2b2d31;
+  scrollbar-width: thin;
+}
+
+.card {
+  @apply rounded-xl border border-discord-border bg-discord-panel shadow-panel;
+}
+
+.input {
+  @apply w-full rounded-lg border border-discord-border bg-discord-darker px-3 py-2 text-sm text-white outline-none focus:border-discord-blurple transition-colors;
+}
+
+.btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+.btn-primary {
+  @apply btn bg-discord-blurple text-white hover:bg-indigo-500;
+}
+
+.btn-secondary {
+  @apply btn bg-discord-panel2 text-white hover:bg-discord-border;
+}
+
+.btn-danger {
+  @apply btn bg-discord-red text-white hover:bg-red-600;
+}
+
+.label {
+  @apply mb-1 block text-xs font-semibold uppercase tracking-wide text-discord-muted;
+}
+
+.pill {
+  @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium;
+}
