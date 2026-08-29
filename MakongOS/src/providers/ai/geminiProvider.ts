@@ -30,7 +30,7 @@ export const geminiProvider: AIProvider = {
   async chat(options: ChatOptions): Promise<string> {
     const client = getClient();
     const model = client.getGenerativeModel({
-      model: process.env.GEMINI_CHAT_MODEL ?? 'gemini-3.6-flash',
+      model: process.env.GEMINI_CHAT_MODEL ?? 'gemini-3.5-flash-lite',
       systemInstruction: options.systemPrompt,
       safetySettings: SAFETY_SETTINGS
     });
@@ -60,7 +60,7 @@ export const geminiProvider: AIProvider = {
   async classifyModeration(text: string): Promise<ModerationClassification> {
     const client = getClient();
     const model = client.getGenerativeModel({
-      model: process.env.GEMINI_CHAT_MODEL ?? 'gemini-3.6-flash',
+      model: process.env.GEMINI_CHAT_MODEL ?? 'gemini-3.5-flash-lite',
       generationConfig: { responseMimeType: 'application/json' }
     });
 
@@ -86,7 +86,7 @@ Message: """${text}"""`;
 
   async analyzeImage(imageUrl: string, prompt: string): Promise<string> {
     const client = getClient();
-    const model = client.getGenerativeModel({ model: process.env.GEMINI_VISION_MODEL ?? 'gemini-3.6-flash' });
+    const model = client.getGenerativeModel({ model: process.env.GEMINI_VISION_MODEL ?? 'gemini-3.5-flash-lite' });
     const inline = await urlToInlineData(imageUrl);
     const result = await model.generateContent([{ text: prompt }, { inlineData: inline }]);
     return result.response.text().trim();
