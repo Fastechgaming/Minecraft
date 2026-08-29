@@ -1,10 +1,16 @@
 import 'dotenv/config';
-import { REST, Routes } from 'discord.js';
-import { modules } from './registry';
+import { registerCommandsForGuilds, registerCommandsGlobally } from './registerCommands';
 import { createLogger } from '../services/logger';
 
 const log = createLogger('deploy');
 
+/**
+ * The bot now syncs guild-scoped commands automatically on every startup
+ * and whenever it joins a new guild (see src/bot/client.ts), so running
+ * this script by hand is optional. It's still useful for:
+ *  - a one-off global rollout (set DISCORD_DEV_GUILD_IDS to empty), or
+ *  - force-syncing specific guilds without restarting the bot process.
+ */
 async function main() {
   const token = process.env.DISCORD_TOKEN;
   const clientId = process.env.DISCORD_CLIENT_ID;
@@ -12,22 +18,16 @@ async function main() {
     throw new Error('DISCORD_TOKEN and DISCORD_CLIENT_ID must be set to deploy commands');
   }
 
-  const body = modules.flatMap((mod) => (mod.commands ?? []).map((c) => c.data.toJSON()));
-  const rest = new REST({ version: '10' }).setToken(token);
-
   const devGuildIds = (process.env.DISCORD_DEV_GUILD_IDS ?? '')
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean);
 
   if (devGuildIds.length > 0) {
-    for (const guildId of devGuildIds) {
-      await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body });
-      log.info(`Registered ${body.length} commands to guild ${guildId}`);
-    }
+    await registerCommandsForGuilds(devGuildIds);
   } else {
-    await rest.put(Routes.applicationCommands(clientId), { body });
-    log.info(`Registered ${body.length} global commands (may take up to 1 hour to propagate)`);
+    await registerCommandsGlobally();
+    log.info('Tip: the bot also auto-syncs guild-scoped commands (instant) to every server it is already in on startup.');
   }
 }
 

@@ -8,6 +8,7 @@ import { recordAuditLog } from '../services/auditLog';
 import { createLogger } from '../services/logger';
 import { automationEngine } from '../automation/engine';
 import { publishBotClient, publishCommandRegistry } from './globalClient';
+import { registerCommandsForGuild, registerCommandsForGuilds } from './registerCommands';
 
 const log = createLogger('bot');
 
@@ -67,6 +68,13 @@ client.once(Events.ClientReady, async (readyClient) => {
     }).catch((err) => log.error('ensureGuild failed', err));
   }
 
+  // Guild-scoped registration propagates near-instantly (global commands can
+  // take up to an hour), so slash commands stay in sync on every startup
+  // with no manual `npm run deploy:commands` step required.
+  await registerCommandsForGuilds(readyClient.guilds.cache.keys()).catch((err) =>
+    log.error('Failed to sync slash commands on ready', err)
+  );
+
   for (const mod of modules) {
     if (mod.onReady) {
       await Promise.resolve(mod.onReady(ctx)).catch((err) => log.error(`onReady failed for ${mod.name}`, err));
@@ -76,6 +84,7 @@ client.once(Events.ClientReady, async (readyClient) => {
 
 client.on(Events.GuildCreate, async (guild) => {
   await ensureGuild({ id: guild.id, name: guild.name, icon: guild.iconURL(), ownerId: guild.ownerId });
+  await registerCommandsForGuild(guild.id).catch((err) => log.error(`Failed to sync commands to new guild ${guild.id}`, err));
 });
 
 client.on(Events.InteractionCreate, async (interaction) => {

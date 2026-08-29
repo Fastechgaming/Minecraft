@@ -1,7 +1,8 @@
-import { EmbedBuilder, type Message, type TextChannel } from 'discord.js';
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, type Message, type TextChannel } from 'discord.js';
 import type { GuildSettings } from '@prisma/client';
 import { geminiProvider } from '../providers/ai/geminiProvider';
 import { getGuildSettings } from '../database/settingsCache';
+import { prisma } from '../database/prisma';
 import { searchKnowledge, formatKnowledgeForPrompt } from './knowledge';
 import { getMemories, formatMemoryForPrompt, getRecentConversation, saveConversationTurn } from './memory';
 import { isWithinLimits, incrementUsage } from './usage';
@@ -101,9 +102,36 @@ export async function handleStaffAssistantMessage(message: Message): Promise<voi
   }
 }
 
+export function buildEscalationComponents(escalationId: string, resolved = false) {
+  return new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`escalation_answer_${escalationId}`)
+      .setLabel('Answer')
+      .setEmoji('✅')
+      .setStyle(ButtonStyle.Success)
+      .setDisabled(resolved),
+    new ButtonBuilder()
+      .setCustomId(`escalation_knowledge_${escalationId}`)
+      .setLabel('Add to Knowledge')
+      .setEmoji('📚')
+      .setStyle(ButtonStyle.Secondary)
+  );
+}
+
 export async function escalateToStaff(message: Message, settings: GuildSettings, reason: string, transcript: string): Promise<void> {
   if (!settings.aiStaffEscalation || !message.guildId) return;
   await incrementUsage(message.guildId, 'escalations');
+
+  const escalation = await prisma.aIEscalation.create({
+    data: {
+      guildId: message.guildId,
+      userId: message.author.id,
+      channelId: message.channelId,
+      question: message.content || '(no text — attachment only)',
+      reason: reason || 'AI could not confidently resolve this request.',
+      transcript: transcript || 'No prior context.'
+    }
+  });
 
   const embed = new EmbedBuilder()
     .setColor(0xda373c)
@@ -112,14 +140,18 @@ export async function escalateToStaff(message: Message, settings: GuildSettings,
       { name: 'User', value: `${message.author}`, inline: true },
       { name: 'Channel', value: `${message.channel}`, inline: true },
       { name: 'Reason', value: reason || 'AI could not confidently resolve this request.' },
+      { name: 'Question', value: (message.content || '(no text — attachment only)').slice(0, 1000) },
       { name: 'AI Summary', value: transcript.slice(-900) || 'No prior context.' }
     )
+    .setFooter({ text: `Escalation #${escalation.id}` })
     .setTimestamp(new Date());
+
+  const components = [buildEscalationComponents(escalation.id)];
 
   if (settings.aiEscalationChannel) {
     const channel = await message.guild!.channels.fetch(settings.aiEscalationChannel).catch(() => null);
     if (channel?.isTextBased()) {
-      await (channel as TextChannel).send({ embeds: [embed] }).catch(() => undefined);
+      await (channel as TextChannel).send({ embeds: [embed], components }).catch(() => undefined);
       return;
     }
   }
@@ -127,7 +159,7 @@ export async function escalateToStaff(message: Message, settings: GuildSettings,
   // Fall back to opening a ticket for the user if no escalation channel is configured.
   try {
     const { channel } = await createTicketChannel(message.guild!, null, { id: message.author.id, username: message.author.username });
-    await channel.send({ embeds: [embed] });
+    await channel.send({ embeds: [embed], components });
   } catch (err) {
     log.error('Failed to escalate to staff', err);
   }

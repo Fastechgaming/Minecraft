@@ -42,6 +42,7 @@ model Guild {
   reactionRolePanels ReactionRolePanel[]
   minecraftServers   MinecraftServer[]
   aiUsage            AIUsage[]
+  aiEscalations      AIEscalation[]
   dashboardAccess    DashboardAccess[]
   antiSpamHits       AntiSpamHit[]
   welcomeConfig      WelcomeConfig?
@@ -398,6 +399,25 @@ model AIUsage {
 
   @@unique([guildId, date])
   @@map("ai_usage")
+}
+
+model AIEscalation {
+  id           String    @id @default(cuid())
+  guildId      String
+  guild        Guild     @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  userId       String
+  channelId    String
+  question     String
+  reason       String
+  transcript   String
+  status       String    @default("pending") // pending | answered
+  answeredById String?
+  answer       String?
+  createdAt    DateTime  @default(now())
+  answeredAt   DateTime?
+
+  @@index([guildId, status])
+  @@map("ai_escalations")
 }
 
 // ─────────────────────────────────────────────────────────────────────────

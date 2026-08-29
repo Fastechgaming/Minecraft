@@ -30,7 +30,7 @@ services:
       DATABASE_URL: postgresql://makongos:makongos@postgres:5432/makongos?schema=public
     ports:
       - '3000:3000'
-    command: sh -c "npx prisma migrate deploy && node dist/server.js"
+    command: npm start
 
 volumes:
   makongos_pgdata:

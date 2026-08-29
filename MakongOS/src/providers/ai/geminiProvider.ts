@@ -30,7 +30,7 @@ export const geminiProvider: AIProvider = {
   async chat(options: ChatOptions): Promise<string> {
     const client = getClient();
     const model = client.getGenerativeModel({
-      model: process.env.GEMINI_CHAT_MODEL ?? 'gemini-2.0-flash',
+      model: process.env.GEMINI_CHAT_MODEL ?? 'gemini-3.6-flash',
       systemInstruction: options.systemPrompt,
       safetySettings: SAFETY_SETTINGS
     });
@@ -60,7 +60,7 @@ export const geminiProvider: AIProvider = {
   async classifyModeration(text: string): Promise<ModerationClassification> {
     const client = getClient();
     const model = client.getGenerativeModel({
-      model: process.env.GEMINI_CHAT_MODEL ?? 'gemini-2.0-flash',
+      model: process.env.GEMINI_CHAT_MODEL ?? 'gemini-3.6-flash',
       generationConfig: { responseMimeType: 'application/json' }
     });
 
@@ -86,7 +86,7 @@ Message: """${text}"""`;
 
   async analyzeImage(imageUrl: string, prompt: string): Promise<string> {
     const client = getClient();
-    const model = client.getGenerativeModel({ model: process.env.GEMINI_VISION_MODEL ?? 'gemini-2.0-flash' });
+    const model = client.getGenerativeModel({ model: process.env.GEMINI_VISION_MODEL ?? 'gemini-3.6-flash' });
     const inline = await urlToInlineData(imageUrl);
     const result = await model.generateContent([{ text: prompt }, { inlineData: inline }]);
     return result.response.text().trim();
@@ -95,15 +95,21 @@ Message: """${text}"""`;
   async generateImage(options: ImageGenerationOptions): Promise<Buffer> {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) throw new Error('GEMINI_API_KEY is not configured');
-    const model = process.env.GEMINI_IMAGE_MODEL ?? 'imagen-3.0-generate-002';
+    const model = process.env.GEMINI_IMAGE_MODEL ?? 'gemini-3.1-flash-image';
 
     const prompt = options.negativePrompt ? `${options.prompt}. Avoid: ${options.negativePrompt}` : options.prompt;
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:predict?key=${apiKey}`, {
+
+    // Image-capable Gemini models ("Nano Banana") generate images through the
+    // normal generateContent endpoint with responseModalities including
+    // IMAGE — the separate Imagen `:predict` endpoint only accepts Vertex AI
+    // OAuth credentials, not a plain Gemini API key, which is why that
+    // approach 404s/403s here.
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        instances: [{ prompt }],
-        parameters: { sampleCount: 1, aspectRatio: options.size === '1024x1024' ? '1:1' : '1:1' }
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: { responseModalities: ['TEXT', 'IMAGE'] }
       })
     });
 
@@ -112,8 +118,11 @@ Message: """${text}"""`;
       throw new Error(`Gemini image generation failed (${res.status}): ${body}`);
     }
 
-    const json = (await res.json()) as { predictions?: { bytesBase64Encoded?: string }[] };
-    const b64 = json.predictions?.[0]?.bytesBase64Encoded;
+    const json = (await res.json()) as {
+      candidates?: { content?: { parts?: { inlineData?: { data?: string } }[] } }[];
+    };
+    const parts = json.candidates?.[0]?.content?.parts ?? [];
+    const b64 = parts.map((p) => p.inlineData?.data).find((data): data is string => !!data);
     if (!b64) throw new Error('Gemini image generation returned no image data');
     return Buffer.from(b64, 'base64');
   }

@@ -1,14 +1,29 @@
-import { SlashCommandBuilder, EmbedBuilder, AttachmentBuilder, MessageFlags, Events } from 'discord.js';
+import {
+  SlashCommandBuilder,
+  EmbedBuilder,
+  AttachmentBuilder,
+  MessageFlags,
+  Events,
+  ActionRowBuilder,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle,
+  type GuildMember
+} from 'discord.js';
 import type { FeatureModule } from '../../../types/command';
 import { getGuildSettings } from '../../../database/settingsCache';
+import { prisma } from '../../../database/prisma';
 import { geminiProvider } from '../../../providers/ai/geminiProvider';
 import { decideAIResponse } from '../../../ai/decisionEngine';
-import { handleStaffAssistantMessage } from '../../../ai/staffAssistant';
+import { handleStaffAssistantMessage, buildEscalationComponents } from '../../../ai/staffAssistant';
 import { maybeRunAIModeration } from '../../../ai/moderationPipeline';
 import { forgetUserMemory, rememberFact } from '../../../ai/memory';
 import { searchKnowledge, formatKnowledgeForPrompt } from '../../../ai/knowledge';
 import { isWithinLimits, incrementUsage } from '../../../ai/usage';
+import { isStaff } from '../../../services/permissions';
 import { consumeCooldown } from '../../../services/cooldowns';
+
+const KNOWLEDGE_CATEGORIES = ['rules', 'faq', 'minecraft', 'commands', 'ranks', 'store', 'events', 'staff', 'punishments', 'other'];
 
 export const aiModule: FeatureModule = {
   name: 'ai',
@@ -116,6 +131,133 @@ export const aiModule: FeatureModule = {
         const mcMatch = message.content.match(/my (?:minecraft|mc) (?:username|name|ign) is\s+(\w{2,16})/i);
         if (mcMatch && settings.aiMemoryEnabled) {
           await rememberFact(message.guildId, message.author.id, 'minecraft_username', mcMatch[1]!, settings.aiMemoryDurationHours);
+        }
+      }
+    }
+  ],
+  components: [
+    {
+      prefix: 'escalation_answer_',
+      button: async (interaction) => {
+        if (!interaction.guildId) return;
+        const settings = await getGuildSettings(interaction.guildId);
+        if (!isStaff(interaction.member as GuildMember, settings)) {
+          await interaction.reply({ content: '🚫 Only staff can answer escalations.', flags: MessageFlags.Ephemeral });
+          return;
+        }
+        const escalationId = interaction.customId.replace('escalation_answer_', '');
+        const modal = new ModalBuilder()
+          .setCustomId(`escalation_answer_modal_${escalationId}`)
+          .setTitle('Answer this escalation')
+          .addComponents(
+            new ActionRowBuilder<TextInputBuilder>().addComponents(
+              new TextInputBuilder()
+                .setCustomId('answer')
+                .setLabel('Your answer (sent to the member)')
+                .setStyle(TextInputStyle.Paragraph)
+                .setRequired(true)
+                .setMaxLength(1800)
+            )
+          );
+        await interaction.showModal(modal);
+      },
+      modal: async (interaction) => {
+        if (!interaction.customId.startsWith('escalation_answer_modal_') || !interaction.guildId) return;
+        const escalationId = interaction.customId.replace('escalation_answer_modal_', '');
+        const answer = interaction.fields.getTextInputValue('answer');
+
+        const escalation = await prisma.aIEscalation.findUnique({ where: { id: escalationId } });
+        if (!escalation) {
+          await interaction.reply({ content: '❌ This escalation no longer exists.', flags: MessageFlags.Ephemeral });
+          return;
+        }
+
+        await prisma.aIEscalation.update({
+          where: { id: escalationId },
+          data: { status: 'answered', answeredById: interaction.user.id, answer, answeredAt: new Date() }
+        });
+
+        if (interaction.isFromMessage()) {
+          const embed = EmbedBuilder.from(interaction.message.embeds[0]!)
+            .addFields({ name: `✅ Answered by ${interaction.user.tag}`, value: answer.slice(0, 1000) })
+            .setColor(0x23a559);
+          await interaction.update({ embeds: [embed], components: [buildEscalationComponents(escalationId, true)] });
+        } else {
+          await interaction.reply({ content: '✅ Answer sent.', flags: MessageFlags.Ephemeral });
+        }
+
+        const channel = await interaction.guild!.channels.fetch(escalation.channelId).catch(() => null);
+        if (channel?.isTextBased()) {
+          await channel
+            .send(`<@${escalation.userId}> Staff followed up on your question: **${escalation.question.slice(0, 200)}**\n\n${answer}`)
+            .catch(() => undefined);
+        } else {
+          const user = await interaction.client.users.fetch(escalation.userId).catch(() => null);
+          await user?.send(`Staff followed up on your question in **${interaction.guild!.name}**:\n\n${answer}`).catch(() => undefined);
+        }
+      }
+    },
+    {
+      prefix: 'escalation_knowledge_',
+      button: async (interaction) => {
+        if (!interaction.guildId) return;
+        const settings = await getGuildSettings(interaction.guildId);
+        if (!isStaff(interaction.member as GuildMember, settings)) {
+          await interaction.reply({ content: '🚫 Only staff can update the knowledge base.', flags: MessageFlags.Ephemeral });
+          return;
+        }
+        const escalationId = interaction.customId.replace('escalation_knowledge_', '');
+        const escalation = await prisma.aIEscalation.findUnique({ where: { id: escalationId } });
+
+        const modal = new ModalBuilder()
+          .setCustomId(`escalation_knowledge_modal_${escalationId}`)
+          .setTitle('Teach the AI')
+          .addComponents(
+            new ActionRowBuilder<TextInputBuilder>().addComponents(
+              new TextInputBuilder()
+                .setCustomId('title')
+                .setLabel('Title')
+                .setStyle(TextInputStyle.Short)
+                .setRequired(true)
+                .setValue(escalation?.question.slice(0, 100) ?? '')
+            ),
+            new ActionRowBuilder<TextInputBuilder>().addComponents(
+              new TextInputBuilder()
+                .setCustomId('category')
+                .setLabel(`Category (${KNOWLEDGE_CATEGORIES.join('/')})`)
+                .setStyle(TextInputStyle.Short)
+                .setRequired(true)
+                .setValue('faq')
+            ),
+            new ActionRowBuilder<TextInputBuilder>().addComponents(
+              new TextInputBuilder()
+                .setCustomId('content')
+                .setLabel('Content the AI should know')
+                .setStyle(TextInputStyle.Paragraph)
+                .setRequired(true)
+                .setMaxLength(1800)
+            )
+          );
+        await interaction.showModal(modal);
+      },
+      modal: async (interaction) => {
+        if (!interaction.customId.startsWith('escalation_knowledge_modal_') || !interaction.guildId) return;
+        const title = interaction.fields.getTextInputValue('title');
+        const category = interaction.fields.getTextInputValue('category').trim().toLowerCase() || 'other';
+        const content = interaction.fields.getTextInputValue('content');
+
+        await prisma.knowledgeBase.create({
+          data: { guildId: interaction.guildId, category, title, content, keywords: [] }
+        });
+
+        if (interaction.isFromMessage()) {
+          const embed = EmbedBuilder.from(interaction.message.embeds[0]!).addFields({
+            name: `📚 Added to knowledge base by ${interaction.user.tag}`,
+            value: `**${title}** (${category})`
+          });
+          await interaction.update({ embeds: [embed], components: interaction.message.components as never });
+        } else {
+          await interaction.reply({ content: '📚 Added to the knowledge base.', flags: MessageFlags.Ephemeral });
         }
       }
     }
