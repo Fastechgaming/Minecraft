@@ -38,7 +38,8 @@ function slugify(text) {
 
 // --- Guided "/additem" wizard state, per chat ---
 const sessions = new Map();
-const STEPS = ["category", "name", "price", "shortDesc", "infoText", "videoUrl", "deliveryCommand", "image"];
+const STEPS = ["gamemode", "category", "name", "price", "shortDesc", "infoText", "videoUrl", "deliveryCommand", "image"];
+const GAMEMODE_IDS = store.GAMEMODES.map((g) => g.id);
 
 function startAddWizard(chatId) {
   sessions.set(chatId, { step: 0, item: {} });
@@ -46,10 +47,12 @@ function startAddWizard(chatId) {
 
 function stepPrompt(step) {
   switch (step) {
+    case "gamemode":
+      return `Which gamemode? Reply with: ${GAMEMODE_IDS.join(", ")}`;
     case "category":
-      return "Which category? Reply with: ranks, coins, or other";
+      return "Which category? Reply with: ranks, keys, or other";
     case "name":
-      return "Item name? (e.g. \"Apsara Rank\")";
+      return "Item name? (e.g. \"VIP Rank\")";
     case "price":
       return "Price in USD? (e.g. 4.99)";
     case "shortDesc":
@@ -59,7 +62,7 @@ function stepPrompt(step) {
     case "videoUrl":
       return "Kit video URL (YouTube/embeddable link), or send \"skip\"";
     case "deliveryCommand":
-      return 'Delivery command to run when you Accept an order.\nUse {player} for the in-server name, e.g.\n`lp user {player} parent add apsara`\nOr send "skip" to deliver this item manually.';
+      return 'Delivery command to run when you Accept an order.\nUse {player} for the in-server name, e.g.\n`lp user {player} parent add vip`\nOr send "skip" to deliver this item manually.';
     case "image":
       return "Send a photo for this item, or send \"skip\" to use a placeholder image.";
     default:
@@ -91,9 +94,15 @@ async function handleWizardMessage(msg) {
   const field = STEPS[session.step];
   const text = (msg.text || "").trim();
 
-  if (field === "category") {
-    if (!["ranks", "coins", "other"].includes(text.toLowerCase())) {
-      await bot.sendMessage(chatId, 'Please reply with exactly: ranks, coins, or other');
+  if (field === "gamemode") {
+    if (!GAMEMODE_IDS.includes(text.toLowerCase())) {
+      await bot.sendMessage(chatId, `Please reply with exactly: ${GAMEMODE_IDS.join(", ")}`);
+      return true;
+    }
+    session.item.gamemode = text.toLowerCase();
+  } else if (field === "category") {
+    if (!["ranks", "keys", "other"].includes(text.toLowerCase())) {
+      await bot.sendMessage(chatId, 'Please reply with exactly: ranks, keys, or other');
       return true;
     }
     session.item.category = text.toLowerCase();
@@ -103,7 +112,12 @@ async function handleWizardMessage(msg) {
       return true;
     }
     session.item.name = text;
-    session.item.id = `${session.item.category}-${slugify(text)}-${nanoid(4)}`;
+    // Ranks are matched by exact id against the LuckPerms ladder (or its
+    // catalogue fallback) per gamemode - see routes/admin.js's fuller comment.
+    session.item.id =
+      session.item.category === "ranks"
+        ? `rank-${session.item.gamemode}-${slugify(text).replace(/-rank$/, "")}`
+        : `${session.item.category}-${session.item.gamemode}-${slugify(text)}-${nanoid(4)}`;
   } else if (field === "price") {
     const price = Number(text);
     if (Number.isNaN(price) || price < 0) {
@@ -157,7 +171,7 @@ async function handleWizardMessage(msg) {
 function formatItemList(items, category) {
   const list = items[category];
   if (!list.length) return `No items in *${category}* yet.`;
-  return list.map((i) => `\`${i.id}\` — ${i.name} — $${i.price}`).join("\n");
+  return list.map((i) => `\`${i.id}\` — [${i.gamemode}] ${i.name} — $${i.price}`).join("\n");
 }
 
 function initBot() {
@@ -178,10 +192,11 @@ function initBot() {
       msg.chat.id,
       [
         "*Makong Network Store Admin*",
+        `Gamemodes: ${GAMEMODE_IDS.join(", ")}`,
         "/additem - add a new store item (guided, supports photo upload)",
-        "/listitems [ranks|coins|other] - list items and their IDs",
+        "/listitems [ranks|keys|other] - list items, their gamemode and IDs",
         "/edititem <id> <field> <value> - edit one field",
-        "  fields: name, price, shortDesc, infoText, videoUrl, category, deliveryCommand",
+        "  fields: name, price, shortDesc, infoText, videoUrl, category, gamemode, deliveryCommand",
         "/edititem <id> image - then send a photo to replace the image",
         "/delitem <id> - delete an item",
         "",
@@ -202,7 +217,7 @@ function initBot() {
     const items = store.getItems();
     const cat = match[1];
     if (cat && !store.CATEGORIES.includes(cat)) {
-      return bot.sendMessage(msg.chat.id, "Category must be ranks, coins, or other.");
+      return bot.sendMessage(msg.chat.id, "Category must be ranks, keys, or other.");
     }
     const cats = cat ? [cat] : store.CATEGORIES;
     const text = cats.map((c) => `*${c}*\n${formatItemList(items, c)}`).join("\n\n");
@@ -228,14 +243,17 @@ function initBot() {
   bot.onText(/^\/edititem (\S+) (\S+) ([\s\S]+)/, (msg, match) => {
     if (!isAdmin(msg)) return bot.sendMessage(msg.chat.id, "This bot is private.");
     const [, id, field, value] = match;
-    const allowed = ["name", "price", "shortDesc", "infoText", "videoUrl", "category", "deliveryCommand"];
+    const allowed = ["name", "price", "shortDesc", "infoText", "videoUrl", "category", "gamemode", "deliveryCommand"];
     const item = store.findItem(id);
     if (!item) return bot.sendMessage(msg.chat.id, "No item with that ID.");
     if (!allowed.includes(field)) {
       return bot.sendMessage(msg.chat.id, `Field must be one of: ${allowed.join(", ")}`);
     }
     if (field === "category" && !store.CATEGORIES.includes(value)) {
-      return bot.sendMessage(msg.chat.id, "Category must be ranks, coins, or other.");
+      return bot.sendMessage(msg.chat.id, "Category must be ranks, keys, or other.");
+    }
+    if (field === "gamemode" && !GAMEMODE_IDS.includes(value)) {
+      return bot.sendMessage(msg.chat.id, `Gamemode must be one of: ${GAMEMODE_IDS.join(", ")}`);
     }
     const patch = { [field]: field === "price" ? Number(value) : value };
     if (field === "category" && value !== item.category) {

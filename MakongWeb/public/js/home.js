@@ -14,7 +14,7 @@ async function loadHome() {
   document.getElementById("hero-tagline").textContent = cfg.tagline || "";
   document.getElementById("welcome-message").textContent = cfg.welcomeMessage || "";
 
-  document.getElementById("telegram-btn").href = cfg.telegramLink || "#";
+  document.getElementById("discord-btn").href = cfg.discordLink || "#";
 
   const ipBtn = document.getElementById("ip-btn");
   const javaAddress = `${cfg.javaIp}${cfg.javaPort && Number(cfg.javaPort) !== 25565 ? ":" + cfg.javaPort : ""}`;
@@ -38,16 +38,6 @@ async function loadHome() {
     }
   });
 
-  document.getElementById("release-value").textContent = formatConfigDate(cfg.releaseDate);
-  document.getElementById("server-age-value").textContent = cfg.releaseDate
-    ? formatDaysHours(daysHoursSince(cfg.releaseDate))
-    : "—";
-
-  document.getElementById("season-value").textContent = cfg.season || "—";
-  document.getElementById("season-age-value").textContent = cfg.seasonStartDate
-    ? formatDaysHours(daysHoursSince(cfg.seasonStartDate))
-    : "—";
-
   renderFeatures(cfg.serverFeatures || []);
   applyLabels(mobile);
 
@@ -57,7 +47,6 @@ async function loadHome() {
   document.addEventListener("i18n:change", () => {
     applyLabels(mobile);
     renderStatus(lastStatus);
-    document.getElementById("release-value").textContent = formatConfigDate(cfg.releaseDate);
   });
 }
 

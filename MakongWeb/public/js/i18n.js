@@ -10,8 +10,8 @@
 
    House rule for the Khmer strings, straight from the brief: words that
    only make sense in English stay in English. Minecraft vocabulary
-   (Server, Rank, Coins, Java, Bedrock, Creeper, Zombie, Combo, KHQR,
-   Telegram, BlueMap, block names...) is never translated - it would read
+   (Server, Rank, Keys, Java, Bedrock, Creeper, Zombie, Combo, KHQR,
+   Telegram, Discord, block names...) is never translated - it would read
    strangely to a Khmer player who knows the game in English.
    ============================================================= */
 const I18n = (() => {
@@ -22,34 +22,34 @@ const I18n = (() => {
     en: {
       /* ---- nav / chrome ---- */
       "nav.home": "🏠 Home",
-      "nav.games": "🎮 Games",
       "nav.store": "💰 Store",
-      "nav.map": "🗺️ Map",
       "nav.menu": "Menu",
       "nav.language": "Language",
       "footer.copy": "© {year} Makong Network · Cambodia Minecraft Server 🇰🇭",
 
       /* ---- home ---- */
-      "home.telegram": "Telegram",
-      "home.telegramSub": "Join our community",
+      "home.discord": "Discord",
+      "home.discordSub": "Join our community",
       "home.copyIp": "Click to copy IP",
       "home.tapJoin": "Tap to join (Bedrock)",
       "home.store": "Store",
-      "home.storeSub": "Ranks, coins & more",
+      "home.storeSub": "Ranks, keys & more",
       "home.checking": "Checking server status…",
       "home.online": "Online — {online}/{max} players",
       "home.offline": "Server offline",
       "home.statusUnavailable": "Status unavailable",
       "home.welcome": "🌿 Welcome 🌿",
-      "home.released": "Released",
-      "home.serverAge": "Server Age",
-      "home.currentSeason": "Current Season",
-      "home.seasonAge": "Season Age",
       "home.copied": 'Copied "{ip}" — paste it into Minecraft > Multiplayer > Add Server',
       "home.opening": "Opening Minecraft (Bedrock)… Java IP also copied just in case!",
 
       /* ---- store ---- */
       "store.subtitle": "STORE",
+      "region.title": "Select your region",
+      "region.subtitle": "This decides how you'll pay. You can change it any time.",
+      "region.khmer": "Cambodia",
+      "region.khmerDesc": "Pay with KHQR",
+      "region.global": "Global",
+      "region.globalDesc": "Pay via Tebex",
       "store.gateTitle": "Who is this for?",
       "store.gateHint":
         "Enter your Minecraft name once so we know where to deliver your purchase — and so we can show your current rank and coins.",
@@ -73,7 +73,7 @@ const I18n = (() => {
       "store.changeHint":
         "This is the name your purchases are delivered to, and the account your website coins and points are saved under.",
       "store.tab.ranks": "Ranks",
-      "store.tab.coins": "Coins",
+      "store.tab.keys": "Keys",
       "store.tab.other": "Other",
       "store.empty": "No items here yet — check back soon!",
       "store.comingSoon": "Coming Soon",
@@ -128,17 +128,6 @@ const I18n = (() => {
       "success.supportLine": "Haven't received your items after an hour? Please contact support.",
       "success.supportLineLink": "Haven't received your items after an hour?",
       "success.back": "Back to home",
-
-      /* ---- map ---- */
-      "map.title": "🌿 Cambodia Map 🌿",
-      "map.subtitle": "LIVE MAP",
-      "map.age": "Map Age: {age}",
-      "map.explain": "Explore Makong Network in real time. Having trouble viewing it below?",
-      "map.openNew": "Open the map in a new tab ↗",
-      "map.fallback": "The live map couldn't be embedded here.",
-      "map.openBluemap": "Open BlueMap in a new tab",
-      "map.notConfigured":
-        'The live map isn\'t configured yet. Set "bluemapUrl" in MakongWeb/config/site.config.json to your BlueMap URL.',
 
       /* ---- games: gate + hub ---- */
       "games.subtitle": "GAMES",
@@ -309,34 +298,34 @@ const I18n = (() => {
     km: {
       /* ---- nav / chrome ---- */
       "nav.home": "🏠 ទំព័រដើម",
-      "nav.games": "🎮 ហ្គេម",
       "nav.store": "💰 ហាង",
-      "nav.map": "🗺️ ផែនទី",
       "nav.menu": "ម៉ឺនុយ",
       "nav.language": "ភាសា",
       "footer.copy": "© {year} Makong Network · Minecraft Server កម្ពុជា 🇰🇭",
 
       /* ---- home ---- */
-      "home.telegram": "Telegram",
-      "home.telegramSub": "ចូលរួមសហគមន៍យើង",
+      "home.discord": "Discord",
+      "home.discordSub": "ចូលរួមសហគមន៍យើង",
       "home.copyIp": "ចុចដើម្បីចម្លង IP",
       "home.tapJoin": "ចុចដើម្បីចូល (Bedrock)",
       "home.store": "ហាង",
-      "home.storeSub": "Ranks, Coins និងច្រើនទៀត",
+      "home.storeSub": "Ranks, Keys និងច្រើនទៀត",
       "home.checking": "កំពុងពិនិត្យស្ថានភាព Server…",
       "home.online": "Online — អ្នកលេង {online}/{max} នាក់",
       "home.offline": "Server Offline",
       "home.statusUnavailable": "មិនអាចពិនិត្យស្ថានភាពបានទេ",
       "home.welcome": "🌿 សូមស្វាគមន៍ 🌿",
-      "home.released": "ចេញផ្សាយ",
-      "home.serverAge": "អាយុ Server",
-      "home.currentSeason": "Season បច្ចុប្បន្ន",
-      "home.seasonAge": "អាយុ Season",
       "home.copied": 'បានចម្លង "{ip}" — សូមដាក់ក្នុង Minecraft > Multiplayer > Add Server',
       "home.opening": "កំពុងបើក Minecraft (Bedrock)… IP Java ក៏បានចម្លងទុកដែរ!",
 
       /* ---- store ---- */
       "store.subtitle": "ហាង",
+      "region.title": "ជ្រើសរើសតំបន់របស់អ្នក",
+      "region.subtitle": "វានឹងកំណត់វិធីបង់ប្រាក់របស់អ្នក។ អ្នកអាចផ្លាស់ប្តូរបានគ្រប់ពេល។",
+      "region.khmer": "កម្ពុជា",
+      "region.khmerDesc": "បង់ប្រាក់តាម KHQR",
+      "region.global": "Global",
+      "region.globalDesc": "បង់ប្រាក់តាម Tebex",
       "store.gateTitle": "ទិញសម្រាប់អ្នកណា?",
       "store.gateHint":
         "បញ្ចូលឈ្មោះ Minecraft តែម្តងគត់ ដើម្បីយើងដឹងថាត្រូវផ្ញើទំនិញទៅណា — ហើយអាចបង្ហាញ Rank និង Coins បច្ចុប្បន្នរបស់អ្នក។",
@@ -360,7 +349,7 @@ const I18n = (() => {
       "store.changeHint":
         "នេះជាឈ្មោះដែលទំនិញនឹងផ្ញើទៅ និងជាគណនីដែលរក្សាទុក Coins និងពិន្ទុរបស់អ្នក។",
       "store.tab.ranks": "Ranks",
-      "store.tab.coins": "Coins",
+      "store.tab.keys": "Keys",
       "store.tab.other": "ផ្សេងៗ",
       "store.empty": "មិនទាន់មានទំនិញនៅទីនេះទេ — សូមមកមើលម្តងទៀតឆាប់ៗ!",
       "store.comingSoon": "ឆាប់ៗនេះ",
@@ -416,16 +405,6 @@ const I18n = (() => {
       "success.supportLineLink": "មិនទាន់ទទួលបានទំនិញក្រោយមួយម៉ោង?",
       "success.back": "ត្រឡប់ទៅទំព័រដើម",
 
-      /* ---- map ---- */
-      "map.title": "🌿 ផែនទីកម្ពុជា 🌿",
-      "map.subtitle": "ផែនទីបន្តផ្ទាល់",
-      "map.age": "អាយុផែនទី៖ {age}",
-      "map.explain": "រុករក Makong Network ជាក់ស្តែង។ មើលមិនឃើញនៅខាងក្រោមមែនទេ?",
-      "map.openNew": "បើកផែនទីក្នុង Tab ថ្មី ↗",
-      "map.fallback": "ផែនទី Live មិនអាចបង្ហាញនៅទីនេះបានទេ។",
-      "map.openBluemap": "បើក BlueMap ក្នុង Tab ថ្មី",
-      "map.notConfigured":
-        'ផែនទី Live មិនទាន់បានកំណត់ទេ។ សូមដាក់ "bluemapUrl" ក្នុង MakongWeb/config/site.config.json ជា URL BlueMap របស់អ្នក។',
 
       /* ---- games: gate + hub ---- */
       "games.subtitle": "ហ្គេម",

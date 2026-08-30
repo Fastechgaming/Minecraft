@@ -46,11 +46,17 @@ router.post("/logout", (req, res) => {
 
 router.get("/", requireAuth, (req, res) => {
   const items = store.getItems();
-  res.render("items", { items, categories: store.CATEGORIES });
+  res.render("items", { items, categories: store.CATEGORIES, gamemodes: store.GAMEMODES });
 });
 
 router.get("/items/new", requireAuth, (req, res) => {
-  res.render("item-form", { item: null, categories: store.CATEGORIES, defaultCategory: req.query.category || "ranks" });
+  res.render("item-form", {
+    item: null,
+    categories: store.CATEGORIES,
+    gamemodes: store.GAMEMODES,
+    defaultCategory: req.query.category || "ranks",
+    defaultGamemode: req.query.gamemode || store.GAMEMODES[0].id,
+  });
 });
 
 function slugify(str) {
@@ -63,25 +69,28 @@ function slugify(str) {
 
 router.post("/items", requireAuth, upload.single("imageFile"), (req, res, next) => {
   try {
-    const { category, name, price, shortDesc, infoText, videoUrl, imageUrl, deliveryCommand } = req.body;
+    const { category, gamemode, name, price, shortDesc, infoText, videoUrl, imageUrl, deliveryCommand } = req.body;
     if (!store.CATEGORIES.includes(category)) throw new Error("Invalid category");
+    if (!store.GAMEMODES.some((g) => g.id === gamemode)) throw new Error("Invalid gamemode");
 
     const slug = slugify(name);
 
     // A rank item is matched to the Minecraft plugin's LuckPerms ladder (and
     // to the catalogue-derived fallback ladder when the plugin isn't
-    // connected) by exact id: `rank-<ladder id>`, e.g. rank-bee, rank-titan
-    // - see AngkorStore's config.yml `ranks.ladder`. So unlike every other
-    // category, a rank's id can't carry a random nanoid suffix; it has to
-    // be `rank-<slug>` with a trailing "rank" word stripped (name "Titan
-    // Rank" -> id rank-titan), or Up Rank silently won't recognise it.
+    // connected) by exact id: `rank-<gamemode>-<ladder id>` - see
+    // AngkorStore's config.yml `ranks.ladder`. Ranks are per-gamemode
+    // (EcoSMP's VIP and BoxPvP's VIP are unrelated), so the gamemode is part
+    // of the id, not just a random nanoid suffix - it has to be
+    // `rank-<gamemode>-<slug>` with a trailing "rank" word stripped (name
+    // "VIP Rank" in EcoSMP -> id rank-ecosmp-vip), or Up Rank silently won't
+    // recognise it.
     let id;
     if (category === "ranks") {
       const rankSlug = slug.replace(/-rank$/, "") || slug;
-      id = `rank-${rankSlug}`;
-      if (store.findItem(id)) id = `rank-${rankSlug}-${nanoid(4)}`;
+      id = `rank-${gamemode}-${rankSlug}`;
+      if (store.findItem(id)) id = `rank-${gamemode}-${rankSlug}-${nanoid(4)}`;
     } else {
-      id = `${category}-${slug}-${nanoid(4)}`;
+      id = `${category}-${gamemode}-${slug}-${nanoid(4)}`;
     }
 
     const item = {
@@ -95,6 +104,7 @@ router.post("/items", requireAuth, upload.single("imageFile"), (req, res, next) 
       deliveryCommand: deliveryCommand || "",
       image: req.file ? `/images/items/${req.file.filename}` : imageUrl || "/images/items/placeholder-other.svg",
       category,
+      gamemode,
     };
     store.upsertItem(category, item);
     res.redirect("/admin");
@@ -106,7 +116,13 @@ router.post("/items", requireAuth, upload.single("imageFile"), (req, res, next) 
 router.get("/items/:id/edit", requireAuth, (req, res) => {
   const item = store.findItem(req.params.id);
   if (!item) return res.status(404).send("Item not found");
-  res.render("item-form", { item, categories: store.CATEGORIES, defaultCategory: item.category });
+  res.render("item-form", {
+    item,
+    categories: store.CATEGORIES,
+    gamemodes: store.GAMEMODES,
+    defaultCategory: item.category,
+    defaultGamemode: item.gamemode || store.GAMEMODES[0].id,
+  });
 });
 
 router.post("/items/:id", requireAuth, upload.single("imageFile"), (req, res, next) => {
@@ -114,8 +130,9 @@ router.post("/items/:id", requireAuth, upload.single("imageFile"), (req, res, ne
     const existing = store.findItem(req.params.id);
     if (!existing) return res.status(404).send("Item not found");
 
-    const { category, name, price, shortDesc, infoText, videoUrl, imageUrl, deliveryCommand } = req.body;
+    const { category, gamemode, name, price, shortDesc, infoText, videoUrl, imageUrl, deliveryCommand } = req.body;
     if (!store.CATEGORIES.includes(category)) throw new Error("Invalid category");
+    if (!store.GAMEMODES.some((g) => g.id === gamemode)) throw new Error("Invalid gamemode");
 
     const updated = {
       ...existing,
@@ -127,6 +144,7 @@ router.post("/items/:id", requireAuth, upload.single("imageFile"), (req, res, ne
       deliveryCommand: deliveryCommand || "",
       image: req.file ? `/images/items/${req.file.filename}` : imageUrl || existing.image,
       category,
+      gamemode,
     };
 
     if (category !== existing.category) store.deleteItem(existing.id);

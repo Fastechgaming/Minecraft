@@ -17,13 +17,5 @@ ingress:
   - hostname: www.makongmc.com
     service: http://127.0.0.1:3000
 
-  # Optional: put BlueMap behind the same tunnel instead of the raw
-  # http://203.0.113.10:25613 link, so the map iframe is HTTPS too. If you do
-  # this, set "bluemapUrl": "https://map.makongmc.com" in
-  # config/site.config.json — browsers block a plain-http iframe inside an
-  # https page, so the map will otherwise show the fallback link.
-  - hostname: map.makongmc.com
-    service: http://127.0.0.1:25613
-
   # Everything else gets a 404 rather than reaching your box.
   - service: http_status:404

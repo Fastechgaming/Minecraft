@@ -139,14 +139,8 @@ sudo systemctl enable --now cloudflared
 
 Open `https://makongmc.com`. That's it.
 
-### 6. Two things to fix afterwards
+### 6. One thing to fix afterwards
 
-* **The map iframe.** `bluemapUrl` is `http://203.0.113.10:25613/` — plain
-  http. Browsers refuse to embed that inside an https page, so the Map page
-  would show its fallback link instead of the map.
-  `deploy/cloudflared-config.yml` has a commented-out block that puts BlueMap on
-  `map.makongmc.com` through the same tunnel; enable it, then set
-  `"bluemapUrl": "https://map.makongmc.com"` in `config/site.config.json`.
 * **`/admin`.** It is password-protected but now public. Use a long password,
   or better, put a Cloudflare Access policy on `makongmc.com/admin` so only
   your email can reach it — Zero Trust → Access → Applications.

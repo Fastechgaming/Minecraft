@@ -38,17 +38,13 @@ router.get("/config", (req, res) => {
     welcomeMessage: cfg.welcomeMessage,
     logo: cfg.logo,
     logoIcon: cfg.logoIcon || cfg.logo,
-    telegramLink: cfg.telegramLink,
+    discordLink: cfg.discordLink,
     khqrImage: cfg.khqrImage,
+    tebexUrl: cfg.tebexUrl,
     javaIp: cfg.javaIp,
     javaPort: cfg.javaPort,
     bedrockIp: cfg.bedrockIp,
     bedrockPort: cfg.bedrockPort,
-    releaseDate: cfg.releaseDate,
-    season: cfg.season,
-    seasonStartDate: cfg.seasonStartDate,
-    mapStartDate: cfg.mapStartDate,
-    bluemapUrl: cfg.bluemapUrl,
     serverFeatures: cfg.serverFeatures || [],
     socials: cfg.socials,
     supportTelegram: process.env.TELEGRAM_SUPPORT_USERNAME || "",
@@ -67,7 +63,7 @@ router.get("/status", async (req, res) => {
 });
 
 router.get("/items", (req, res) => {
-  res.json(store.getItems());
+  res.json({ ...store.getItems(), gamemodes: store.GAMEMODES });
 });
 
 // Public view of an order - used by /checkout and /success.
@@ -128,7 +124,7 @@ router.post("/checkout", async (req, res) => {
     let upgrade = null;
     const isRankItem = store.getItems().ranks.some((i) => i.id === item.id);
     if (upgradeFromRankId && isRankItem) {
-      const { ranks } = await getRankLadder();
+      const { ranks } = await getRankLadder(item.gamemode);
       const toRank = ranks.find((r) => r.itemId === item.id || `rank-${r.id}` === item.id);
       const fromRank = ranks.find((r) => r.id === upgradeFromRankId);
       if (toRank && fromRank && fromRank.weight < toRank.weight) {

@@ -1,167 +1,43 @@
 {
   "ranks": [
-    {
-      "id": "rank-bee",
-      "name": "Bee Rank",
-      "price": 3,
-      "currency": "USD",
-      "image": "/images/items/rank-bee.png",
-      "shortDesc": "Description coming soon.",
-      "infoText": "Bee Rank\n\nPerks and kit contents will be listed here soon.",
-      "videoUrl": "",
-      "category": "ranks",
-      "deliveryCommand": "lp user {player} parent add bee"
-    },
-    {
-      "id": "rank-zombie",
-      "name": "Zombie Rank",
-      "price": 6,
-      "currency": "USD",
-      "image": "/images/items/rank-zombie.png",
-      "shortDesc": "Description coming soon.",
-      "infoText": "Zombie Rank\n\nPerks and kit contents will be listed here soon.",
-      "videoUrl": "",
-      "category": "ranks",
-      "deliveryCommand": "lp user {player} parent add zombie"
-    },
-    {
-      "id": "rank-warden",
-      "name": "Warden Rank",
-      "price": 10,
-      "currency": "USD",
-      "image": "/images/items/rank-warden.png",
-      "shortDesc": "Description coming soon.",
-      "infoText": "Warden Rank\n\nPerks and kit contents will be listed here soon.",
-      "videoUrl": "",
-      "category": "ranks",
-      "deliveryCommand": "lp user {player} parent add warden"
-    },
-    {
-      "id": "rank-wither",
-      "name": "Wither Rank",
-      "price": 15,
-      "currency": "USD",
-      "image": "/images/items/rank-wither.png",
-      "shortDesc": "Description coming soon.",
-      "infoText": "Wither Rank\n\nPerks and kit contents will be listed here soon.",
-      "videoUrl": "",
-      "category": "ranks",
-      "deliveryCommand": "lp user {player} parent add wither"
-    },
-    {
-      "id": "rank-dragon",
-      "name": "Dragon Rank",
-      "price": 20,
-      "currency": "USD",
-      "image": "/images/items/rank-dragon.png",
-      "shortDesc": "Description coming soon.",
-      "infoText": "Dragon Rank\n\nPerks and kit contents will be listed here soon.",
-      "videoUrl": "",
-      "category": "ranks",
-      "deliveryCommand": "lp user {player} parent add dragon"
-    },
-    {
-      "id": "rank-titan",
-      "name": "Titan Rank",
-      "price": 30,
-      "currency": "USD",
-      "image": "/images/items/rank-titan.png",
-      "shortDesc": "Description coming soon.",
-      "infoText": "Titan Rank\n\nPerks and kit contents will be listed here soon.",
-      "videoUrl": "",
-      "category": "ranks",
-      "deliveryCommand": "lp user {player} parent add titan"
-    },
-    {
-      "id": "rank-makong",
-      "name": "Makong Rank",
-      "price": 50,
-      "currency": "USD",
-      "image": "/images/items/placeholder-rank.svg",
-      "shortDesc": "Description coming soon.",
-      "infoText": "Makong Rank\n\nPerks and kit contents will be listed here soon.",
-      "videoUrl": "",
-      "category": "ranks",
-      "deliveryCommand": "lp user {player} parent add makong"
-    }
+    { "id": "rank-arcade-vip", "name": "VIP", "price": 3, "currency": "USD", "image": "/images/items/rank-bee.png", "shortDesc": "Description coming soon.", "infoText": "VIP Rank\n\nPerks and kit contents will be listed here soon.", "videoUrl": "", "category": "ranks", "gamemode": "arcade", "deliveryCommand": "lp user {player} parent add arcade_vip" },
+    { "id": "rank-arcade-mvp", "name": "MVP", "price": 8, "currency": "USD", "image": "/images/items/rank-zombie.png", "shortDesc": "Description coming soon.", "infoText": "MVP Rank\n\nPerks and kit contents will be listed here soon.", "videoUrl": "", "category": "ranks", "gamemode": "arcade", "deliveryCommand": "lp user {player} parent add arcade_mvp" },
+    { "id": "rank-arcade-elite", "name": "ELITE", "price": 15, "currency": "USD", "image": "/images/items/rank-warden.png", "shortDesc": "Description coming soon.", "infoText": "ELITE Rank\n\nPerks and kit contents will be listed here soon.", "videoUrl": "", "category": "ranks", "gamemode": "arcade", "deliveryCommand": "lp user {player} parent add arcade_elite" },
+    { "id": "rank-arcade-legend", "name": "LEGEND", "price": 25, "currency": "USD", "image": "/images/items/rank-dragon.png", "shortDesc": "Description coming soon.", "infoText": "LEGEND Rank\n\nPerks and kit contents will be listed here soon.", "videoUrl": "", "category": "ranks", "gamemode": "arcade", "deliveryCommand": "lp user {player} parent add arcade_legend" },
+
+    { "id": "rank-ecosmp-vip", "name": "VIP", "price": 5, "currency": "USD", "image": "/images/items/rank-bee.png", "shortDesc": "Description coming soon.", "infoText": "VIP Rank\n\nPerks and kit contents will be listed here soon.", "videoUrl": "", "category": "ranks", "gamemode": "ecosmp", "deliveryCommand": "lp user {player} parent add ecosmp_vip" },
+    { "id": "rank-ecosmp-mvp", "name": "MVP", "price": 12, "currency": "USD", "image": "/images/items/rank-zombie.png", "shortDesc": "Description coming soon.", "infoText": "MVP Rank\n\nPerks and kit contents will be listed here soon.", "videoUrl": "", "category": "ranks", "gamemode": "ecosmp", "deliveryCommand": "lp user {player} parent add ecosmp_mvp" },
+    { "id": "rank-ecosmp-elite", "name": "ELITE", "price": 20, "currency": "USD", "image": "/images/items/rank-warden.png", "shortDesc": "Description coming soon.", "infoText": "ELITE Rank\n\nPerks and kit contents will be listed here soon.", "videoUrl": "", "category": "ranks", "gamemode": "ecosmp", "deliveryCommand": "lp user {player} parent add ecosmp_elite" },
+    { "id": "rank-ecosmp-legend", "name": "LEGEND", "price": 35, "currency": "USD", "image": "/images/items/rank-wither.png", "shortDesc": "Description coming soon.", "infoText": "LEGEND Rank\n\nPerks and kit contents will be listed here soon.", "videoUrl": "", "category": "ranks", "gamemode": "ecosmp", "deliveryCommand": "lp user {player} parent add ecosmp_legend" },
+
+    { "id": "rank-boxpvp-vip", "name": "VIP", "price": 5, "currency": "USD", "image": "/images/items/rank-bee.png", "shortDesc": "Description coming soon.", "infoText": "VIP Rank\n\nPerks and kit contents will be listed here soon.", "videoUrl": "", "category": "ranks", "gamemode": "boxpvp", "deliveryCommand": "lp user {player} parent add boxpvp_vip" },
+    { "id": "rank-boxpvp-mvp", "name": "MVP", "price": 12, "currency": "USD", "image": "/images/items/rank-zombie.png", "shortDesc": "Description coming soon.", "infoText": "MVP Rank\n\nPerks and kit contents will be listed here soon.", "videoUrl": "", "category": "ranks", "gamemode": "boxpvp", "deliveryCommand": "lp user {player} parent add boxpvp_mvp" },
+    { "id": "rank-boxpvp-elite", "name": "ELITE", "price": 20, "currency": "USD", "image": "/images/items/rank-warden.png", "shortDesc": "Description coming soon.", "infoText": "ELITE Rank\n\nPerks and kit contents will be listed here soon.", "videoUrl": "", "category": "ranks", "gamemode": "boxpvp", "deliveryCommand": "lp user {player} parent add boxpvp_elite" },
+    { "id": "rank-boxpvp-legend", "name": "LEGEND", "price": 35, "currency": "USD", "image": "/images/items/rank-wither.png", "shortDesc": "Description coming soon.", "infoText": "LEGEND Rank\n\nPerks and kit contents will be listed here soon.", "videoUrl": "", "category": "ranks", "gamemode": "boxpvp", "deliveryCommand": "lp user {player} parent add boxpvp_legend" },
+
+    { "id": "rank-plotcity-vip", "name": "VIP", "price": 4, "currency": "USD", "image": "/images/items/rank-bee.png", "shortDesc": "Description coming soon.", "infoText": "VIP Rank\n\nPerks and kit contents will be listed here soon.", "videoUrl": "", "category": "ranks", "gamemode": "plotcity", "deliveryCommand": "lp user {player} parent add plotcity_vip" },
+    { "id": "rank-plotcity-mvp", "name": "MVP", "price": 10, "currency": "USD", "image": "/images/items/rank-zombie.png", "shortDesc": "Description coming soon.", "infoText": "MVP Rank\n\nPerks and kit contents will be listed here soon.", "videoUrl": "", "category": "ranks", "gamemode": "plotcity", "deliveryCommand": "lp user {player} parent add plotcity_mvp" },
+    { "id": "rank-plotcity-elite", "name": "ELITE", "price": 18, "currency": "USD", "image": "/images/items/rank-warden.png", "shortDesc": "Description coming soon.", "infoText": "ELITE Rank\n\nPerks and kit contents will be listed here soon.", "videoUrl": "", "category": "ranks", "gamemode": "plotcity", "deliveryCommand": "lp user {player} parent add plotcity_elite" },
+    { "id": "rank-plotcity-mythic", "name": "MYTHIC", "price": 28, "currency": "USD", "image": "/images/items/rank-titan.png", "shortDesc": "Description coming soon.", "infoText": "MYTHIC Rank\n\nPerks and kit contents will be listed here soon.", "videoUrl": "", "category": "ranks", "gamemode": "plotcity", "deliveryCommand": "lp user {player} parent add plotcity_mythic" },
+
+    { "id": "rank-hyperclash-vip", "name": "VIP", "price": 4, "currency": "USD", "image": "/images/items/rank-bee.png", "shortDesc": "Description coming soon.", "infoText": "VIP Rank\n\nPerks and kit contents will be listed here soon.", "videoUrl": "", "category": "ranks", "gamemode": "hyperclash", "deliveryCommand": "lp user {player} parent add hyperclash_vip" },
+    { "id": "rank-hyperclash-mvp", "name": "MVP", "price": 10, "currency": "USD", "image": "/images/items/rank-zombie.png", "shortDesc": "Description coming soon.", "infoText": "MVP Rank\n\nPerks and kit contents will be listed here soon.", "videoUrl": "", "category": "ranks", "gamemode": "hyperclash", "deliveryCommand": "lp user {player} parent add hyperclash_mvp" },
+    { "id": "rank-hyperclash-elite", "name": "ELITE", "price": 18, "currency": "USD", "image": "/images/items/rank-warden.png", "shortDesc": "Description coming soon.", "infoText": "ELITE Rank\n\nPerks and kit contents will be listed here soon.", "videoUrl": "", "category": "ranks", "gamemode": "hyperclash", "deliveryCommand": "lp user {player} parent add hyperclash_elite" }
   ],
-  "coins": [
-    {
-      "id": "coins-1500",
-      "name": "1,500 Coins",
-      "price": 1,
-      "currency": "USD",
-      "image": "/images/items/coins-1500.png",
-      "shortDesc": "Spend at the in-game shop.",
-      "infoText": "1,500 Makong Coins are added to your in-game balance once your payment is confirmed.",
-      "videoUrl": "",
-      "category": "coins",
-      "deliveryCommand": "eco give {player} 1500"
-    },
-    {
-      "id": "coins-10000",
-      "name": "10,000 Coins",
-      "price": 5,
-      "currency": "USD",
-      "image": "/images/items/coins-10000.png",
-      "shortDesc": "Better value than the 1,500 pack.",
-      "infoText": "10,000 Makong Coins are added to your in-game balance once your payment is confirmed.",
-      "videoUrl": "",
-      "category": "coins",
-      "deliveryCommand": "eco give {player} 10000"
-    },
-    {
-      "id": "coins-25000",
-      "name": "25,000 Coins",
-      "price": 10,
-      "currency": "USD",
-      "image": "/images/items/coins-25000.png",
-      "shortDesc": "Best value coin pack.",
-      "infoText": "25,000 Makong Coins are added to your in-game balance once your payment is confirmed.",
-      "videoUrl": "",
-      "category": "coins",
-      "deliveryCommand": "eco give {player} 25000"
-    }
+  "keys": [
+    { "id": "keys-ecosmp-common", "name": "Common Key", "price": 2, "currency": "USD", "image": "/images/items/placeholder-keys.svg", "shortDesc": "Opens a Common crate.", "infoText": "Unlocks one Common crate at spawn.", "videoUrl": "", "category": "keys", "gamemode": "ecosmp", "deliveryCommand": "crates give {player} common 1" },
+    { "id": "keys-ecosmp-rare", "name": "Rare Key", "price": 5, "currency": "USD", "image": "/images/items/placeholder-keys.svg", "shortDesc": "Opens a Rare crate.", "infoText": "Unlocks one Rare crate at spawn.", "videoUrl": "", "category": "keys", "gamemode": "ecosmp", "deliveryCommand": "crates give {player} rare 1" },
+    { "id": "keys-ecosmp-legendary", "name": "Legendary Key", "price": 10, "currency": "USD", "image": "/images/items/placeholder-keys.svg", "shortDesc": "Opens a Legendary crate.", "infoText": "Unlocks one Legendary crate at spawn.", "videoUrl": "", "category": "keys", "gamemode": "ecosmp", "deliveryCommand": "crates give {player} legendary 1" },
+
+    { "id": "keys-boxpvp-common", "name": "Common Key", "price": 2, "currency": "USD", "image": "/images/items/placeholder-keys.svg", "shortDesc": "Opens a Common crate.", "infoText": "Unlocks one Common crate at spawn.", "videoUrl": "", "category": "keys", "gamemode": "boxpvp", "deliveryCommand": "crates give {player} common 1" },
+    { "id": "keys-boxpvp-rare", "name": "Rare Key", "price": 5, "currency": "USD", "image": "/images/items/placeholder-keys.svg", "shortDesc": "Opens a Rare crate.", "infoText": "Unlocks one Rare crate at spawn.", "videoUrl": "", "category": "keys", "gamemode": "boxpvp", "deliveryCommand": "crates give {player} rare 1" },
+    { "id": "keys-boxpvp-legendary", "name": "Legendary Key", "price": 10, "currency": "USD", "image": "/images/items/placeholder-keys.svg", "shortDesc": "Opens a Legendary crate.", "infoText": "Unlocks one Legendary crate at spawn.", "videoUrl": "", "category": "keys", "gamemode": "boxpvp", "deliveryCommand": "crates give {player} legendary 1" }
   ],
   "other": [
-    {
-      "id": "other-slot-1",
-      "name": "Coming Soon",
-      "price": 0,
-      "currency": "USD",
-      "image": "/images/items/coming-soon.svg",
-      "shortDesc": "A new block or item is on the way.",
-      "infoText": "This slot is reserved for an upcoming block or item. Check back soon!",
-      "videoUrl": "",
-      "category": "other",
-      "comingSoon": true,
-      "deliveryCommand": ""
-    },
-    {
-      "id": "other-slot-2",
-      "name": "Coming Soon",
-      "price": 0,
-      "currency": "USD",
-      "image": "/images/items/coming-soon.svg",
-      "shortDesc": "A new block or item is on the way.",
-      "infoText": "This slot is reserved for an upcoming block or item. Check back soon!",
-      "videoUrl": "",
-      "category": "other",
-      "comingSoon": true,
-      "deliveryCommand": ""
-    },
-    {
-      "id": "other-slot-3",
-      "name": "Coming Soon",
-      "price": 0,
-      "currency": "USD",
-      "image": "/images/items/coming-soon.svg",
-      "shortDesc": "A new block or item is on the way.",
-      "infoText": "This slot is reserved for an upcoming block or item. Check back soon!",
-      "videoUrl": "",
-      "category": "other",
-      "comingSoon": true,
-      "deliveryCommand": ""
-    }
+    { "id": "other-ecosmp-starterkit", "name": "Starter Kit", "price": 3, "currency": "USD", "image": "/images/items/placeholder-other.svg", "shortDesc": "A useful bundle to get going.", "infoText": "Starter Kit\n\nContents will be listed here soon.", "videoUrl": "", "category": "other", "gamemode": "ecosmp", "deliveryCommand": "kit give {player} starter" },
+    { "id": "other-ecosmp-slot-1", "name": "Coming Soon", "price": 0, "currency": "USD", "image": "/images/items/coming-soon.svg", "shortDesc": "A new item is on the way.", "infoText": "This slot is reserved for an upcoming item. Check back soon!", "videoUrl": "", "category": "other", "gamemode": "ecosmp", "comingSoon": true, "deliveryCommand": "" },
+
+    { "id": "other-boxpvp-starterkit", "name": "Starter Kit", "price": 3, "currency": "USD", "image": "/images/items/placeholder-other.svg", "shortDesc": "A useful bundle to get going.", "infoText": "Starter Kit\n\nContents will be listed here soon.", "videoUrl": "", "category": "other", "gamemode": "boxpvp", "deliveryCommand": "kit give {player} starter" },
+    { "id": "other-boxpvp-slot-1", "name": "Coming Soon", "price": 0, "currency": "USD", "image": "/images/items/coming-soon.svg", "shortDesc": "A new item is on the way.", "infoText": "This slot is reserved for an upcoming item. Check back soon!", "videoUrl": "", "category": "other", "gamemode": "boxpvp", "comingSoon": true, "deliveryCommand": "" }
   ]
 }

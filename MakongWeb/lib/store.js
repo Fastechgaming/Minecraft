@@ -33,7 +33,18 @@ function writeJson(file, data) {
   fs.renameSync(tmp, file);
 }
 
-const CATEGORIES = ["ranks", "coins", "other"];
+const CATEGORIES = ["ranks", "keys", "other"];
+
+// The store is divided into gamemodes. Every gamemode sells ranks; only
+// EcoSMP and BoxPvP also sell keys and other items - `categories` is what
+// the store page uses to decide which tabs to show under each gamemode.
+const GAMEMODES = [
+  { id: "arcade", name: "Arcade", categories: ["ranks"] },
+  { id: "ecosmp", name: "EcoSMP", categories: ["ranks", "keys", "other"] },
+  { id: "boxpvp", name: "BoxPvP", categories: ["ranks", "keys", "other"] },
+  { id: "plotcity", name: "PlotCity", categories: ["ranks"] },
+  { id: "hyperclash", name: "HyperClash", categories: ["ranks"] },
+];
 
 function getConfig() {
   return readJson(CONFIG_FILE, {});
@@ -44,9 +55,17 @@ function saveConfig(cfg) {
 }
 
 function getItems() {
-  const data = readJson(ITEMS_FILE, { ranks: [], coins: [], other: [] });
+  const data = readJson(ITEMS_FILE, { ranks: [], keys: [], other: [] });
   for (const cat of CATEGORIES) if (!Array.isArray(data[cat])) data[cat] = [];
   return data;
+}
+
+// Every item in `category`, in gamemode `gamemodeId` only.
+function getItemsFor(gamemodeId) {
+  const items = getItems();
+  const out = {};
+  for (const cat of CATEGORIES) out[cat] = items[cat].filter((i) => i.gamemode === gamemodeId);
+  return out;
 }
 
 function saveItems(data) {
@@ -111,9 +130,11 @@ function findOrder(id) {
 
 module.exports = {
   CATEGORIES,
+  GAMEMODES,
   getConfig,
   saveConfig,
   getItems,
+  getItemsFor,
   saveItems,
   findItem,
   upsertItem,

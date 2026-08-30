@@ -52,7 +52,6 @@ try { if (localStorage.getItem("makong-theme") === "light") document.documentEle
       <ul class="nav-links">
         <li><a href="/" data-i18n="nav.home">🏠 Home</a></li>
         <li><a href="/store" class="active" data-i18n="nav.store">💰 Store</a></li>
-        <li><a href="/map" data-i18n="nav.map">🗺️ Map</a></li>
       </ul>
       <button class="nav-toggle" onclick="toggleNav()" aria-label="Menu" data-i18n-aria="nav.menu">&#9776;</button>
     </div>
@@ -118,6 +117,7 @@ try { if (localStorage.getItem("makong-theme") === "light") document.documentEle
             <button class="change-name-btn" id="store-change-btn" data-i18n="games.changeName">Change name</button>
           </div>
 
+          <div class="store-tabs gamemode-tabs" id="gamemode-tabs"></div>
           <div class="store-tabs" id="store-tabs"></div>
           <div class="item-grid" id="item-grid"></div>
         </div>
@@ -129,6 +129,28 @@ try { if (localStorage.getItem("makong-theme") === "light") document.documentEle
   <footer class="site-footer">
     <p id="footer-copy" data-i18n="footer.copy"></p>
   </footer>
+
+  <!-- Region select: Cambodia stays on-site (KHQR), Global goes to Tebex -->
+  <div class="modal-overlay" id="region-modal">
+    <div class="modal-box">
+      <h3 data-i18n="region.title">Select your region</h3>
+      <p class="checkout-hint centered" data-i18n="region.subtitle">
+        This decides how you'll pay. You can change it any time.
+      </p>
+      <div class="region-choice">
+        <button type="button" class="region-btn" id="region-khmer">
+          <span class="region-flag">🇰🇭</span>
+          <span class="region-name" data-i18n="region.khmer">Cambodia</span>
+          <span class="region-desc" data-i18n="region.khmerDesc">Pay with KHQR</span>
+        </button>
+        <button type="button" class="region-btn" id="region-global">
+          <span class="region-flag">🌍</span>
+          <span class="region-name" data-i18n="region.global">Global</span>
+          <span class="region-desc" data-i18n="region.globalDesc">Pay via Tebex</span>
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- Info ("!") modal -->
   <div class="modal-overlay" id="info-modal">

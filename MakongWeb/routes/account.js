@@ -207,7 +207,12 @@ router.post("/logout", (req, res) => {
 // it is running (it knows the real groups), otherwise from the store catalogue.
 // Shared with routes/api.js, which needs the same ladder to price an upgrade
 // order server-side rather than trust whatever the browser computed.
-async function getRankLadder() {
+//
+// Ranks are per-gamemode (EcoSMP's VIP and BoxPvP's VIP are unrelated), so the
+// catalogue fallback ladder is built from just that gamemode's ranks. The
+// live plugin path isn't gamemode-scoped — that's the plugin's own ladder,
+// out of scope here — so it's only used when a gamemode isn't given.
+async function getRankLadder(gamemodeId) {
   if (angkorstore.enabled()) {
     const fromPlugin = await angkorstore.getRanks();
     if (fromPlugin.ok && Array.isArray(fromPlugin.ranks) && fromPlugin.ranks.length) {
@@ -215,7 +220,8 @@ async function getRankLadder() {
     }
   }
   // Catalogue order is price order, which is also the rank order.
-  const ranks = (store.getItems().ranks || [])
+  const pool = gamemodeId ? store.getItemsFor(gamemodeId).ranks : store.getItems().ranks;
+  const ranks = (pool || [])
     .filter((item) => !item.comingSoon)
     .map((item, index) => ({
       id: item.id.replace(/^rank-/, ""),
@@ -229,9 +235,8 @@ async function getRankLadder() {
   return { ranks, source: "catalogue" };
 }
 
-// Not scoped — the ladder itself is the same regardless of who's asking.
 router.get("/ranks", async (req, res) => {
-  res.json(await getRankLadder());
+  res.json(await getRankLadder(req.query.gamemode));
 });
 
 module.exports = { router, current, payload, getRankLadder, STORE_SCOPE, COOLDOWN_MS };

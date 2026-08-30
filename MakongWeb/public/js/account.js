@@ -34,8 +34,8 @@ const Account = (() => {
     return cached[scope] || null;
   }
 
-  function ranks() {
-    return fetchJSON("/api/account/ranks");
+  function ranks(gamemode) {
+    return fetchJSON(`/api/account/ranks${gamemode ? `?gamemode=${encodeURIComponent(gamemode)}` : ""}`);
   }
 
   return { load, set, get, ranks };

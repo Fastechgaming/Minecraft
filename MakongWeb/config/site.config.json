@@ -4,24 +4,20 @@
   "welcomeMessage": "Welcome to Makong Network! Build among the ruins, survive the jungle, and write your own chapter of the empire.",
   "logo": "/images/site/logo-full.png",
   "logoIcon": "/images/site/logo-icon.png",
-  "telegramLink": "https://t.me/MakongNetwork",
+  "discordLink": "https://discord.gg/makong",
   "khqrImage": "/images/site/khqr.png",
+  "tebexUrl": "https://makong.tebex.io/",
   "javaIp": "makongmc.com",
   "javaPort": 25565,
   "bedrockIp": "makongmc.com",
   "bedrockPort": 19132,
-  "releaseDate": "2026-01-01T00:00:00+07:00",
-  "season": "Season 1: The Kingdom of Cambodia",
-  "seasonStartDate": "2026-01-01T00:00:00+07:00",
-  "mapStartDate": "2026-01-01T00:00:00+07:00",
-  "bluemapUrl": "https://map.makongmc.com/",
   "serverFeatures": [
-    { "icon": "🌴", "title": "Chill Community", "desc": "A relaxed, friendly SMP — no drama, just building and surviving together." },
-    { "icon": "🛡️", "title": "No Raiding", "desc": "Bases and builds are protected. Griefing and raiding other players is not allowed." },
-    { "icon": "🗺️", "title": "Live Cambodia Map", "desc": "Explore the world in real time.", "link": "/map.html" }
+    { "icon": "🎮", "title": "Gamemodes", "desc": "BoxPvP, SMP, PlotCity, and more." },
+    { "icon": "🛡️", "title": "Good Anticheat", "desc": "Fair play enforced across every gamemode." },
+    { "icon": "🧑‍💼", "title": "Active Staff", "desc": "Our team is online and ready to help." }
   ],
   "socials": {
-    "telegram": "https://t.me/MakongNetwork",
+    "discord": "https://discord.gg/makong",
     "youtube": "",
     "tiktok": ""
   }

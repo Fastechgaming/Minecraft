@@ -520,7 +520,7 @@ button { font-family: inherit; }
   border: 2px solid var(--stone-darkest);
   box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.35), inset 0 -2px 0 rgba(0, 0, 0, 0.25);
 }
-.action-btn.telegram .btn-icon { background: #229ed9; }
+.action-btn.discord .btn-icon { background: #5865f2; }
 .action-btn.server-ip .btn-icon { background: linear-gradient(180deg, var(--gold-light), var(--gold)); }
 .action-btn.store .btn-icon { background: linear-gradient(180deg, var(--moss-light), var(--moss)); }
 .action-btn .btn-text { display: flex; flex-direction: column; gap: 0.1rem; }
@@ -921,6 +921,19 @@ a.feature-card.linked .feature-title { color: var(--link-accent); }
   background: #000;
 }
 .modal-box .info-text { white-space: pre-line; color: var(--ink-soft); font-weight: 600; }
+
+/* Region picker (Cambodia / Global) */
+.region-choice { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; margin-top: 1.2rem; }
+.region-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 0.2rem;
+  background: var(--wood-surface); border: 3px solid var(--brown-dark); border-radius: 12px;
+  padding: 1.1rem 0.8rem; cursor: pointer; box-shadow: var(--wood-bevel);
+  color: var(--on-dark); transition: transform 0.15s ease;
+}
+.region-btn:hover { transform: translateY(-2px) scale(1.02); }
+.region-flag { font-size: 2rem; }
+.region-name { font-weight: 800; font-size: 1.05rem; }
+.region-desc { font-size: 0.8rem; opacity: 0.85; }
 
 /* Buy flow */
 .field { display: flex; flex-direction: column; gap: 0.35rem; margin-bottom: 1rem; }

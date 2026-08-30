@@ -73,6 +73,11 @@ button[type="submit"], .btn { background: var(--jungle); color: #fff; }
 .admin-header .btn-ghost { color: #fff; border-color: rgba(255,255,255,0.6); }
 
 .admin-main { padding: 1.5rem 2rem 3rem; max-width: 1100px; margin: 0 auto; }
+.admin-gamemode-head {
+  margin: 2.5rem 0 0.75rem; padding-bottom: 0.4rem; font-size: 1.4rem;
+  color: var(--jungle); border-bottom: 3px solid var(--gold);
+}
+.admin-gamemode-head:first-of-type { margin-top: 0.5rem; }
 .admin-section { margin-bottom: 2.5rem; }
 .admin-section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.8rem; }
 .admin-section-head h2 { margin: 0; color: var(--jungle); }

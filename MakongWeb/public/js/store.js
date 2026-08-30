@@ -1,14 +1,22 @@
-// Store page. You verify your Minecraft name once, then the catalogue knows
-// who it is selling to: it can show your rank and coins, price rank upgrades
-// against what you already own, and deliver to the right account.
-let allItems = { ranks: [], coins: [], other: [] };
-let ladder = [];        // the rank ladder, ascending
+// Store page. First you pick a region — Cambodia stays on this site (KHQR +
+// Telegram-approved delivery), Global is sent to the Tebex store instead.
+// Then you verify your Minecraft name once, and the catalogue knows who it
+// is selling to: it can show your rank and coins, price rank upgrades
+// against what you already own, and deliver to the right account. The
+// catalogue itself is split into gamemodes (Arcade, EcoSMP, BoxPvP,
+// PlotCity, HyperClash) — every gamemode sells ranks, and EcoSMP/BoxPvP also
+// sell keys and other items.
+let allItems = { ranks: [], keys: [], other: [] };
+let gamemodes = [];      // [{id, name, categories}], from /api/items
+let activeGamemode = null;
+let ladder = [];        // the rank ladder for activeGamemode, ascending
 let account = null;
 let activeCategory = "ranks";
 let pendingItem = null; // the item sitting in the confirmation dialog
 let pendingUpgradeFrom = null; // rank id being traded in, or null for a plain buy
 
-const CATEGORY_KEYS = { ranks: "store.tab.ranks", coins: "store.tab.coins", other: "store.tab.other" };
+const CATEGORY_KEYS = { ranks: "store.tab.ranks", keys: "store.tab.keys", other: "store.tab.other" };
+const REGION_KEY = "makong-region";
 
 const gate = document.getElementById("store-gate");
 const body = document.getElementById("store-body");
@@ -16,6 +24,49 @@ const nameInput = document.getElementById("store-name");
 const namePreview = document.getElementById("store-name-preview");
 const verifyBtn = document.getElementById("store-verify-btn");
 let edition = "java";
+
+/* ---------------- Region gate ----------------
+   Cambodia stays on this site; Global is handed off to Tebex entirely, so
+   there's nothing to "come back" to — only the Cambodia choice is worth
+   remembering for the rest of this tab's session. */
+function storedRegion() {
+  try {
+    return sessionStorage.getItem(REGION_KEY);
+  } catch {
+    return null;
+  }
+}
+
+async function goGlobal() {
+  let cfg = null;
+  try {
+    cfg = await getSiteConfig();
+  } catch {
+    /* fall through to the hardcoded fallback below */
+  }
+  window.location.href = (cfg && cfg.tebexUrl) || "https://makong.tebex.io/";
+}
+
+function chooseKhmer() {
+  try {
+    sessionStorage.setItem(REGION_KEY, "khmer");
+  } catch {
+    /* private browsing — the choice just won't persist across page loads */
+  }
+  document.getElementById("region-modal").classList.remove("open");
+  bootStore();
+}
+
+document.getElementById("region-khmer").addEventListener("click", chooseKhmer);
+document.getElementById("region-global").addEventListener("click", goGlobal);
+
+function initRegionGate() {
+  if (storedRegion() === "khmer") {
+    bootStore();
+  } else {
+    document.getElementById("region-modal").classList.add("open");
+  }
+}
 
 function escapeHtml(str) {
   const div = document.createElement("div");
@@ -60,10 +111,20 @@ async function verifyName() {
   }
 }
 
+async function loadLadder() {
+  try {
+    ladder = (await Account.ranks(activeGamemode)).ranks || [];
+  } catch {
+    ladder = [];
+  }
+}
+
 async function showStore() {
   gate.hidden = true;
   body.hidden = false;
   renderProfile();
+  renderGamemodeTabs();
+  await loadLadder();
   renderTabs();
   renderGrid();
 }
@@ -116,10 +177,38 @@ function renderProfile() {
 }
 
 /* ---------------- Catalogue ---------------- */
+
+// Gamemode tabs (Arcade / EcoSMP / BoxPvP / PlotCity / HyperClash). Switching
+// gamemode also re-picks the active category, since not every gamemode
+// sells the same ones (only EcoSMP/BoxPvP have Keys and Other), and
+// re-fetches the rank ladder, since ranks are priced per gamemode.
+function renderGamemodeTabs() {
+  const wrap = document.getElementById("gamemode-tabs");
+  wrap.innerHTML = "";
+  gamemodes.forEach((gm) => {
+    const btn = document.createElement("button");
+    btn.textContent = gm.name;
+    btn.className = gm.id === activeGamemode ? "active" : "";
+    btn.addEventListener("click", async () => {
+      if (gm.id === activeGamemode) return;
+      activeGamemode = gm.id;
+      if (!gm.categories.includes(activeCategory)) activeCategory = gm.categories[0];
+      renderGamemodeTabs();
+      await loadLadder();
+      renderTabs();
+      renderGrid();
+    });
+    wrap.appendChild(btn);
+  });
+}
+
+// Category tabs (Ranks / Keys / Other) — only the ones the active gamemode sells.
 function renderTabs() {
   const wrap = document.getElementById("store-tabs");
   wrap.innerHTML = "";
-  Object.keys(CATEGORY_KEYS).forEach((cat) => {
+  const gm = gamemodes.find((g) => g.id === activeGamemode);
+  const cats = gm ? gm.categories : Object.keys(CATEGORY_KEYS);
+  cats.forEach((cat) => {
     const btn = document.createElement("button");
     btn.textContent = t(CATEGORY_KEYS[cat]);
     btn.className = cat === activeCategory ? "active" : "";
@@ -259,7 +348,9 @@ function actionsMarkup(item) {
 
 function renderGrid() {
   const grid = document.getElementById("item-grid");
-  const items = (allItems[activeCategory] || []).map((item) => ({ ...item, category: activeCategory }));
+  const items = (allItems[activeCategory] || [])
+    .filter((item) => item.gamemode === activeGamemode)
+    .map((item) => ({ ...item, category: activeCategory }));
   if (!items.length) {
     grid.innerHTML = `<p class="empty-note">${escapeHtml(t("store.empty"))}</p>`;
     return;
@@ -605,10 +696,15 @@ document.addEventListener("i18n:change", () => {
 // routes/account.js `verify()`) — a missing plugin just means names are
 // accepted as typed and ranks/coins stay hidden (`account.linked === false`).
 // The "Unavailable" panel below is reserved for an actual outage: the items
-// or account fetch itself failing, not "no plugin configured".
-(async function initStore() {
+// or account fetch itself failing, not "no plugin configured". Only runs
+// once a region is picked — see initRegionGate() at the very bottom.
+async function bootStore() {
   try {
-    [allItems, account] = await Promise.all([fetchJSON("/api/items"), Account.load("store")]);
+    const items = await fetchJSON("/api/items");
+    gamemodes = items.gamemodes || [];
+    delete items.gamemodes;
+    allItems = items;
+    account = await Account.load("store");
   } catch {
     gate.hidden = true;
     const box = document.getElementById("store-unavailable");
@@ -628,11 +724,14 @@ document.addEventListener("i18n:change", () => {
     return;
   }
 
-  try {
-    ladder = (await Account.ranks()).ranks || [];
-  } catch {
-    ladder = [];
+  activeGamemode = gamemodes[0] ? gamemodes[0].id : null;
+  if (activeGamemode) {
+    const gm = gamemodes.find((g) => g.id === activeGamemode);
+    activeCategory = gm.categories[0];
   }
+  await loadLadder();
   if (account && account.player) return showStore();
   updatePreview();
-})();
+}
+
+initRegionGate();

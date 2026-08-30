@@ -14,6 +14,14 @@
 
   <main class="admin-main">
     <form class="admin-form" method="POST" action="<%= item ? '/admin/items/' + item.id : '/admin/items' %>" enctype="multipart/form-data">
+      <label>Gamemode
+        <select name="gamemode" required>
+          <% gamemodes.forEach(function(gm) { %>
+            <option value="<%= gm.id %>" <%= (item ? item.gamemode : defaultGamemode) === gm.id ? "selected" : "" %>><%= gm.name %></option>
+          <% }) %>
+        </select>
+      </label>
+
       <label>Category
         <select name="category" required>
           <% categories.forEach(function(cat) { %>
@@ -43,7 +51,7 @@
       </label>
 
       <label>Delivery command (run when you Accept an order in Telegram)
-        <input type="text" name="deliveryCommand" value="<%= item ? (item.deliveryCommand || '') : '' %>" placeholder="lp user {player} parent add apsara" />
+        <input type="text" name="deliveryCommand" value="<%= item ? (item.deliveryCommand || '') : '' %>" placeholder="lp user {player} parent add vip" />
         <small style="font-weight:400; color:#7a7060;">Use <code>{player}</code> for the in-server name. Leave blank to deliver this item by hand.</small>
       </label>
 

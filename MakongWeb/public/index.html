@@ -71,7 +71,6 @@ try { if (localStorage.getItem("makong-theme") === "light") document.documentEle
       <ul class="nav-links">
         <li><a href="/" data-i18n="nav.home">🏠 Home</a></li>
         <li><a href="/store" data-i18n="nav.store">💰 Store</a></li>
-        <li><a href="/map" data-i18n="nav.map">🗺️ Map</a></li>
       </ul>
       <button class="nav-toggle" onclick="toggleNav()" aria-label="Menu" data-i18n-aria="nav.menu">&#9776;</button>
     </div>
@@ -95,11 +94,11 @@ try { if (localStorage.getItem("makong-theme") === "light") document.documentEle
     <p class="tagline" id="hero-tagline"></p>
 
     <div class="hero-actions">
-      <a id="telegram-btn" class="action-btn telegram" href="#" target="_blank" rel="noopener">
-        <span class="btn-icon">✈️</span>
+      <a id="discord-btn" class="action-btn discord" href="#" target="_blank" rel="noopener">
+        <span class="btn-icon">💬</span>
         <span class="btn-text">
-          <span class="btn-title" data-i18n="home.telegram">Telegram</span>
-          <small data-i18n="home.telegramSub">Join our community</small>
+          <span class="btn-title" data-i18n="home.discord">Discord</span>
+          <small data-i18n="home.discordSub">Join our community</small>
         </span>
       </a>
       <a id="ip-btn" class="action-btn server-ip" href="#">
@@ -133,23 +132,6 @@ try { if (localStorage.getItem("makong-theme") === "light") document.documentEle
         <p class="welcome-box" id="welcome-message"></p>
 
         <div class="feature-grid" id="feature-grid"></div>
-
-        <div class="info-grid">
-          <div class="info-card stacked">
-            <div class="value" id="release-value">—</div>
-            <div class="label" data-i18n="home.released">Released</div>
-            <div class="stat-divider"></div>
-            <div class="sub-value" id="server-age-value">—</div>
-            <div class="sub-label" data-i18n="home.serverAge">Server Age</div>
-          </div>
-          <div class="info-card stacked">
-            <div class="value" id="season-value">—</div>
-            <div class="label" data-i18n="home.currentSeason">Current Season</div>
-            <div class="stat-divider"></div>
-            <div class="sub-value" id="season-age-value">—</div>
-            <div class="sub-label" data-i18n="home.seasonAge">Season Age</div>
-          </div>
-        </div>
       </div>
     </section>
   </main>
