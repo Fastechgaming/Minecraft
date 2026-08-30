@@ -25,7 +25,7 @@ const I18n = (() => {
       "nav.store": "💰 Store",
       "nav.menu": "Menu",
       "nav.language": "Language",
-      "footer.copy": "© {year} Makong Network · Cambodia Minecraft Server 🇰🇭",
+      "footer.copy": "© {year} Makong Network · Asia Minecraft Server 🌏",
 
       /* ---- home ---- */
       "home.discord": "Discord",
@@ -301,7 +301,7 @@ const I18n = (() => {
       "nav.store": "💰 ហាង",
       "nav.menu": "ម៉ឺនុយ",
       "nav.language": "ភាសា",
-      "footer.copy": "© {year} Makong Network · Minecraft Server កម្ពុជា 🇰🇭",
+      "footer.copy": "© {year} Makong Network · Minecraft Server អាស៊ី 🌏",
 
       /* ---- home ---- */
       "home.discord": "Discord",

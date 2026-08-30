@@ -10,54 +10,59 @@
    --------------------------------------------------------------- */
 :root {
   /* shared brand accents */
-  --gold: #f7b537;
-  --gold-light: #ffd873;
-  --gold-deep: #c2760f;
-  --jungle: #2f8a4a;
-  --jungle-dark: #1f6636;
-  --moss: #6bb544;
-  --moss-dark: #438029;
-  --moss-light: #99d66d;
-  --flower-pink: #ff9ec4;
-  --flower-white: #fffaf0;
-  /* nav + footer stay dark stone in both themes, so these never flip */
-  --link-accent: #9fe07a;
-  --on-dark: #f8ecd3;
-  --on-dark-soft: #d8c39c;
-  --bar-bg: linear-gradient(180deg, #2a1c0e, #150e06);
+  --gold: #ffca4d;
+  --gold-light: #ffe38a;
+  --gold-deep: #d99a1f;
+  --jungle: #34b358;
+  --jungle-dark: #1d6b34;
+  --moss: #7fd858;
+  --moss-dark: #4f9c34;
+  --moss-light: #b6f08a;
+  --flower-pink: #ff8fc2;
+  --flower-white: #f4fff0;
+  --flower-red: #ff6b5e;
+  --flower-purple: #c58bff;
+  --water-blue: #57d0e8;
+  --firefly-glow: #ddff7e;
+  --firefly-glow-2: #8ce8ff;
+  /* nav + footer stay dark forest in both themes, so these never flip */
+  --link-accent: #a6ff8a;
+  --on-dark: #eef7ea;
+  --on-dark-soft: #bcd9b8;
+  --bar-bg: linear-gradient(180deg, #12281c, #06120c);
   --radius: 18px;
   --nav-h: 72px;
 
-  /* --- DARK theme (default): jungle night --- */
-  --cream: #1d1409;
-  --cream-dark: #2c2013;
-  --ink: #f8ecd3;
-  --ink-soft: #cdb28a;
-  --brown: #8a6238;
-  --brown-dark: #ffd873;
-  --brown-darkest: #100a04;
+  /* --- DARK theme (default): magical night forest --- */
+  --cream: #0a1712;
+  --cream-dark: #13291d;
+  --ink: #eef7ea;
+  --ink-soft: #a2c69c;
+  --brown: #7c5a34;
+  --brown-dark: #ffdb70;
+  --brown-darkest: #050d08;
   --terracotta: #ff8f5e;
   --success: #7ad06a;
-  --sky-top: #3a4f6b;
-  --sky-bottom: #23324a;
-  --sky-deep: #14202f;
-  --input-bg: #33251c;
+  --sky-top: #173a2b;
+  --sky-bottom: #0b2118;
+  --sky-deep: #050f0a;
+  --input-bg: #17301f;
   --tagline-shadow: 0 2px 6px rgba(0, 0, 0, 0.75), 0 1px 2px rgba(0, 0, 0, 0.9);
 
-  --stone-light: #74593a;
-  --stone: #5d4527;
-  --stone-mid: #48331a;
-  --stone-dark: #8a6a3f;
-  --stone-darkest: #120c06;
+  --stone-light: #3f6b46;
+  --stone: #2c4f34;
+  --stone-mid: #1f3826;
+  --stone-dark: #578a5c;
+  --stone-darkest: #0a1810;
 
   --stone-surface:
-    radial-gradient(circle at 16% 20%, rgba(255, 235, 200, 0.14) 0%, transparent 5%),
+    radial-gradient(circle at 16% 20%, rgba(200, 255, 200, 0.14) 0%, transparent 5%),
     radial-gradient(circle at 74% 62%, rgba(0, 0, 0, 0.22) 0%, transparent 6%),
-    radial-gradient(circle at 42% 82%, rgba(255, 235, 200, 0.09) 0%, transparent 4%),
+    radial-gradient(circle at 42% 82%, rgba(200, 255, 200, 0.09) 0%, transparent 4%),
     radial-gradient(circle at 86% 22%, rgba(0, 0, 0, 0.2) 0%, transparent 5%),
     radial-gradient(circle at 30% 48%, rgba(0, 0, 0, 0.16) 0%, transparent 4%),
     linear-gradient(155deg, var(--stone-light) 0%, var(--stone) 55%, var(--stone-mid) 100%);
-  --stone-bevel: inset 0 2px 0 rgba(255, 224, 176, 0.24), inset 0 -3px 0 rgba(0, 0, 0, 0.4);
+  --stone-bevel: inset 0 2px 0 rgba(210, 255, 200, 0.2), inset 0 -3px 0 rgba(0, 0, 0, 0.4);
 
   --wood-surface:
     repeating-linear-gradient(180deg, rgba(0, 0, 0, 0.14) 0 2px, transparent 2px 9px),
@@ -69,29 +74,29 @@
   --press-shadow-active: 0 1px 0 var(--stone-darkest);
 }
 
-/* --- LIGHT theme: warm parchment daylight --- */
+/* --- LIGHT theme: vibrant sunlit forest day --- */
 :root[data-theme="light"] {
-  --link-accent: #2f7d1f;
-  --cream: #fff3d9;
-  --cream-dark: #ffe4ad;
-  --ink: #3a2210;
-  --ink-soft: #6b4423;
-  --brown: #7a4a22;
-  --brown-dark: #40230f;
-  --brown-darkest: #2a1608;
+  --link-accent: #1f7d33;
+  --cream: #eef8e0;
+  --cream-dark: #dcf0c4;
+  --ink: #163a1c;
+  --ink-soft: #3f6b3a;
+  --brown: #8a6030;
+  --brown-dark: #1c4a22;
+  --brown-darkest: #0f2812;
   --terracotta: #d9542f;
   --success: #2f8a4a;
-  --sky-top: #ffe9b8;
-  --sky-bottom: #f7a238;
-  --sky-deep: #c9631f;
-  --input-bg: #fffdf7;
+  --sky-top: #bdeaff;
+  --sky-bottom: #cdf0a0;
+  --sky-deep: #9fdd7a;
+  --input-bg: #ffffff;
   --tagline-shadow: none;
 
-  --stone-light: #fbeecb;
-  --stone: #f0d99a;
-  --stone-mid: #dfb96a;
-  --stone-dark: #a8783f;
-  --stone-darkest: #6b4726;
+  --stone-light: #f5fbe8;
+  --stone: #e2f2c8;
+  --stone-mid: #c3e39a;
+  --stone-dark: #7fae5a;
+  --stone-darkest: #345c2a;
 
   --stone-surface:
     radial-gradient(circle at 16% 20%, rgba(255, 255, 255, 0.4) 0%, transparent 5%),
@@ -107,8 +112,8 @@
     linear-gradient(155deg, #c9945c 0%, #a8723f 55%, #8a5a30 100%);
   --wood-bevel: inset 0 2px 0 rgba(255, 224, 176, 0.5), inset 0 -3px 0 rgba(0, 0, 0, 0.25);
 
-  --shadow-hard: 4px 4px 0 rgba(107, 71, 38, 0.28), 5px 8px 14px rgba(107, 71, 38, 0.16);
-  --press-shadow: 0 5px 0 var(--stone-darkest), 0 7px 12px rgba(107, 71, 38, 0.22);
+  --shadow-hard: 4px 4px 0 rgba(53, 74, 38, 0.24), 5px 8px 14px rgba(53, 74, 38, 0.14);
+  --press-shadow: 0 5px 0 var(--stone-darkest), 0 7px 12px rgba(53, 74, 38, 0.2);
   --press-shadow-active: 0 1px 0 var(--stone-darkest);
 }
 
@@ -118,7 +123,12 @@ html { scroll-behavior: smooth; }
 body {
   margin: 0;
   font-family: "Noto Sans", "Kantumruy Pro", system-ui, sans-serif;
-  background: var(--cream);
+  /* dappled forest light: soft color pools over the base tone, not a flat fill */
+  background:
+    radial-gradient(720px 420px at 8% 0%, rgba(127, 216, 88, 0.16), transparent 60%),
+    radial-gradient(640px 380px at 95% 15%, rgba(255, 202, 77, 0.12), transparent 55%),
+    radial-gradient(760px 460px at 50% 100%, rgba(87, 208, 232, 0.08), transparent 60%),
+    var(--cream);
   color: var(--ink);
   line-height: 1.5;
 }
@@ -400,7 +410,7 @@ button { font-family: inherit; }
   text-align: center;
   overflow: hidden;
 }
-/* soft warm glow behind the logo, like sun filtering through the canopy */
+/* soft glow behind the logo — warm sunlight by day, cool moonlight by night */
 .hero::before {
   content: "";
   position: absolute;
@@ -413,26 +423,58 @@ button { font-family: inherit; }
   pointer-events: none;
   z-index: 0;
 }
+:root:not([data-theme="light"]) .hero::before {
+  background: radial-gradient(circle, rgba(200, 240, 220, 0.35) 0%, rgba(140, 232, 255, 0.16) 45%, rgba(140, 232, 255, 0) 72%);
+}
 .hero > * { position: relative; z-index: 1; }
 
+/* Fireflies: night-forest magic. Visible by default (dark is the default
+   theme); hidden in daylight, where glowing bugs would look out of place. */
 .firefly {
   position: absolute;
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #fff3b0;
-  box-shadow: 0 0 8px 3px rgba(255, 243, 176, 0.9);
+  background: var(--firefly-glow);
+  box-shadow: 0 0 6px 2px var(--firefly-glow), 0 0 14px 6px rgba(221, 255, 126, 0.5);
   opacity: 0;
-  animation: firefly-float 7s ease-in-out infinite;
+  animation: firefly-float 8s ease-in-out infinite;
   pointer-events: none;
   z-index: 1;
 }
+.firefly.blue {
+  background: var(--firefly-glow-2);
+  box-shadow: 0 0 6px 2px var(--firefly-glow-2), 0 0 14px 6px rgba(140, 232, 255, 0.5);
+}
+:root[data-theme="light"] .firefly { display: none; }
 @keyframes firefly-float {
-  0% { opacity: 0; transform: translate(0, 0) scale(0.8); }
-  15% { opacity: 0.9; }
-  50% { opacity: 0.5; transform: translate(14px, -22px) scale(1.1); }
-  85% { opacity: 0.9; }
-  100% { opacity: 0; transform: translate(-10px, -40px) scale(0.8); }
+  0% { opacity: 0; transform: translate(0, 0) scale(0.7); }
+  12% { opacity: 1; }
+  30% { transform: translate(16px, -18px) scale(1.15); }
+  50% { opacity: 0.4; transform: translate(-10px, -34px) scale(0.9); }
+  70% { opacity: 1; transform: translate(12px, -50px) scale(1.1); }
+  88% { opacity: 0.8; }
+  100% { opacity: 0; transform: translate(-16px, -68px) scale(0.7); }
+}
+
+/* Floating leaves + petals drifting down through the hero — the "lively,
+   colorful forest" ambience, on in both themes. */
+.leaf-particle {
+  position: absolute;
+  top: -8%;
+  font-size: 1.1rem;
+  opacity: 0;
+  animation: leaf-drift linear infinite;
+  pointer-events: none;
+  z-index: 1;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.25));
+}
+@keyframes leaf-drift {
+  0% { opacity: 0; transform: translate(0, 0) rotate(0deg); }
+  8% { opacity: 0.95; }
+  50% { transform: translate(38px, 46vh) rotate(170deg); }
+  92% { opacity: 0.9; }
+  100% { opacity: 0; transform: translate(-24px, 96vh) rotate(340deg); }
 }
 
 /* Hangs like jungle vines/fronds draping in from the top corners. */
