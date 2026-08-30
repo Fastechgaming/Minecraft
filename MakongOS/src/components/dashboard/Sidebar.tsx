@@ -18,14 +18,7 @@ function buildNav(guildId: string): NavGroup[] {
   const base = `/dashboard/${guildId}`;
   return [
     { title: '', items: [{ href: base, label: 'Overview', icon: '📊' }] },
-    {
-      title: 'Server',
-      items: [
-        { href: `${base}/server`, label: 'General', icon: '⚙️' },
-        { href: `${base}/server/welcome`, label: 'Welcome', icon: '👋' },
-        { href: `${base}/server/minecraft`, label: 'Minecraft', icon: '⛏️' }
-      ]
-    },
+    { title: 'Server', items: [{ href: `${base}/server`, label: 'General', icon: '⚙️' }] },
     {
       title: 'AI',
       items: [
@@ -33,22 +26,12 @@ function buildNav(guildId: string): NavGroup[] {
         { href: `${base}/ai/knowledge`, label: 'Knowledge', icon: '📚' }
       ]
     },
-    {
-      title: 'Moderation',
-      items: [
-        { href: `${base}/moderation`, label: 'AutoMod & Anti-Spam', icon: '🛡️' },
-        { href: `${base}/moderation/cases`, label: 'Cases', icon: '📁' }
-      ]
-    },
-    {
-      title: 'Community',
-      items: [
-        { href: `${base}/community`, label: 'XP, Games & Roles', icon: '🎮' }
-      ]
-    },
+    { title: 'Economy', items: [{ href: `${base}/economy`, label: 'Settings', icon: '💰' }] },
     { title: 'Tickets', items: [{ href: `${base}/tickets`, label: 'Panels & Categories', icon: '🎫' }] },
+    { title: 'Suggestions', items: [{ href: `${base}/suggestions`, label: 'Queue & Settings', icon: '📣' }] },
+    { title: 'Giveaways', items: [{ href: `${base}/giveaways`, label: 'Active & History', icon: '🎉' }] },
     { title: 'Music', items: [{ href: `${base}/music`, label: 'Settings', icon: '🎵' }] },
-    { title: 'Automation', items: [{ href: `${base}/automation`, label: 'Rules', icon: '🧩' }] },
+    { title: 'Community', items: [{ href: `${base}/community`, label: 'XP & Leaderboard', icon: '📈' }] },
     { title: 'Commands', items: [{ href: `${base}/commands`, label: 'Command Manager', icon: '⌨️' }] },
     { title: 'Logs', items: [{ href: `${base}/logs`, label: 'Audit Logs', icon: '🧾' }] },
     { title: 'System', items: [{ href: `${base}/system`, label: 'Health & Providers', icon: '🩺' }] }

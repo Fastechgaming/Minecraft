@@ -33,7 +33,6 @@ export function CommunitySettingsForm({ guildId, initial }: { guildId: string; i
       <section className="card flex flex-col gap-4 p-5">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-discord-muted">XP & Levels</h2>
         <ToggleRow label="Leveling Enabled" checked={form.levelingEnabled} onChange={(v) => set('levelingEnabled', v)} />
-        <ToggleRow label="Games Enabled" checked={form.gamesEnabled} onChange={(v) => set('gamesEnabled', v)} />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Field label="XP per Message">
             <TextInput type="number" min={0} value={form.xpPerMessage} onChange={(e) => set('xpPerMessage', Number(e.target.value))} />

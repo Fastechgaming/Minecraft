@@ -2,7 +2,7 @@
   "name": "makongos",
   "version": "1.0.0",
   "private": true,
-  "description": "MakongOS - Discord Staff System bot + web dashboard in a single application",
+  "description": "MakongOS - AI-first Discord assistant bot + web dashboard in a single application",
   "scripts": {
     "dev": "cross-env NODE_ENV=development tsx watch src/server.ts",
     "build": "next build && tsc -p tsconfig.server.json",
@@ -21,21 +21,18 @@
     "@discordjs/voice": "^0.19.0",
     "@google/generative-ai": "^0.21.0",
     "@prisma/client": "^5.20.0",
-    "bcryptjs": "^2.4.3",
     "discord-api-types": "^0.37.100",
     "discord.js": "^14.16.3",
     "dotenv": "^16.4.5",
     "ffmpeg-static": "^5.2.0",
     "libsodium-wrappers": "^0.7.15",
-    "minecraft-server-util": "^5.4.4",
     "next": "^14.2.15",
     "next-auth": "^4.24.8",
     "play-dl": "^1.9.7",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "sodium-native": "^4.3.1",
-    "ws": "^8.18.0",
-    "zod": "^3.23.8"
+    "ws": "^8.18.0"
   },
   "devDependencies": {
     "@types/node": "^20.16.10",

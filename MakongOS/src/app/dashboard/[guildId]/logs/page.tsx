@@ -1,10 +1,7 @@
 import { prisma } from '../../../../database/prisma';
 import { LogFilters } from '../../../../components/dashboard/forms/LogFilters';
 
-const TYPES = [
-  'moderation', 'ticket', 'command', 'ai', 'error', 'member_join', 'member_leave',
-  'role_change', 'channel_change', 'message_delete', 'message_edit', 'anti_spam', 'security'
-];
+const TYPES = ['ticket', 'command', 'ai', 'error', 'member_join', 'member_leave', 'suggestion', 'giveaway'];
 
 export default async function LogsPage({ params, searchParams }: { params: { guildId: string }; searchParams: Record<string, string | undefined> }) {
   const { type, userId, moderatorId, channelId } = searchParams;
@@ -25,7 +22,7 @@ export default async function LogsPage({ params, searchParams }: { params: { gui
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-bold text-white">Audit Logs</h1>
-        <p className="text-discord-muted">Searchable history across every system: moderation, tickets, commands, AI, and more.</p>
+        <p className="text-discord-muted">Searchable history across every system: tickets, commands, AI, suggestions, giveaways, and more.</p>
       </div>
 
       <LogFilters types={TYPES} current={{ type, userId, moderatorId, channelId }} />

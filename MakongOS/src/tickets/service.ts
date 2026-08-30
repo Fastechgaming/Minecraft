@@ -1,10 +1,4 @@
-import {
-  ChannelType,
-  PermissionFlagsBits,
-  type Guild,
-  type TextChannel,
-  type CategoryChannel
-} from 'discord.js';
+import { ChannelType, PermissionFlagsBits, type Guild, type TextChannel, type CategoryChannel } from 'discord.js';
 import { prisma } from '../database/prisma';
 import { getGuildSettings } from '../database/settingsCache';
 
@@ -36,18 +30,20 @@ export async function nextTicketNumber(guildId: string): Promise<number> {
   return (last?.number ?? 1000) + 1;
 }
 
-export async function createTicketChannel(
-  guild: Guild,
-  categoryId: string | null,
-  opener: { id: string; username: string },
-  formAnswers?: Record<string, string>
-) {
+export async function countOpenTicketsForUser(guildId: string, userId: string): Promise<number> {
+  return prisma.ticket.count({ where: { guildId, openerId: userId, status: { not: 'closed' } } });
+}
+
+export async function createTicketChannel(guild: Guild, categoryId: string | null, opener: { id: string; username: string }) {
   const settings = await getGuildSettings(guild.id);
   const number = await nextTicketNumber(guild.id);
 
-  const category = settings.ticketCategoryId
-    ? ((await guild.channels.fetch(settings.ticketCategoryId).catch(() => null)) as CategoryChannel | null)
+  const category = categoryId ? await prisma.ticketCategory.findUnique({ where: { id: categoryId } }) : null;
+  const discordCategory = category?.discordCategoryId
+    ? ((await guild.channels.fetch(category.discordCategoryId).catch(() => null)) as CategoryChannel | null)
     : null;
+
+  const staffRoleIds = category?.staffRoleIds.length ? category.staffRoleIds : settings.staffRoleIds;
 
   const overwrites = [
     { id: guild.roles.everyone.id, deny: [PermissionFlagsBits.ViewChannel] },
@@ -55,7 +51,7 @@ export async function createTicketChannel(
       id: opener.id,
       allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory]
     },
-    ...settings.staffRoleIds.map((roleId) => ({
+    ...staffRoleIds.map((roleId) => ({
       id: roleId,
       allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory]
     }))
@@ -64,7 +60,7 @@ export async function createTicketChannel(
   const channel = await guild.channels.create({
     name: `ticket-${number}`,
     type: ChannelType.GuildText,
-    parent: category?.id,
+    parent: discordCategory?.id,
     permissionOverwrites: overwrites,
     topic: `Ticket #${number} opened by ${opener.username}`
   });
@@ -75,8 +71,7 @@ export async function createTicketChannel(
       categoryId: categoryId ?? undefined,
       number,
       channelId: channel.id,
-      openerId: opener.id,
-      formAnswers: formAnswers as never
+      openerId: opener.id
     }
   });
 

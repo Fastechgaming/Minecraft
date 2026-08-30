@@ -1,9 +1,11 @@
 import { getOrCreateDefaultPanel } from '../../../../tickets/service';
+import { getGuildSettings } from '../../../../database/settingsCache';
 import { prisma } from '../../../../database/prisma';
 import { TicketCategoryManager } from '../../../../components/dashboard/forms/TicketCategoryManager';
 
 export default async function TicketsPage({ params }: { params: { guildId: string } }) {
   const panel = await getOrCreateDefaultPanel(params.guildId);
+  const settings = await getGuildSettings(params.guildId);
   const [openCount, totalCount] = await Promise.all([
     prisma.ticket.count({ where: { guildId: params.guildId, status: { not: 'closed' } } }),
     prisma.ticket.count({ where: { guildId: params.guildId } })
@@ -14,8 +16,8 @@ export default async function TicketsPage({ params }: { params: { guildId: strin
       <div>
         <h1 className="text-2xl font-bold text-white">Tickets</h1>
         <p className="text-discord-muted">
-          {openCount} open / {totalCount} total. Run <code className="rounded bg-discord-panel2 px-1.5 py-0.5">/ticket-panel</code> in any channel to post
-          this panel.
+          {openCount} open / {totalCount} total · max {settings.ticketMaxOpenPerUser} open per member. Run{' '}
+          <code className="rounded bg-discord-panel2 px-1.5 py-0.5">/ticket-panel</code> in any channel to post this panel.
         </p>
       </div>
       <TicketCategoryManager

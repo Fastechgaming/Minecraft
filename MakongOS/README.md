@@ -1,6 +1,6 @@
 # MakongOS
 
-A production-grade Discord staff system for a Minecraft server community — the bot and its web dashboard ship as **one application, one process, one deploy**. There is nothing else to host separately.
+An AI-first Discord assistant for a Minecraft community — the bot and its web dashboard ship as **one application, one process, one deploy**. There is nothing else to host separately.
 
 ```
 npm install
@@ -10,8 +10,14 @@ npm start
 
 ## What's inside
 
-- **Discord bot** (discord.js v14) — moderation, anti-spam, tickets, music, games, XP/leveling, welcome/leave, self-role panels, Minecraft integration, and a Gemini-powered AI staff assistant.
-- **Web dashboard** (Next.js App Router) — Discord OAuth2 login, per-guild permission-gated settings, command manager, knowledge base editor, moderation case history, automation rule builder, searchable audit logs, and system health.
+- **AI Staff Assistant** (Gemini) — the centerpiece: natural chat, a response-decision engine (so it doesn't spam every message), a per-guild knowledge base, per-user memory, image understanding + generation, and a staff-escalation flow with inline **Answer** / **Add to Knowledge** buttons when the AI can't confidently help.
+- **Tickets** — panel + category based support tickets with staff roles, claim/close, transcripts, and per-user open-ticket limits.
+- **Economy & Social** — coins/bank, `/daily`, `/beg`, `/gamble`, transfers, and reputation.
+- **Suggestions** — member suggestions with reaction voting and staff approve/reject.
+- **Giveaways** — reaction-based giveaways with scheduled auto-end and rerolls.
+- **Music** — a queue-based player with a live "Now Playing" embed and playback buttons.
+- **Fun & Utility** — memes, animal facts, anime reaction gifs, coinflip/dice/8-ball, avatar/userinfo/botstats, urban dictionary, and a leveling/XP system with a leaderboard.
+- **Web dashboard** (Next.js App Router) — Discord OAuth2 login, per-guild permission-gated settings, command manager, knowledge base editor, and searchable audit logs.
 - **One custom Node server** (`src/server.ts`) boots the Next.js request handler and the Discord client side by side, sharing the same Prisma client and an in-process settings cache — a dashboard change (e.g. flipping "AI enabled") is picked up by the bot on its very next message, no restart required.
 - **PostgreSQL + Prisma** for all persistence (`prisma/schema.prisma`).
 
@@ -21,16 +27,15 @@ npm start
 src/
 ├── server.ts        # boots Next.js + the Discord client together
 ├── bot/              # client bootstrap, command/event framework, module registry
-│   └── modules/      # one FeatureModule per system: moderation, tickets, music, ai, ...
-├── ai/                # decision engine, knowledge retrieval, memory, moderation pipeline
-├── moderation/        # case service shared by commands + anti-spam + AI automod
+│   └── modules/      # one FeatureModule per system: ai, tickets, economy, fun, suggestions, giveaways, utility, music, core
+├── ai/                # decision engine, knowledge retrieval, memory, staff assistant + escalation
+├── economy/           # coins/bank/daily/beg/gamble/reputation service
 ├── tickets/           # ticket channel + transcript service
+├── suggestions/       # (inline in the module) reaction-vote review flow
+├── giveaways/         # scheduling, winner selection, reroll
 ├── music/             # queue manager + player (provider-agnostic)
-├── games/             # mini-game logic (tic-tac-toe, trivia, stats)
-├── community/         # XP/leveling, daily/weekly rewards, placeholders
-├── automation/         # WHEN/IF/THEN rule engine
-├── minecraft/ (via providers/minecraft) # Java/Bedrock status queries
-├── providers/         # swappable AI / music / Minecraft provider implementations
+├── stats/             # XP/leveling
+├── providers/         # swappable AI / music provider implementations
 ├── database/          # Prisma client singleton + guild settings cache
 ├── services/          # logger, permissions, cooldowns, audit log
 ├── lib/               # dashboard-only auth/session/guild-access helpers
@@ -39,7 +44,7 @@ src/
 └── components/        # dashboard UI
 ```
 
-New feature idea (e.g. giveaways)? Add one module under `src/bot/modules/`, register it in `src/bot/registry.ts`, and (optionally) a settings page under `src/app/dashboard/[guildId]/`. Nothing else needs to change.
+New feature idea? Add one module under `src/bot/modules/`, register it in `src/bot/registry.ts`, and (optionally) a settings page under `src/app/dashboard/[guildId]/`. Nothing else needs to change.
 
 ## Setup
 
@@ -51,8 +56,7 @@ New feature idea (e.g. giveaways)? Add one module under `src/bot/modules/`, regi
    - `BOT_OWNER_IDS` — comma-separated Discord user IDs that always get full dashboard access.
 2. `npm install`
 3. `npx prisma migrate deploy` (or `npm run db:migrate:dev` in development)
-4. `npm run deploy:commands` to register slash commands with Discord
-5. `npm run build && npm start` (or `npm run dev` for local development)
+4. `npm run build && npm start` (or `npm run dev` for local development). Slash commands auto-sync to every guild the bot is in on startup — no separate deploy step needed.
 
 ## Docker
 
@@ -72,5 +76,6 @@ pm2 start ecosystem.config.js
 ## Notes
 
 - All secrets live in environment variables and are never sent to the browser.
-- Every command, feature toggle, moderation threshold, AI behavior, ticket category, and automation rule is configurable from the dashboard — no code changes required for day-to-day administration.
-- The AI assistant only takes automatic moderation action above a configurable high-confidence threshold; medium-confidence findings are routed to a staff alert channel instead.
+- Every feature toggle, AI behavior setting, ticket category, economy amount, and knowledge base entry is configurable from the dashboard — no code changes required for day-to-day administration.
+- Fun/utility commands that depend on free third-party APIs (memes, animal facts, anime reactions, urban dictionary) fail gracefully with a friendly message if that API is unreachable — they never crash the bot.
+- Image filters/overlays (meme-style image editing) were intentionally **not** ported from the reference bot this was built from: that feature depends on a private, paid third-party API key and ships disabled by default even in the original project.

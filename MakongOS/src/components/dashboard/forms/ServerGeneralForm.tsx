@@ -73,14 +73,6 @@ export function ServerGeneralForm({ guildId, initial, channels, roles, botOnline
               ))}
             </Select>
           </Field>
-          <Field label="Moderation Log Channel">
-            <Select value={form.modLogChannelId ?? ''} onChange={(e) => set('modLogChannelId', e.target.value || null)}>
-              <option value="">Not set</option>
-              {channels.map((c) => (
-                <option key={c.id} value={c.id}>#{c.name}</option>
-              ))}
-            </Select>
-          </Field>
           <Field label="AI Escalation Channel">
             <Select value={form.aiEscalationChannel ?? ''} onChange={(e) => set('aiEscalationChannel', e.target.value || null)}>
               <option value="">Not set</option>
@@ -89,41 +81,32 @@ export function ServerGeneralForm({ guildId, initial, channels, roles, botOnline
               ))}
             </Select>
           </Field>
-          <Field label="Welcome Channel">
-            <Select value={form.welcomeChannelId ?? ''} onChange={(e) => set('welcomeChannelId', e.target.value || null)}>
-              <option value="">Not set</option>
+          <Field label="Suggestions Channel">
+            <Select value={form.suggestionsChannelId ?? ''} onChange={(e) => set('suggestionsChannelId', e.target.value || null)}>
+              <option value="">Not set (posts in the channel /suggest was used in)</option>
               {channels.map((c) => (
                 <option key={c.id} value={c.id}>#{c.name}</option>
               ))}
             </Select>
           </Field>
-          <Field label="Leave Channel">
-            <Select value={form.leaveChannelId ?? ''} onChange={(e) => set('leaveChannelId', e.target.value || null)}>
+          <Field label="Ticket Log Channel">
+            <Select value={form.ticketLogChannelId ?? ''} onChange={(e) => set('ticketLogChannelId', e.target.value || null)}>
               <option value="">Not set</option>
               {channels.map((c) => (
                 <option key={c.id} value={c.id}>#{c.name}</option>
               ))}
             </Select>
-          </Field>
-          <Field label="Ticket Category ID" hint="Paste a category channel ID">
-            <TextInput value={form.ticketCategoryId ?? ''} onChange={(e) => set('ticketCategoryId', e.target.value || null)} />
           </Field>
         </div>
       </section>
 
       <section className="card flex flex-col gap-4 p-5">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-discord-muted">Roles</h2>
-        <Field label="Staff Roles" hint="Can claim/close tickets and are considered staff by the AI escalation flow">
+        <Field label="Staff Roles" hint="Can claim/close tickets, review suggestions, and are considered staff by the AI escalation flow">
           <MultiRoleSelect roles={roles} value={form.staffRoleIds} onChange={(v) => set('staffRoleIds', v)} />
         </Field>
-        <Field label="Moderator Roles">
-          <MultiRoleSelect roles={roles} value={form.moderatorRoleIds} onChange={(v) => set('moderatorRoleIds', v)} />
-        </Field>
-        <Field label="Admin Roles">
+        <Field label="Admin Roles" hint="Full dashboard-equivalent control in Discord commands">
           <MultiRoleSelect roles={roles} value={form.adminRoleIds} onChange={(v) => set('adminRoleIds', v)} />
-        </Field>
-        <Field label="Default Roles on Join">
-          <MultiRoleSelect roles={roles} value={form.defaultRoleIds} onChange={(v) => set('defaultRoleIds', v)} />
         </Field>
         <Field label="DJ Roles" hint="Leave empty to let anyone control music">
           <MultiRoleSelect roles={roles} value={form.djRoleIds} onChange={(v) => set('djRoleIds', v)} />
@@ -133,15 +116,14 @@ export function ServerGeneralForm({ guildId, initial, channels, roles, botOnline
       <section className="card flex flex-col gap-3 p-5">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-discord-muted">Feature Toggles</h2>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          <ToggleRow label="Moderation" checked={form.moderationEnabled} onChange={(v) => set('moderationEnabled', v)} />
-          <ToggleRow label="Anti-Spam" checked={form.antiSpamEnabled} onChange={(v) => set('antiSpamEnabled', v)} />
           <ToggleRow label="AI Staff Assistant" checked={form.aiEnabled} onChange={(v) => set('aiEnabled', v)} />
           <ToggleRow label="Music" checked={form.musicEnabled} onChange={(v) => set('musicEnabled', v)} />
           <ToggleRow label="Tickets" checked={form.ticketsEnabled} onChange={(v) => set('ticketsEnabled', v)} />
+          <ToggleRow label="Economy" checked={form.economyEnabled} onChange={(v) => set('economyEnabled', v)} />
+          <ToggleRow label="Fun Commands" checked={form.funEnabled} onChange={(v) => set('funEnabled', v)} />
+          <ToggleRow label="Suggestions" checked={form.suggestionsEnabled} onChange={(v) => set('suggestionsEnabled', v)} />
+          <ToggleRow label="Giveaways" checked={form.giveawaysEnabled} onChange={(v) => set('giveawaysEnabled', v)} />
           <ToggleRow label="Leveling / XP" checked={form.levelingEnabled} onChange={(v) => set('levelingEnabled', v)} />
-          <ToggleRow label="Games" checked={form.gamesEnabled} onChange={(v) => set('gamesEnabled', v)} />
-          <ToggleRow label="Welcome Messages" checked={form.welcomeEnabled} onChange={(v) => set('welcomeEnabled', v)} />
-          <ToggleRow label="Automation Engine" checked={form.automationEnabled} onChange={(v) => set('automationEnabled', v)} />
         </div>
       </section>
 

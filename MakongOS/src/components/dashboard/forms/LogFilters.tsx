@@ -39,7 +39,7 @@ export function LogFilters({ types, current }: { types: string[]; current: Curre
       <Field label="User ID">
         <TextInput value={filters.userId ?? ''} onChange={(e) => setFilters((f) => ({ ...f, userId: e.target.value }))} placeholder="123456789" />
       </Field>
-      <Field label="Moderator ID">
+      <Field label="Staff/Reviewer ID">
         <TextInput value={filters.moderatorId ?? ''} onChange={(e) => setFilters((f) => ({ ...f, moderatorId: e.target.value }))} />
       </Field>
       <Field label="Channel ID">

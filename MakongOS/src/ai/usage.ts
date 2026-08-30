@@ -5,7 +5,7 @@ function todayUtc(): Date {
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
 }
 
-type UsageField = 'messagesAnalyzed' | 'responses' | 'imageAnalyses' | 'imagesGenerated' | 'moderationAlerts' | 'escalations';
+type UsageField = 'messagesAnalyzed' | 'responses' | 'imageAnalyses' | 'imagesGenerated' | 'escalations';
 
 export async function incrementUsage(guildId: string, field: UsageField, amount = 1): Promise<void> {
   const date = todayUtc();

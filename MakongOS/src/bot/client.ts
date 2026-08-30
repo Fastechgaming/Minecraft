@@ -6,7 +6,6 @@ import { ensureGuild } from '../database/settingsCache';
 import { consumeCooldown, remainingCooldownMs } from '../services/cooldowns';
 import { recordAuditLog } from '../services/auditLog';
 import { createLogger } from '../services/logger';
-import { automationEngine } from '../automation/engine';
 import { publishBotClient, publishCommandRegistry } from './globalClient';
 import { registerCommandsForGuild, registerCommandsForGuilds } from './registerCommands';
 
@@ -123,12 +122,6 @@ client.on(Events.InteractionCreate, async (interaction) => {
           action: `/${interaction.commandName}`,
           userId: interaction.user.id,
           channelId: interaction.channelId
-        });
-        await automationEngine.trigger(client, 'command_used', {
-          guildId: interaction.guildId!,
-          userId: interaction.user.id,
-          channelId: interaction.channelId,
-          data: { command: interaction.commandName }
         });
       }
       return;

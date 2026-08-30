@@ -22,90 +22,59 @@ model Guild {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  settings           GuildSettings?
-  members            Member[]
-  moderationCases    ModerationCase[]
-  warnings           Warning[]
-  tickets            Ticket[]
-  ticketPanels       TicketPanel[]
-  aiConversations    AIConversation[]
-  aiMemories         AIMemory[]
-  knowledgeEntries   KnowledgeBase[]
-  commandConfigs     CommandConfig[]
-  automationRules    AutomationRule[]
-  xpEntries          XP[]
-  gameStats          GameStats[]
-  musicSessions      MusicSession[]
-  announcements      Announcement[]
-  events             Event[]
-  auditLogs          AuditLog[]
-  reactionRolePanels ReactionRolePanel[]
-  minecraftServers   MinecraftServer[]
-  aiUsage            AIUsage[]
-  aiEscalations      AIEscalation[]
-  dashboardAccess    DashboardAccess[]
-  antiSpamHits       AntiSpamHit[]
-  welcomeConfig      WelcomeConfig?
+  settings         GuildSettings?
+  members          Member[]
+  tickets          Ticket[]
+  ticketPanels     TicketPanel[]
+  aiConversations  AIConversation[]
+  aiMemories       AIMemory[]
+  knowledgeEntries KnowledgeBase[]
+  commandConfigs   CommandConfig[]
+  xpEntries        XP[]
+  musicSessions    MusicSession[]
+  auditLogs        AuditLog[]
+  aiUsage          AIUsage[]
+  aiEscalations    AIEscalation[]
+  dashboardAccess  DashboardAccess[]
+  economyProfiles  EconomyProfile[]
+  suggestions      Suggestion[]
+  giveaways        Giveaway[]
 
   @@map("guilds")
 }
 
-model WelcomeConfig {
-  id               String  @id @default(cuid())
-  guildId          String  @unique
-  guild            Guild   @relation(fields: [guildId], references: [id], onDelete: Cascade)
-  embedTitle       String  @default("👋 Welcome {user}!")
-  embedDescription String  @default("Welcome to {server}! You are member #{member_count}.")
-  embedImage       String?
-  embedColor       String  @default("#23A559")
-  dmEnabled        Boolean @default(false)
-  dmMessage        String?
-  buttons          Json? // [{ label, url }]
-  leaveEnabled     Boolean @default(true)
-  leaveMessage     String  @default("{username} has left the server. We now have {member_count} members.")
-
-  @@map("welcome_configs")
-}
-
 model GuildSettings {
-  id       String @id @default(cuid())
-  guildId  String @unique
-  guild    Guild  @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  id      String @id @default(cuid())
+  guildId String @unique
+  guild   Guild  @relation(fields: [guildId], references: [id], onDelete: Cascade)
 
-  prefix        String @default("!")
-  language      String @default("en")
-  timezone      String @default("UTC")
-  embedColor    String @default("#5865F2")
+  prefix     String @default("!")
+  language   String @default("en")
+  timezone   String @default("UTC")
+  embedColor String @default("#5865F2")
 
   // Channels
-  logChannelId         String?
-  modLogChannelId      String?
-  aiEscalationChannel  String?
-  welcomeChannelId     String?
-  leaveChannelId       String?
-  aiChannelIds         String[] @default([])
-  musicChannelIds      String[] @default([])
+  logChannelId        String?
+  aiEscalationChannel String?
+  suggestionsChannelId String?
+  ticketLogChannelId  String?
+  aiChannelIds        String[] @default([])
+  musicChannelIds     String[] @default([])
 
   // Roles
-  staffRoleIds     String[] @default([])
-  moderatorRoleIds String[] @default([])
-  adminRoleIds     String[] @default([])
-  defaultRoleIds   String[] @default([])
-  djRoleIds        String[] @default([])
-
-  // Ticket
-  ticketCategoryId String?
+  staffRoleIds String[] @default([])
+  adminRoleIds String[] @default([])
+  djRoleIds    String[] @default([])
 
   // Feature toggles
-  moderationEnabled Boolean @default(true)
-  antiSpamEnabled   Boolean @default(true)
-  aiEnabled         Boolean @default(false)
-  musicEnabled      Boolean @default(true)
-  ticketsEnabled    Boolean @default(true)
-  levelingEnabled   Boolean @default(true)
-  gamesEnabled      Boolean @default(true)
-  welcomeEnabled    Boolean @default(true)
-  automationEnabled Boolean @default(true)
+  aiEnabled          Boolean @default(true)
+  musicEnabled       Boolean @default(true)
+  ticketsEnabled     Boolean @default(true)
+  economyEnabled     Boolean @default(true)
+  funEnabled         Boolean @default(true)
+  suggestionsEnabled Boolean @default(true)
+  giveawaysEnabled   Boolean @default(true)
+  levelingEnabled    Boolean @default(true)
 
   // AI behavior
   aiMode                  String  @default("staff") // staff | moderator | friend | hybrid
@@ -123,28 +92,26 @@ model GuildSettings {
   aiMonthlyLimit          Int     @default(10000)
   aiPerUserCooldownSec    Int     @default(8)
   aiPerChannelCooldownSec Int     @default(2)
-  aiAutoModEnabled        Boolean @default(false)
-  aiAutoModHighConfidence Float   @default(0.9)
-  aiAutoModMedConfidence  Float   @default(0.6)
-  aiAutoModAction         String  @default("timeout") // warn | timeout | kick | ban
 
-  // Anti-spam scoring thresholds (0-100)
-  spamWarnThreshold    Int @default(31)
-  spamActionThreshold  Int @default(61)
-  spamBanThreshold     Int @default(81)
-  spamWhitelistUserIds String[] @default([])
-  spamWhitelistRoleIds String[] @default([])
-  spamWhitelistChanIds String[] @default([])
-
-  // XP
-  xpPerMessage    Int @default(5)
-  xpCooldownSec   Int @default(60)
-  xpPerVoiceMin   Int @default(2)
-  xpLevelUpBase   Int @default(100)
+  // XP / leveling
+  xpPerMessage  Int @default(5)
+  xpCooldownSec Int @default(60)
+  xpPerVoiceMin Int @default(2)
+  xpLevelUpBase Int @default(100)
 
   // Music
-  musicMaxQueue    Int @default(200)
-  musicDefaultVol  Int @default(80)
+  musicMaxQueue   Int @default(200)
+  musicDefaultVol Int @default(80)
+
+  // Tickets
+  ticketMaxOpenPerUser Int @default(2)
+
+  // Economy
+  economyCurrencySymbol String @default("🪙")
+  economyDailyAmount    Int    @default(100)
+  economyBegMin         Int    @default(10)
+  economyBegMax         Int    @default(150)
+  economyBegCooldownSec Int    @default(21600)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -157,7 +124,7 @@ model DashboardAccess {
   guildId String
   guild   Guild  @relation(fields: [guildId], references: [id], onDelete: Cascade)
   userId  String
-  role    String @default("viewer") // owner | administrator | moderator | support | dj | event_manager | ai_manager | viewer
+  role    String @default("viewer") // owner | administrator | support | dj | ai_manager | viewer
 
   createdAt DateTime @default(now())
 
@@ -173,26 +140,20 @@ model User {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  memberships     Member[]
-  moderationCases ModerationCase[] @relation("TargetUser")
-  moderatedCases  ModerationCase[] @relation("ModeratorUser")
-  warnings        Warning[]        @relation("WarnedUser")
-  aiMemories      AIMemory[]
-  gameStats       GameStats[]
+  memberships Member[]
+  aiMemories  AIMemory[]
 
   @@map("users")
 }
 
 model Member {
-  id        String   @id @default(cuid())
-  guildId   String
-  guild     Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  joinedAt  DateTime @default(now())
-  leftAt    DateTime?
-  minecraftUsername String?
-  notes     String?
+  id       String    @id @default(cuid())
+  guildId  String
+  guild    Guild     @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  joinedAt DateTime  @default(now())
+  leftAt   DateTime?
 
   @@unique([guildId, userId])
   @@index([guildId])
@@ -200,56 +161,27 @@ model Member {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// Moderation
+// Economy + Social
 // ─────────────────────────────────────────────────────────────────────────
 
-model ModerationCase {
-  id          Int      @id @default(autoincrement())
+model EconomyProfile {
+  id          String    @id @default(cuid())
   guildId     String
-  guild       Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
-  targetId    String
-  target      User     @relation("TargetUser", fields: [targetId], references: [id])
-  moderatorId String
-  moderator   User     @relation("ModeratorUser", fields: [moderatorId], references: [id])
-  action      String   // warn | timeout | kick | ban | unban | softban | purge | slowmode | lock | unlock | nickname
-  reason      String?
-  durationSec Int?
-  metadata    Json?
-  createdAt   DateTime @default(now())
+  guild       Guild     @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  userId      String
+  coins       Int       @default(0)
+  bank        Int       @default(0)
+  dailyStreak Int       @default(0)
+  lastDailyAt DateTime?
+  lastBegAt   DateTime?
+  repGiven    Int       @default(0)
+  repReceived Int       @default(0)
+  lastRepAt   DateTime?
 
-  @@index([guildId, targetId])
-  @@index([guildId, createdAt])
-  @@map("moderation_cases")
-}
-
-model Warning {
-  id        Int      @id @default(autoincrement())
-  guildId   String
-  guild     Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
-  userId    String
-  user      User     @relation("WarnedUser", fields: [userId], references: [id])
-  moderatorId String
-  reason    String?
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
-
-  @@index([guildId, userId])
-  @@map("warnings")
-}
-
-model AntiSpamHit {
-  id        String   @id @default(cuid())
-  guildId   String
-  guild     Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
-  userId    String
-  channelId String
-  score     Int
-  action    String
-  reason    String
-  createdAt DateTime @default(now())
-
-  @@index([guildId, userId])
-  @@map("anti_spam_hits")
+  @@unique([guildId, userId])
+  @@index([guildId, coins])
+  @@index([guildId, repReceived])
+  @@map("economy_profiles")
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -257,34 +189,33 @@ model AntiSpamHit {
 // ─────────────────────────────────────────────────────────────────────────
 
 model TicketPanel {
-  id          String   @id @default(cuid())
+  id          String           @id @default(cuid())
   guildId     String
-  guild       Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  guild       Guild            @relation(fields: [guildId], references: [id], onDelete: Cascade)
   name        String
   channelId   String?
   messageId   String?
-  title       String   @default("🎫 Support Center")
-  description String   @default("What do you need help with?")
-  color       String   @default("#5865F2")
+  title       String           @default("🎫 Support Center")
+  description String           @default("What do you need help with?")
+  color       String           @default("#5865F2")
   categories  TicketCategory[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
 
   @@index([guildId])
   @@map("ticket_panels")
 }
 
 model TicketCategory {
-  id              String       @id @default(cuid())
-  panelId         String
-  panel           TicketPanel  @relation(fields: [panelId], references: [id], onDelete: Cascade)
-  label           String
-  emoji           String?
-  description     String?
+  id                String      @id @default(cuid())
+  panelId           String
+  panel             TicketPanel @relation(fields: [panelId], references: [id], onDelete: Cascade)
+  label             String
+  emoji             String?
+  description       String?
   discordCategoryId String?
-  staffRoleIds    String[] @default([])
-  formFields      Json?    // [{ label, style, required, placeholder }]
-  order           Int      @default(0)
+  staffRoleIds      String[]    @default([])
+  order             Int         @default(0)
 
   tickets Ticket[]
 
@@ -293,44 +224,72 @@ model TicketCategory {
 }
 
 model Ticket {
-  id           String    @id @default(cuid())
+  id           String          @id @default(cuid())
   guildId      String
-  guild        Guild     @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  guild        Guild           @relation(fields: [guildId], references: [id], onDelete: Cascade)
   categoryId   String?
   category     TicketCategory? @relation(fields: [categoryId], references: [id])
-  number        Int
-  channelId    String    @unique
+  number       Int
+  channelId    String          @unique
   openerId     String
   claimedById  String?
-  status       String    @default("open") // open | claimed | closed
-  formAnswers  Json?
-  aiSummary    String?
-  rating       Int?
+  status       String          @default("open") // open | claimed | closed
   transcript   String?
   closedById   String?
   closedReason String?
-  createdAt    DateTime  @default(now())
+  createdAt    DateTime        @default(now())
   closedAt     DateTime?
-
-  messages TicketMessage[]
 
   @@unique([guildId, number])
   @@index([guildId, status])
   @@map("tickets")
 }
 
-model TicketMessage {
-  id        String   @id @default(cuid())
-  ticketId  String
-  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  authorId  String
-  authorTag String
-  content   String
-  attachments String[] @default([])
-  createdAt DateTime @default(now())
+// ─────────────────────────────────────────────────────────────────────────
+// Suggestions
+// ─────────────────────────────────────────────────────────────────────────
 
-  @@index([ticketId])
-  @@map("ticket_messages")
+model Suggestion {
+  id           String    @id @default(cuid())
+  guildId      String
+  guild        Guild     @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  channelId    String
+  messageId    String    @unique
+  userId       String
+  content      String
+  status       String    @default("pending") // pending | approved | rejected
+  upvotes      Int       @default(0)
+  downvotes    Int       @default(0)
+  reviewedById String?
+  reviewReason String?
+  createdAt    DateTime  @default(now())
+  reviewedAt   DateTime?
+
+  @@index([guildId, status])
+  @@map("suggestions")
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Giveaways
+// ─────────────────────────────────────────────────────────────────────────
+
+model Giveaway {
+  id          String   @id @default(cuid())
+  guildId     String
+  guild       Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  channelId   String
+  messageId   String   @unique
+  prize       String
+  winnerCount Int      @default(1)
+  hostedById  String
+  entrantIds  String[] @default([])
+  winnerIds   String[] @default([])
+  endsAt      DateTime
+  ended       Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([guildId, ended, endsAt])
+  @@map("giveaways")
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -354,16 +313,16 @@ model AIConversation {
 }
 
 model AIMemory {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   guildId   String
-  guild     Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  guild     Guild     @relation(fields: [guildId], references: [id], onDelete: Cascade)
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   key       String
   value     String
   expiresAt DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   @@unique([guildId, userId, key])
   @@index([guildId, userId])
@@ -386,16 +345,15 @@ model KnowledgeBase {
 }
 
 model AIUsage {
-  id            String   @id @default(cuid())
-  guildId       String
-  guild         Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
-  date          DateTime @default(now()) // truncated to day
-  messagesAnalyzed Int   @default(0)
-  responses     Int      @default(0)
-  imageAnalyses Int      @default(0)
-  imagesGenerated Int    @default(0)
-  moderationAlerts Int   @default(0)
-  escalations   Int      @default(0)
+  id               String   @id @default(cuid())
+  guildId          String
+  guild            Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  date             DateTime @default(now()) // truncated to day
+  messagesAnalyzed Int      @default(0)
+  responses        Int      @default(0)
+  imageAnalyses    Int      @default(0)
+  imagesGenerated  Int      @default(0)
+  escalations      Int      @default(0)
 
   @@unique([guildId, date])
   @@map("ai_usage")
@@ -421,176 +379,65 @@ model AIEscalation {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// Command config / Automation / Audit
+// Command config / Audit / XP / Music
 // ─────────────────────────────────────────────────────────────────────────
 
 model CommandConfig {
-  id              String   @id @default(cuid())
-  guildId         String
-  guild           Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
-  commandName     String
-  enabled         Boolean  @default(true)
-  allowedRoleIds  String[] @default([])
+  id                 String   @id @default(cuid())
+  guildId            String
+  guild              Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  commandName        String
+  enabled            Boolean  @default(true)
+  allowedRoleIds     String[] @default([])
   disabledChannelIds String[] @default([])
-  cooldownSec     Int      @default(0)
-  customResponse  Json?
+  cooldownSec        Int      @default(0)
 
   @@unique([guildId, commandName])
   @@map("command_configs")
 }
 
-model AutomationRule {
+model AuditLog {
   id          String   @id @default(cuid())
   guildId     String
   guild       Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
-  name        String
-  enabled     Boolean  @default(true)
-  trigger     String   // member_join | member_leave | ai_high_confidence_spam | message_contains | role_added | scheduled | command_used
-  conditions  Json?    // [{ field, operator, value }]
-  actions     Json     // [{ type, params }]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@index([guildId, trigger])
-  @@map("automation_rules")
-}
-
-model AuditLog {
-  id        String   @id @default(cuid())
-  guildId   String
-  guild     Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
-  type      String   // moderation | ticket | command | ai | error | member_join | member_leave | role_change | channel_change | message_delete | message_edit | anti_spam | security
-  userId    String?
+  type        String   // ticket | command | ai | error | member_join | member_leave | suggestion | giveaway
+  userId      String?
   moderatorId String?
-  channelId String?
-  action    String
-  details   Json?
-  createdAt DateTime @default(now())
+  channelId   String?
+  action      String
+  details     Json?
+  createdAt   DateTime @default(now())
 
   @@index([guildId, type, createdAt])
   @@index([guildId, userId])
   @@map("audit_logs")
 }
 
-// ─────────────────────────────────────────────────────────────────────────
-// Community: XP / Games / Music / Announcements / Events / Roles
-// ─────────────────────────────────────────────────────────────────────────
-
 model XP {
-  id             String   @id @default(cuid())
-  guildId        String
-  guild          Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
-  userId         String
-  xp             Int      @default(0)
-  level          Int      @default(0)
-  lastMessageAt  DateTime?
-  lastVoiceAt    DateTime?
-  streakDays     Int      @default(0)
-  lastDailyAt    DateTime?
-  lastWeeklyAt   DateTime?
+  id            String    @id @default(cuid())
+  guildId       String
+  guild         Guild     @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  userId        String
+  xp            Int       @default(0)
+  level         Int       @default(0)
+  lastMessageAt DateTime?
+  lastVoiceAt   DateTime?
 
   @@unique([guildId, userId])
   @@index([guildId, xp])
   @@map("xp")
 }
 
-model GameStats {
-  id        String   @id @default(cuid())
-  guildId   String
-  guild     Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  game      String
-  wins      Int      @default(0)
-  losses    Int      @default(0)
-  draws     Int      @default(0)
-  score     Int      @default(0)
-
-  @@unique([guildId, userId, game])
-  @@index([guildId, game, wins])
-  @@map("game_stats")
-}
-
 model MusicSession {
-  id         String   @id @default(cuid())
-  guildId    String
-  guild      Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
-  channelId  String
-  startedById String
-  tracksPlayed Int    @default(0)
-  startedAt  DateTime @default(now())
-  endedAt    DateTime?
+  id           String    @id @default(cuid())
+  guildId      String
+  guild        Guild     @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  channelId    String
+  startedById  String
+  tracksPlayed Int       @default(0)
+  startedAt    DateTime  @default(now())
+  endedAt      DateTime?
 
   @@index([guildId])
   @@map("music_sessions")
-}
-
-model Announcement {
-  id          String    @id @default(cuid())
-  guildId     String
-  guild       Guild     @relation(fields: [guildId], references: [id], onDelete: Cascade)
-  title       String
-  content     String
-  embed       Json?
-  channelIds  String[]  @default([])
-  mentionRoleIds String[] @default([])
-  scheduledFor DateTime?
-  sentAt      DateTime?
-  createdAt   DateTime  @default(now())
-
-  @@index([guildId])
-  @@map("announcements")
-}
-
-model Event {
-  id            String    @id @default(cuid())
-  guildId       String
-  guild         Guild     @relation(fields: [guildId], references: [id], onDelete: Cascade)
-  title         String
-  description   String?
-  channelId     String?
-  startsAt      DateTime
-  endsAt        DateTime?
-  rsvpUserIds   String[]  @default([])
-  rewardXp      Int       @default(0)
-  createdAt     DateTime  @default(now())
-
-  @@index([guildId, startsAt])
-  @@map("events")
-}
-
-model ReactionRolePanel {
-  id        String   @id @default(cuid())
-  guildId   String
-  guild     Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
-  channelId String?
-  messageId String?
-  title     String   @default("Choose your roles")
-  style     String   @default("button") // button | dropdown | reaction
-  options   Json     // [{ label, emoji, roleId }]
-  createdAt DateTime @default(now())
-
-  @@index([guildId])
-  @@map("reaction_role_panels")
-}
-
-model MinecraftServer {
-  id        String   @id @default(cuid())
-  guildId   String
-  guild     Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
-  name      String
-  edition   String   @default("java") // java | bedrock
-  host      String
-  port      Int      @default(25565)
-  rconHost  String?
-  rconPort  Int?
-  rconPassword String?
-  statusChannelId String?
-  statusMessageId String?
-  chatBridgeChannelId String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([guildId])
-  @@map("minecraft_servers")
 }

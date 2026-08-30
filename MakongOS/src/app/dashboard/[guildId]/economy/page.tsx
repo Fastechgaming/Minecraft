@@ -1,22 +1,22 @@
 import { getGuildSettings } from '../../../../database/settingsCache';
-import { getLeaderboard } from '../../../../stats/xp';
-import { CommunitySettingsForm } from '../../../../components/dashboard/forms/CommunitySettingsForm';
+import { getEconomyLeaderboard } from '../../../../economy/service';
+import { EconomySettingsForm } from '../../../../components/dashboard/forms/EconomySettingsForm';
 
-export default async function CommunityPage({ params }: { params: { guildId: string } }) {
+export default async function EconomyPage({ params }: { params: { guildId: string } }) {
   const settings = await getGuildSettings(params.guildId);
-  const leaderboard = await getLeaderboard(params.guildId, 10);
+  const leaderboard = await getEconomyLeaderboard(params.guildId, 5);
 
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-bold text-white">Community</h1>
-        <p className="text-discord-muted">XP rates and the server's top members.</p>
+        <h1 className="text-2xl font-bold text-white">Economy</h1>
+        <p className="text-discord-muted">Currency symbol, daily/beg reward amounts, and cooldowns.</p>
       </div>
 
       <div className="card p-5">
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-discord-muted">Top Members</h2>
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-discord-muted">Richest Members</h2>
         {leaderboard.length === 0 ? (
-          <p className="text-discord-muted">No XP data yet.</p>
+          <p className="text-discord-muted">No economy activity yet.</p>
         ) : (
           <ol className="flex flex-col gap-2">
             {leaderboard.map((row, i) => (
@@ -25,7 +25,7 @@ export default async function CommunityPage({ params }: { params: { guildId: str
                   {['🥇', '🥈', '🥉'][i] ?? `${i + 1}.`} <span className="font-mono text-xs">{row.userId}</span>
                 </span>
                 <span className="text-discord-muted">
-                  Level {row.level} · {row.xp} XP
+                  {row.coins + row.bank} {settings.economyCurrencySymbol}
                 </span>
               </li>
             ))}
@@ -33,7 +33,7 @@ export default async function CommunityPage({ params }: { params: { guildId: str
         )}
       </div>
 
-      <CommunitySettingsForm guildId={params.guildId} initial={settings} />
+      <EconomySettingsForm guildId={params.guildId} initial={settings} />
     </div>
   );
 }

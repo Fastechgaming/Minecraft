@@ -37,7 +37,6 @@ export function AIStaffForm({ guildId, initial, channels }: { guildId: string; i
           <Field label="Mode">
             <Select value={form.aiMode} onChange={(e) => set('aiMode', e.target.value)}>
               <option value="staff">Staff — helpful & friendly</option>
-              <option value="moderator">Moderator — careful & authoritative</option>
               <option value="friend">Friend — casual & playful</option>
               <option value="hybrid">Hybrid — blend of staff + friend</option>
             </Select>
@@ -92,32 +91,6 @@ export function AIStaffForm({ guildId, initial, channels }: { guildId: string; i
           </Field>
           <Field label="Per-Channel Cooldown (s)">
             <TextInput type="number" min={0} value={form.aiPerChannelCooldownSec} onChange={(e) => set('aiPerChannelCooldownSec', Number(e.target.value))} />
-          </Field>
-        </div>
-      </section>
-
-      <section className="card flex flex-col gap-3 p-5">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-discord-muted">AI Moderator Mode</h2>
-        <ToggleRow
-          label="AI Auto-Moderation"
-          description="Classify risky messages and act automatically above your high-confidence threshold"
-          checked={form.aiAutoModEnabled}
-          onChange={(v) => set('aiAutoModEnabled', v)}
-        />
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <Field label="Medium Confidence (alert staff)" hint="0.0 - 1.0">
-            <TextInput type="number" step="0.05" min={0} max={1} value={form.aiAutoModMedConfidence} onChange={(e) => set('aiAutoModMedConfidence', Number(e.target.value))} />
-          </Field>
-          <Field label="High Confidence (auto-act)" hint="0.0 - 1.0">
-            <TextInput type="number" step="0.05" min={0} max={1} value={form.aiAutoModHighConfidence} onChange={(e) => set('aiAutoModHighConfidence', Number(e.target.value))} />
-          </Field>
-          <Field label="Automatic Action">
-            <Select value={form.aiAutoModAction} onChange={(e) => set('aiAutoModAction', e.target.value)}>
-              <option value="warn">Warn</option>
-              <option value="timeout">Timeout</option>
-              <option value="kick">Kick</option>
-              <option value="ban">Ban</option>
-            </Select>
           </Field>
         </div>
       </section>

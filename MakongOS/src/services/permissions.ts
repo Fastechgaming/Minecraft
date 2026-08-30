@@ -2,16 +2,7 @@ import type { GuildMember } from 'discord.js';
 import type { GuildSettings } from '@prisma/client';
 
 /** Dashboard role hierarchy, low to high. Never rely on hardcoded user IDs alone. */
-export const DASHBOARD_ROLES = [
-  'viewer',
-  'support',
-  'dj',
-  'event_manager',
-  'ai_manager',
-  'moderator',
-  'administrator',
-  'owner'
-] as const;
+export const DASHBOARD_ROLES = ['viewer', 'support', 'dj', 'ai_manager', 'administrator', 'owner'] as const;
 
 export type DashboardRole = (typeof DASHBOARD_ROLES)[number];
 
@@ -33,18 +24,7 @@ export function getBotOwnerIds(): string[] {
 
 /** In-Discord staff tier checks, driven entirely by dashboard-configured role IDs. */
 export function isStaff(member: GuildMember, settings: GuildSettings): boolean {
-  return (
-    isModerator(member, settings) ||
-    settings.staffRoleIds.some((id) => member.roles.cache.has(id))
-  );
-}
-
-export function isModerator(member: GuildMember, settings: GuildSettings): boolean {
-  return (
-    isAdmin(member, settings) ||
-    settings.moderatorRoleIds.some((id) => member.roles.cache.has(id)) ||
-    member.permissions.has('ModerateMembers')
-  );
+  return isAdmin(member, settings) || settings.staffRoleIds.some((id) => member.roles.cache.has(id));
 }
 
 export function isAdmin(member: GuildMember, settings: GuildSettings): boolean {

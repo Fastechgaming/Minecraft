@@ -6,20 +6,7 @@ import { createLogger } from './logger';
 
 const log = createLogger('audit');
 
-export type AuditLogType =
-  | 'moderation'
-  | 'ticket'
-  | 'command'
-  | 'ai'
-  | 'error'
-  | 'member_join'
-  | 'member_leave'
-  | 'role_change'
-  | 'channel_change'
-  | 'message_delete'
-  | 'message_edit'
-  | 'anti_spam'
-  | 'security';
+export type AuditLogType = 'ticket' | 'command' | 'ai' | 'error' | 'member_join' | 'member_leave' | 'suggestion' | 'giveaway';
 
 interface AuditLogInput {
   guildId: string;
@@ -32,19 +19,14 @@ interface AuditLogInput {
 }
 
 const TYPE_COLOR: Record<AuditLogType, number> = {
-  moderation: 0xda373c,
   ticket: 0x5865f2,
   command: 0x949ba4,
   ai: 0x9b59b6,
   error: 0xed4245,
   member_join: 0x23a559,
   member_leave: 0xf0b232,
-  role_change: 0x5865f2,
-  channel_change: 0x5865f2,
-  message_delete: 0xed4245,
-  message_edit: 0xf0b232,
-  anti_spam: 0xda373c,
-  security: 0xda373c
+  suggestion: 0xf0b232,
+  giveaway: 0x9b59b6
 };
 
 export async function recordAuditLog(client: Client, input: AuditLogInput): Promise<void> {
@@ -66,7 +48,7 @@ export async function recordAuditLog(client: Client, input: AuditLogInput): Prom
 
   try {
     const settings = await getGuildSettings(input.guildId);
-    const channelId = input.type === 'moderation' ? settings.modLogChannelId : settings.logChannelId;
+    const channelId = settings.logChannelId;
     if (!channelId) return;
 
     const channel = await client.channels.fetch(channelId).catch(() => null);

@@ -19,13 +19,13 @@ export default async function AIStaffPage({ params }: { params: { guildId: strin
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-bold text-white">AI Staff Assistant</h1>
-        <p className="text-discord-muted">Powered by Gemini — configure behavior, limits, and moderation confidence tiers.</p>
+        <p className="text-discord-muted">Powered by Gemini — configure behavior, memory, and usage limits.</p>
       </div>
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <StatCard label="Messages Analyzed Today" value={today?.messagesAnalyzed ?? 0} hint={`limit ${settings.aiDailyLimit}/day`} />
         <StatCard label="Responses Today" value={today?.responses ?? 0} />
-        <StatCard label="Moderation Alerts Today" value={today?.moderationAlerts ?? 0} />
+        <StatCard label="Escalations Today" value={today?.escalations ?? 0} />
         <StatCard label="Responses This Month" value={monthTotal} hint={`limit ${settings.aiMonthlyLimit}/mo`} />
       </div>
 

@@ -16,13 +16,14 @@ export default async function OverviewPage({ params }: { params: { guildId: stri
   const startedAt = getBotStartedAt();
   const discordGuild = client?.guilds.cache.get(guildId);
 
-  const [modCount, ticketOpen, ticketTotal, aiUsageAgg, commandCount, musicSessions, recentLogs, dbOk] = await Promise.all([
-    prisma.moderationCase.count({ where: { guildId } }),
+  const [ticketOpen, ticketTotal, aiUsageAgg, commandCount, musicSessions, activeGiveaways, pendingSuggestions, recentLogs, dbOk] = await Promise.all([
     prisma.ticket.count({ where: { guildId, status: { not: 'closed' } } }),
     prisma.ticket.count({ where: { guildId } }),
     prisma.aIUsage.aggregate({ where: { guildId }, _sum: { responses: true, messagesAnalyzed: true } }),
     prisma.auditLog.count({ where: { guildId, type: 'command' } }),
     prisma.musicSession.count({ where: { guildId } }),
+    prisma.giveaway.count({ where: { guildId, ended: false } }),
+    prisma.suggestion.count({ where: { guildId, status: 'pending' } }),
     prisma.auditLog.findMany({ where: { guildId }, orderBy: { createdAt: 'desc' }, take: 8 }),
     prisma.$queryRaw`SELECT 1`.then(() => true).catch(() => false)
   ]);
@@ -39,10 +40,10 @@ export default async function OverviewPage({ params }: { params: { guildId: stri
         <StatCard label="Uptime" value={startedAt ? formatUptime(Date.now() - startedAt) : '—'} />
         <StatCard label="Members" value={discordGuild?.memberCount ?? '—'} />
         <StatCard label="Database" value={dbOk ? '🟢 Connected' : '🔴 Error'} />
-        <StatCard label="Moderation Actions" value={modCount} />
         <StatCard label="Tickets" value={`${ticketOpen} open`} hint={`${ticketTotal} total`} />
         <StatCard label="AI Responses" value={aiUsageAgg._sum.responses ?? 0} hint={`${aiUsageAgg._sum.messagesAnalyzed ?? 0} messages analyzed`} />
-        <StatCard label="Commands Run" value={commandCount} hint={`${musicSessions} music sessions`} />
+        <StatCard label="Pending Suggestions" value={pendingSuggestions} />
+        <StatCard label="Commands Run" value={commandCount} hint={`${musicSessions} music sessions · ${activeGiveaways} active giveaways`} />
       </div>
 
       <div className="card p-4">

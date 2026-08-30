@@ -16,7 +16,6 @@ import { prisma } from '../../../database/prisma';
 import { geminiProvider } from '../../../providers/ai/geminiProvider';
 import { decideAIResponse } from '../../../ai/decisionEngine';
 import { handleStaffAssistantMessage, buildEscalationComponents } from '../../../ai/staffAssistant';
-import { maybeRunAIModeration } from '../../../ai/moderationPipeline';
 import { forgetUserMemory, rememberFact } from '../../../ai/memory';
 import { searchKnowledge, formatKnowledgeForPrompt } from '../../../ai/knowledge';
 import { isWithinLimits, incrementUsage } from '../../../ai/usage';
@@ -116,8 +115,6 @@ export const aiModule: FeatureModule = {
       event: Events.MessageCreate,
       handler: async (message) => {
         if (!message.guildId || message.author.bot) return;
-
-        await maybeRunAIModeration(message).catch(() => undefined);
 
         const settings = await getGuildSettings(message.guildId);
         const botId = message.client.user?.id;
