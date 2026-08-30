@@ -73,6 +73,16 @@ npm run build
 pm2 start ecosystem.config.js
 ```
 
+## Updating an existing bare-metal/VPS install
+
+`npm start` only runs the already-compiled `dist/server.js` — pulling new source or changing dependencies does **not** rebuild it automatically. Running `git pull` (or `npm install`) without a fresh `npm run build` leaves the bot executing stale, possibly-deleted code against a `node_modules` tree it no longer matches — this has caused confusing "Cannot find module" and reverted-bug-fix crash loops before. Always use:
+
+```
+./deploy.sh
+```
+
+which does `git pull && npm install && rm -rf dist .next && npm run build`, then restarts PM2. Do this after **every** update — never just `git pull` and restart.
+
 ## Notes
 
 - All secrets live in environment variables and are never sent to the browser.
