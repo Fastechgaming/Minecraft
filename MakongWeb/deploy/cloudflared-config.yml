@@ -1,0 +1,21 @@
+# Cloudflare Tunnel config for the Makong Network website.
+#
+# Put this at /etc/cloudflared/config.yml (or ~/.cloudflared/config.yml) after
+# running `cloudflared tunnel create makong-web`. Replace the tunnel id and
+# the hostnames with your own.
+#
+# The tunnel dials OUT to Cloudflare, so you never open a port on the box and
+# the website is not reachable on the server's raw IP at all.
+
+tunnel: PUT-YOUR-TUNNEL-ID-HERE
+credentials-file: /etc/cloudflared/PUT-YOUR-TUNNEL-ID-HERE.json
+
+ingress:
+  # The website itself.
+  - hostname: makongmc.com
+    service: http://127.0.0.1:3000
+  - hostname: www.makongmc.com
+    service: http://127.0.0.1:3000
+
+  # Everything else gets a 404 rather than reaching your box.
+  - service: http_status:404

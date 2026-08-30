@@ -1,0 +1,24 @@
+{
+  "serverName": "Makong Network",
+  "tagline": "A Khmer-inspired Minecraft Survival Multiplayer world",
+  "welcomeMessage": "Welcome to Makong Network! Build among the ruins, survive the jungle, and write your own chapter of the empire.",
+  "logo": "/images/site/logo-full.png",
+  "logoIcon": "/images/site/logo-icon.png",
+  "discordLink": "https://discord.gg/makong",
+  "khqrImage": "/images/site/khqr.png",
+  "tebexUrl": "https://makong.tebex.io/",
+  "javaIp": "makongmc.com",
+  "javaPort": 25565,
+  "bedrockIp": "makongmc.com",
+  "bedrockPort": 19132,
+  "serverFeatures": [
+    { "icon": "🎮", "title": "Gamemodes", "desc": "BoxPvP, SMP, PlotCity, and more." },
+    { "icon": "🛡️", "title": "Good Anticheat", "desc": "Fair play enforced across every gamemode." },
+    { "icon": "🧑‍💼", "title": "Active Staff", "desc": "Our team is online and ready to help." }
+  ],
+  "socials": {
+    "discord": "https://discord.gg/makong",
+    "youtube": "",
+    "tiktok": ""
+  }
+}

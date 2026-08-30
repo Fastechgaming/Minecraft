@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Complete your Purchase — Makong Network</title>
+<meta name="robots" content="noindex, nofollow" />
+<link rel="icon" href="/images/site/logo-icon.png" />
+<link rel="stylesheet" href="/css/style.css" />
+<script>
+// Apply the saved theme before first paint so there's no flash. Dark is default.
+try { if (localStorage.getItem("makong-theme") === "light") document.documentElement.setAttribute("data-theme","light"); } catch (e) {}
+</script>
+</head>
+<body>
+  <nav class="site-nav">
+    <div class="nav-vine" aria-hidden="true"></div>
+    <div class="container">
+      <a class="brand" href="/">
+        <img id="nav-logo" src="/images/site/logo-icon.png" alt="logo" onerror="this.style.display='none'" />
+        Makong Network
+      </a>
+      <div class="nav-tools">
+        <div class="lang-dropdown">
+          <button type="button" class="lang-toggle" onclick="toggleLangMenu()" aria-haspopup="true" aria-expanded="false" aria-label="Language">
+            <span class="lang-current">EN</span>
+          </button>
+          <ul class="lang-menu" role="menu">
+            <li role="none"><button type="button" role="menuitem" class="lang-option" data-lang="en" onclick="setLang('en')">English</button></li>
+            <li role="none"><button type="button" role="menuitem" class="lang-option" data-lang="km" onclick="setLang('km')">ខ្មែរ</button></li>
+          </ul>
+        </div>
+        <button class="theme-toggle" onclick="toggleTheme()" aria-label="Switch theme">☀️</button>
+      </div>
+      <ul class="nav-links">
+        <li><a href="/" data-i18n="nav.home">🏠 Home</a></li>
+        <li><a href="/store" data-i18n="nav.store">💰 Store</a></li>
+      </ul>
+      <button class="nav-toggle" onclick="toggleNav()" aria-label="Menu" data-i18n-aria="nav.menu">&#9776;</button>
+    </div>
+  </nav>
+  <div class="khmer-strip" aria-hidden="true"></div>
+
+  <main>
+    <section class="section">
+      <div class="container checkout-wrap">
+        <h2 data-i18n="checkout.title">🌿 Complete your Purchase 🌿</h2>
+
+        <div id="checkout-content" class="checkout-panel">
+          <p class="empty-note" data-i18n="checkout.loading">Loading your order…</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="khmer-strip" aria-hidden="true"></div>
+  <footer class="site-footer">
+    <p id="footer-copy" data-i18n="footer.copy"></p>
+  </footer>
+
+  <script src="/js/playername.js"></script>
+  <script src="/js/i18n.js"></script>
+  <script src="/js/main.js"></script>
+  <script src="/js/checkout.js"></script>
+</body>
+</html>
