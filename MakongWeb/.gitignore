@@ -1,0 +1,6 @@
+node_modules/
+.env
+*.log
+data/proofs/
+data/orders.json
+data/items.json

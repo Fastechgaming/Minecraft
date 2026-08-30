@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Makong Network — Khmer-Inspired Minecraft Survival Server</title>
+<meta name="description" content="Makong Network is a Khmer-inspired Minecraft Survival Multiplayer server: build among the ruins, survive the jungle, and shop the store. Join at www.makongmc.com." />
+<link rel="canonical" href="https://www.makongmc.com/" />
+<meta name="theme-color" content="#f7b537" />
+<link rel="icon" href="/images/site/logo-icon.png" />
+<link rel="apple-touch-icon" href="/images/site/logo-icon.png" />
+
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Makong Network" />
+<meta property="og:url" content="https://www.makongmc.com/" />
+<meta property="og:title" content="Makong Network — Khmer-Inspired Minecraft Survival Server" />
+<meta property="og:description" content="A Khmer-inspired Minecraft Survival Multiplayer world. Build among the ruins, survive the jungle, and write your own chapter of the empire." />
+<meta property="og:image" content="https://www.makongmc.com/images/site/og-cover.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:locale" content="en_US" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Makong Network — Khmer-Inspired Minecraft Survival Server" />
+<meta name="twitter:description" content="A Khmer-inspired Minecraft Survival Multiplayer world. Build among the ruins, survive the jungle, and write your own chapter of the empire." />
+<meta name="twitter:image" content="https://www.makongmc.com/images/site/og-cover.png" />
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "Makong Network",
+  "alternateName": "Makong Network",
+  "url": "https://www.makongmc.com/",
+  "description": "A Khmer-inspired Minecraft Survival Multiplayer server.",
+  "publisher": {
+    "@type": "Organization",
+    "name": "Makong Network",
+    "url": "https://www.makongmc.com/",
+    "logo": "https://www.makongmc.com/images/site/logo-full.png",
+    "sameAs": ["https://t.me/MakongNetwork"]
+  }
+}
+</script>
+
+<link rel="stylesheet" href="/css/style.css" />
+<script>
+// Apply the saved theme before first paint so there's no flash. Dark is default.
+try { if (localStorage.getItem("makong-theme") === "light") document.documentElement.setAttribute("data-theme","light"); } catch (e) {}
+</script>
+</head>
+<body>
+  <nav class="site-nav">
+    <div class="nav-vine" aria-hidden="true"></div>
+    <div class="container">
+      <a class="brand" href="/">
+        <img id="nav-logo" src="/images/site/logo-icon.png" alt="logo" onerror="this.style.display='none'" />
+        Makong Network
+      </a>
+      <div class="nav-tools">
+        <div class="lang-dropdown">
+          <button type="button" class="lang-toggle" onclick="toggleLangMenu()" aria-haspopup="true" aria-expanded="false" aria-label="Language">
+            <span class="lang-current">EN</span>
+          </button>
+          <ul class="lang-menu" role="menu">
+            <li role="none"><button type="button" role="menuitem" class="lang-option" data-lang="en" onclick="setLang('en')">English</button></li>
+            <li role="none"><button type="button" role="menuitem" class="lang-option" data-lang="km" onclick="setLang('km')">ខ្មែរ</button></li>
+          </ul>
+        </div>
+        <button class="theme-toggle" onclick="toggleTheme()" aria-label="Switch theme">☀️</button>
+      </div>
+      <ul class="nav-links">
+        <li><a href="/" data-i18n="nav.home">🏠 Home</a></li>
+        <li><a href="/store" data-i18n="nav.store">💰 Store</a></li>
+        <li><a href="/map" data-i18n="nav.map">🗺️ Map</a></li>
+      </ul>
+      <button class="nav-toggle" onclick="toggleNav()" aria-label="Menu" data-i18n-aria="nav.menu">&#9776;</button>
+    </div>
+  </nav>
+  <div class="khmer-strip" aria-hidden="true"></div>
+
+  <header class="hero">
+    <img class="leaf-corner left" src="/images/site/leaf-corner.svg" alt="" aria-hidden="true" />
+    <img class="leaf-corner right" src="/images/site/leaf-corner.svg" alt="" aria-hidden="true" />
+    <img class="flower-accent" src="/images/site/flower.svg" alt="" aria-hidden="true" style="left:6%; top:32%; animation-delay:0.5s;" />
+    <img class="flower-accent" src="/images/site/flower.svg" alt="" aria-hidden="true" style="right:7%; top:40%; animation-delay:2s;" />
+    <span class="firefly" style="left:12%; top:20%; animation-delay:0s;"></span>
+    <span class="firefly" style="left:24%; top:55%; animation-delay:1.4s;"></span>
+    <span class="firefly" style="left:80%; top:15%; animation-delay:2.6s;"></span>
+    <span class="firefly" style="left:88%; top:48%; animation-delay:0.8s;"></span>
+    <span class="firefly" style="left:65%; top:65%; animation-delay:3.6s;"></span>
+    <span class="firefly" style="left:38%; top:12%; animation-delay:4.8s;"></span>
+
+    <h1 id="hero-title" class="sr-only">Makong Network</h1>
+    <img id="hero-logo" class="hero-logo-full" src="/images/site/logo-full.png" alt="Makong Network" />
+    <p class="tagline" id="hero-tagline"></p>
+
+    <div class="hero-actions">
+      <a id="telegram-btn" class="action-btn telegram" href="#" target="_blank" rel="noopener">
+        <span class="btn-icon">✈️</span>
+        <span class="btn-text">
+          <span class="btn-title" data-i18n="home.telegram">Telegram</span>
+          <small data-i18n="home.telegramSub">Join our community</small>
+        </span>
+      </a>
+      <a id="ip-btn" class="action-btn server-ip" href="#">
+        <span class="btn-icon">📋</span>
+        <span class="btn-text">
+          <span class="btn-title ip-text">play.makongmc.com</span>
+          <small data-i18n="home.copyIp">Click to copy IP</small>
+        </span>
+      </a>
+      <a class="action-btn store" href="/store">
+        <span class="btn-icon">🛒</span>
+        <span class="btn-text">
+          <span class="btn-title" data-i18n="home.store">Store</span>
+          <small data-i18n="home.storeSub">Ranks, coins &amp; more</small>
+        </span>
+      </a>
+    </div>
+
+    <div class="status-pill">
+      <span id="status-dot" class="status-dot"></span>
+      <span id="status-text" data-i18n="home.checking">Checking server status…</span>
+    </div>
+
+    <img class="hero-silhouette" src="/images/site/forest-silhouette.svg" alt="" aria-hidden="true" />
+  </header>
+
+  <main>
+    <section class="section">
+      <div class="container">
+        <h2 data-i18n="home.welcome">🌿 Welcome 🌿</h2>
+        <p class="welcome-box" id="welcome-message"></p>
+
+        <div class="feature-grid" id="feature-grid"></div>
+
+        <div class="info-grid">
+          <div class="info-card stacked">
+            <div class="value" id="release-value">—</div>
+            <div class="label" data-i18n="home.released">Released</div>
+            <div class="stat-divider"></div>
+            <div class="sub-value" id="server-age-value">—</div>
+            <div class="sub-label" data-i18n="home.serverAge">Server Age</div>
+          </div>
+          <div class="info-card stacked">
+            <div class="value" id="season-value">—</div>
+            <div class="label" data-i18n="home.currentSeason">Current Season</div>
+            <div class="stat-divider"></div>
+            <div class="sub-value" id="season-age-value">—</div>
+            <div class="sub-label" data-i18n="home.seasonAge">Season Age</div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="khmer-strip" aria-hidden="true"></div>
+  <footer class="site-footer">
+    <p id="footer-copy" data-i18n="footer.copy"></p>
+  </footer>
+
+  <script src="/js/i18n.js"></script>
+  <script src="/js/main.js"></script>
+  <script src="/js/home.js"></script>
+</body>
+</html>

@@ -1,0 +1,38 @@
+# systemd unit for the Makong Network website.
+#
+#   sudo cp deploy/makong-web.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now makong-web
+#
+# Logs:    journalctl -u makong-web -f
+# Restart: sudo systemctl restart makong-web
+
+[Unit]
+Description=Makong Network website
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Change these two if you cloned somewhere else or run as another user.
+User=minecraft
+WorkingDirectory=/opt/makong/Minecraft/MakongWeb
+
+ExecStart=/usr/bin/node server.js
+Restart=always
+RestartSec=5
+# .env in WorkingDirectory is loaded by the app itself (dotenv).
+Environment=NODE_ENV=production
+
+# Keep the process from wandering outside its own directory.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=read-only
+ReadWritePaths=/opt/makong/Minecraft/MakongWeb/data /opt/makong/Minecraft/MakongWeb/config /opt/makong/Minecraft/MakongWeb/public/images/items
+
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

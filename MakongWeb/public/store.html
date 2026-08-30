@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Store — Makong Network</title>
+<meta name="description" content="Buy ranks and Makong Coin packs for the Makong Network Minecraft server. Java and Bedrock supported, KHQR payment, instant Telegram delivery." />
+<link rel="canonical" href="https://www.makongmc.com/store" />
+<meta name="theme-color" content="#f7b537" />
+<link rel="icon" href="/images/site/logo-icon.png" />
+<link rel="apple-touch-icon" href="/images/site/logo-icon.png" />
+
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Makong Network" />
+<meta property="og:url" content="https://www.makongmc.com/store" />
+<meta property="og:title" content="Store — Makong Network" />
+<meta property="og:description" content="Buy ranks and Makong Coin packs for the Makong Network Minecraft server. Java and Bedrock supported." />
+<meta property="og:image" content="https://www.makongmc.com/images/site/og-cover.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Store — Makong Network" />
+<meta name="twitter:description" content="Buy ranks and Makong Coin packs for the Makong Network Minecraft server. Java and Bedrock supported." />
+<meta name="twitter:image" content="https://www.makongmc.com/images/site/og-cover.png" />
+
+<link rel="stylesheet" href="/css/style.css" />
+<script>
+// Apply the saved theme before first paint so there's no flash. Dark is default.
+try { if (localStorage.getItem("makong-theme") === "light") document.documentElement.setAttribute("data-theme","light"); } catch (e) {}
+</script>
+</head>
+<body>
+  <nav class="site-nav">
+    <div class="nav-vine" aria-hidden="true"></div>
+    <div class="container">
+      <a class="brand" href="/">
+        <img id="nav-logo" src="/images/site/logo-icon.png" alt="logo" onerror="this.style.display='none'" />
+        Makong Network
+      </a>
+      <div class="nav-tools">
+        <div class="lang-dropdown">
+          <button type="button" class="lang-toggle" onclick="toggleLangMenu()" aria-haspopup="true" aria-expanded="false" aria-label="Language">
+            <span class="lang-current">EN</span>
+          </button>
+          <ul class="lang-menu" role="menu">
+            <li role="none"><button type="button" role="menuitem" class="lang-option" data-lang="en" onclick="setLang('en')">English</button></li>
+            <li role="none"><button type="button" role="menuitem" class="lang-option" data-lang="km" onclick="setLang('km')">ខ្មែរ</button></li>
+          </ul>
+        </div>
+        <button class="theme-toggle" onclick="toggleTheme()" aria-label="Switch theme">☀️</button>
+      </div>
+      <ul class="nav-links">
+        <li><a href="/" data-i18n="nav.home">🏠 Home</a></li>
+        <li><a href="/store" class="active" data-i18n="nav.store">💰 Store</a></li>
+        <li><a href="/map" data-i18n="nav.map">🗺️ Map</a></li>
+      </ul>
+      <button class="nav-toggle" onclick="toggleNav()" aria-label="Menu" data-i18n-aria="nav.menu">&#9776;</button>
+    </div>
+  </nav>
+  <div class="khmer-strip" aria-hidden="true"></div>
+
+  <main>
+    <section class="section">
+      <div class="container">
+        <h2 class="no-rule">🌿 Makong Network 🌿</h2>
+        <p class="section-subtitle" data-i18n="store.subtitle">STORE</p>
+        <!-- Sign in first: the store needs to know who it is selling to -->
+        <div class="checkout-panel games-gate" id="store-gate">
+          <div class="games-gate-icon">🛒</div>
+          <h3 data-i18n="store.gateTitle">Who is this for?</h3>
+          <p class="checkout-hint centered" data-i18n="store.gateHint">
+            Enter your Minecraft name once so we know where to deliver your
+            purchase — and so we can show your current rank and coins.
+          </p>
+
+          <div class="field">
+            <label for="store-name" data-i18n="buy.username">Minecraft username</label>
+            <input type="text" id="store-name" placeholder="Steve123" maxlength="24" autocomplete="off" />
+          </div>
+          <div class="field">
+            <label data-i18n="buy.edition">Edition</label>
+            <div class="edition-toggle" id="store-edition">
+              <button type="button" data-edition="java" class="active" data-i18n="buy.java">Java</button>
+              <button type="button" data-edition="bedrock" data-i18n="buy.bedrock">Bedrock</button>
+            </div>
+            <span class="preview-name" id="store-name-preview"></span>
+          </div>
+
+          <button class="continue-btn" id="store-verify-btn" data-i18n="games.verify">Verify</button>
+        </div>
+
+        <!-- Shown instead of the gate above when the game server bridge isn't running -->
+        <div class="checkout-panel games-gate" id="store-unavailable" hidden>
+          <div class="games-gate-icon">🚧</div>
+          <h3 data-i18n="store.unavailableTitle">Unavailable</h3>
+          <p class="checkout-hint centered" data-i18n="store.unavailableBody">
+            The store is probably under maintenance or offline for now.
+            Please check back later, or contact support if this keeps
+            happening.
+          </p>
+          <p class="checkout-hint centered" id="store-unavailable-support" hidden></p>
+        </div>
+
+        <!-- Signed in: profile bar, then the catalogue -->
+        <div id="store-body" hidden>
+          <div class="player-bar checkout-panel store-profile">
+            <div class="player-id">
+              <span class="player-avatar" id="store-rank-icon">🧑‍🌾</span>
+              <div>
+                <div class="player-label" data-i18n="store.loggedInAs">Logged in as</div>
+                <div class="player-name" id="store-player-name">—</div>
+                <div class="profile-meta">
+                  <span id="store-rank-chip"></span>
+                  <span class="profile-chip coins" id="store-coins-chip"></span>
+                </div>
+              </div>
+            </div>
+            <button class="change-name-btn" id="store-change-btn" data-i18n="games.changeName">Change name</button>
+          </div>
+
+          <div class="store-tabs" id="store-tabs"></div>
+          <div class="item-grid" id="item-grid"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="khmer-strip" aria-hidden="true"></div>
+  <footer class="site-footer">
+    <p id="footer-copy" data-i18n="footer.copy"></p>
+  </footer>
+
+  <!-- Info ("!") modal -->
+  <div class="modal-overlay" id="info-modal">
+    <div class="modal-box wide">
+      <button class="modal-close" id="info-modal-close">&times;</button>
+      <div id="info-modal-body"></div>
+    </div>
+  </div>
+
+  <!-- Purchase confirmation -->
+  <div class="modal-overlay" id="buy-modal">
+    <div class="modal-box">
+      <button class="modal-close" id="buy-modal-close">&times;</button>
+      <div id="buy-modal-body"></div>
+    </div>
+  </div>
+
+  <!-- Change-name modal -->
+  <div class="modal-overlay" id="name-modal">
+    <div class="modal-box">
+      <button class="modal-close" id="name-modal-close" aria-label="Close">&times;</button>
+      <h3 data-i18n="games.changeTitle">Change your name</h3>
+      <p class="checkout-hint" data-i18n="store.changeHint">
+        This is the name your purchases are delivered to, and the account your
+        website coins and points are saved under.
+      </p>
+      <div class="field" id="change-name-field">
+        <label for="change-name" data-i18n="buy.username">Minecraft username</label>
+        <input type="text" id="change-name" placeholder="Steve123" maxlength="24" autocomplete="off" />
+      </div>
+      <div class="field" id="change-edition-field">
+        <label data-i18n="buy.edition">Edition</label>
+        <div class="edition-toggle" id="change-edition">
+          <button type="button" data-edition="java" class="active" data-i18n="buy.java">Java</button>
+          <button type="button" data-edition="bedrock" data-i18n="buy.bedrock">Bedrock</button>
+        </div>
+        <span class="preview-name" id="change-name-preview"></span>
+      </div>
+      <p class="checkout-hint cooldown-note" id="change-cooldown-note" hidden></p>
+      <button class="continue-btn" id="change-name-save" data-i18n="games.changeConfirm">Save new name</button>
+    </div>
+  </div>
+
+  <script src="/js/playername.js"></script>
+  <script src="/js/i18n.js"></script>
+  <script src="/js/account.js"></script>
+  <script src="/js/main.js"></script>
+  <script src="/js/store.js"></script>
+</body>
+</html>
