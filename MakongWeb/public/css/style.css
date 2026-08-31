@@ -162,15 +162,6 @@ button { font-family: inherit; }
   padding: 0 1.25rem;
 }
 
-/* Small leaf-vine border used between sections. */
-.khmer-strip {
-  height: 20px;
-  background-image: url("/images/site/khmer-pattern.svg");
-  background-repeat: repeat-x;
-  background-size: 34px 20px;
-  background-position: center;
-}
-
 .flower-accent {
   position: absolute;
   width: 30px;
@@ -305,18 +296,6 @@ button { font-family: inherit; }
   .lang-toggle { font-size: 0.8rem; }
 }
 
-/* Vine tendrils hanging just below the nav wall. */
-.nav-vine {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -14px;
-  height: 20px;
-  background-image: url("/images/site/vine-drape.svg");
-  background-repeat: repeat-x;
-  background-size: 150px 20px;
-  pointer-events: none;
-}
 .site-nav .brand {
   color: var(--gold-light);
   font-weight: 800;
@@ -616,27 +595,49 @@ button { font-family: inherit; }
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-/* Tap feedback - a quick bright-green blink wherever you tap a button,
-   link, or card, spawned by main.js on every click. */
-.click-blink {
+/* Tap feedback - a tiny lime-green firework of sparks bursting out from
+   wherever you tap a button, link, or card, spawned by main.js on every
+   click (each spark's --angle/--dist is set inline, per spark). */
+.click-sparkle {
   position: fixed;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: radial-gradient(circle, #fff 0%, var(--click-blink) 40%, rgba(157, 255, 87, 0) 75%);
-  box-shadow: 0 0 16px 5px rgba(157, 255, 87, 0.65);
+  width: 0;
+  height: 0;
   pointer-events: none;
   z-index: 9999;
-  transform: translate(-50%, -50%) scale(0.3);
-  animation: click-blink 0.42s ease-out forwards;
 }
-@keyframes click-blink {
-  0% { opacity: 1; transform: translate(-50%, -50%) scale(0.3); }
-  35% { opacity: 1; transform: translate(-50%, -50%) scale(1.4); }
-  100% { opacity: 0; transform: translate(-50%, -50%) scale(2.3); }
+.click-sparkle .spark {
+  position: absolute;
+  top: -1.5px;
+  left: -1.5px;
+  width: 3px;
+  height: 9px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #f4ffd6 0%, var(--click-blink) 55%, rgba(157, 255, 87, 0) 100%);
+  box-shadow: 0 0 5px 1px rgba(157, 255, 87, 0.75);
+  transform-origin: center top;
+  transform: rotate(var(--angle)) translateY(0) scaleY(0.5);
+  opacity: 1;
+  animation: spark-burst 0.5s cubic-bezier(.2, .8, .3, 1) forwards;
+}
+.click-sparkle .spark.center {
+  top: -3px;
+  left: -3px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff 0%, var(--click-blink) 60%, rgba(157, 255, 87, 0) 80%);
+  animation: spark-flash 0.25s ease-out forwards;
+}
+@keyframes spark-burst {
+  0% { transform: rotate(var(--angle)) translateY(0) scaleY(0.5); opacity: 1; }
+  100% { transform: rotate(var(--angle)) translateY(var(--dist)) scaleY(1); opacity: 0; }
+}
+@keyframes spark-flash {
+  0% { opacity: 1; transform: scale(0.4); }
+  100% { opacity: 0; transform: scale(2.2); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .click-blink { display: none; }
+  .click-sparkle { display: none; }
 }
 
 /* ---------- Sections ---------- */
@@ -955,7 +956,7 @@ a.feature-card.linked .feature-title { color: var(--link-accent); }
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(42, 22, 8, 0.55);
+  background: rgba(5, 13, 8, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -994,7 +995,7 @@ a.feature-card.linked .feature-title { color: var(--link-accent); }
   position: absolute;
   top: 0.7rem;
   right: 0.7rem;
-  background: var(--terracotta);
+  background: #fff;
   border: 2px solid var(--brown-darkest);
   border-radius: 8px;
   width: 32px;
@@ -1002,7 +1003,7 @@ a.feature-card.linked .feature-title { color: var(--link-accent); }
   font-size: 1.2rem;
   line-height: 1;
   cursor: pointer;
-  color: #fff;
+  color: var(--terracotta);
   font-weight: 800;
 }
 .modal-box h3 { margin-top: 0; }

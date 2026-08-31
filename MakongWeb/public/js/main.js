@@ -63,13 +63,32 @@ function findInteractiveAncestor(el) {
   return null;
 }
 
-function spawnClickBlink(x, y) {
-  const blink = document.createElement("span");
-  blink.className = "click-blink";
-  blink.style.left = `${x}px`;
-  blink.style.top = `${y}px`;
-  document.body.appendChild(blink);
-  blink.addEventListener("animationend", () => blink.remove(), { once: true });
+// A tiny firework: one quick center flash plus a handful of sparks that
+// shoot outward at random angles/distances, all lime-green.
+function spawnClickSparkle(x, y) {
+  const container = document.createElement("span");
+  container.className = "click-sparkle";
+  container.style.left = `${x}px`;
+  container.style.top = `${y}px`;
+
+  const center = document.createElement("span");
+  center.className = "spark center";
+  container.appendChild(center);
+
+  const sparkCount = 7;
+  for (let i = 0; i < sparkCount; i++) {
+    const spark = document.createElement("span");
+    spark.className = "spark";
+    const angle = (360 / sparkCount) * i + (Math.random() * 26 - 13);
+    const dist = 16 + Math.random() * 16;
+    spark.style.setProperty("--angle", `${angle}deg`);
+    spark.style.setProperty("--dist", `${-dist}px`);
+    spark.style.animationDelay = `${Math.random() * 40}ms`;
+    container.appendChild(spark);
+  }
+
+  document.body.appendChild(container);
+  setTimeout(() => container.remove(), 650);
 }
 
 document.addEventListener("click", (e) => {
@@ -78,12 +97,12 @@ document.addEventListener("click", (e) => {
   let { clientX: x, clientY: y } = e;
   if (!x && !y) {
     // Keyboard-triggered activation (Enter/Space) has no pointer position -
-    // center the blink on the element instead.
+    // center the sparkle on the element instead.
     const rect = target.getBoundingClientRect();
     x = rect.left + rect.width / 2;
     y = rect.top + rect.height / 2;
   }
-  spawnClickBlink(x, y);
+  spawnClickSparkle(x, y);
 });
 
 function toggleNav() {
