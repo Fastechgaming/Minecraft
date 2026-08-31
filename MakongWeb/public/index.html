@@ -111,23 +111,22 @@ try { if (localStorage.getItem("makong-theme") === "light") document.documentEle
       <a id="discord-btn" class="action-btn action-btn-badge discord" href="#" target="_blank" rel="noopener" data-i18n-aria="home.discord" aria-label="Discord">
         <img class="action-badge" src="/images/site/discord-badge.png" alt="" />
       </a>
-      <a id="ip-btn" class="action-btn server-ip" href="#">
-        <span class="btn-text">
-          <span class="btn-title ip-text">play.makongmc.com</span>
-          <small data-i18n="home.copyIp">Click to copy IP</small>
-        </span>
-      </a>
+      <div class="ip-stack">
+        <a id="ip-btn" class="action-btn server-ip" href="#">
+          <span class="btn-text">
+            <span class="btn-title ip-text">play.makongmc.com</span>
+            <small data-i18n="home.copyIp">Click to copy IP</small>
+          </span>
+        </a>
+        <div class="status-pill">
+          <span id="status-dot" class="status-dot"></span>
+          <span id="status-text" data-i18n="home.checking">Checking server status…</span>
+        </div>
+      </div>
       <a class="action-btn action-btn-badge store" href="/store" data-i18n-aria="home.store" aria-label="Store">
         <img class="action-badge" src="/images/site/store-badge.png" alt="" />
       </a>
     </div>
-
-    <div class="status-pill">
-      <span id="status-dot" class="status-dot"></span>
-      <span id="status-text" data-i18n="home.checking">Checking server status…</span>
-    </div>
-
-    <img class="hero-silhouette" src="/images/site/forest-silhouette.svg" alt="" aria-hidden="true" />
   </header>
 
   <main>

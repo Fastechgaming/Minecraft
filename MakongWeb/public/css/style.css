@@ -473,8 +473,8 @@ button { font-family: inherit; }
 @media (max-width: 600px) { .leaf-corner { width: 95px; height: 95px; } }
 
 .hero-logo-full {
-  max-width: 420px;
-  width: 80%;
+  max-width: 504px;
+  width: 96%;
   margin: 0 auto 1.25rem;
   filter: drop-shadow(4px 6px 0 rgba(42, 22, 8, 0.25));
 }
@@ -540,44 +540,59 @@ button { font-family: inherit; }
   width: auto;
   filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.35));
 }
-@media (max-width: 560px) { .action-badge { height: 100px; } }
 .action-btn .btn-text { display: flex; flex-direction: column; gap: 0.1rem; }
 .action-btn small { font-weight: 600; opacity: 0.85; font-size: 0.72rem; color: #ffe8c2; }
 .action-btn .ip-text { font-size: 1.05rem; }
 
-/* Flat green button with a bold white border and centered white text, no
-   icon - matches the reference the badges were designed alongside. */
+/* The IP button + player-count pill, stacked as one column that stretches
+   to match the Discord/Store badges' height (.hero-actions has
+   align-items:stretch, and this is a direct flex child of it). */
+.ip-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 0.5rem;
+  min-width: 210px;
+}
+
+/* Same jungle-green pill look as the nav's Home/Store links, just with a
+   two-line label instead of an icon + word. */
 .action-btn.server-ip {
   justify-content: center;
   text-align: center;
-  padding: 1rem 1.75rem;
-  background: #28b400;
-  border: 4px solid #ffffff;
-  border-radius: 20px;
-  box-shadow: 0 6px 0 rgba(0, 0, 0, 0.35), 0 10px 16px rgba(0, 0, 0, 0.3);
+  padding: 0.5rem 1rem;
+  min-width: 0;
+  background: linear-gradient(180deg, var(--jungle), var(--jungle-dark));
+  border: 2px solid var(--stone-darkest);
+  border-radius: 10px;
+  box-shadow: 0 3px 0 var(--stone-darkest);
 }
-.action-btn.server-ip:active { box-shadow: 0 2px 0 rgba(0, 0, 0, 0.35); }
+.action-btn.server-ip:hover { transform: translateY(-2px) scale(1.04); }
+.action-btn.server-ip:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--stone-darkest); }
 .action-btn.server-ip::after { content: none; }
 .action-btn.server-ip .btn-text { align-items: center; }
-.action-btn.server-ip .ip-text { font-size: 1.15rem; }
+.action-btn.server-ip .ip-text { font-size: 1rem; }
 .action-btn.server-ip .btn-title,
 .action-btn.server-ip small {
-  color: #ffffff;
+  color: var(--on-dark);
   opacity: 1;
-  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.35);
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.3);
 }
 
 .status-pill {
   display: inline-flex;
   align-items: center;
-  gap: 0.6rem;
+  justify-content: center;
+  align-self: center;
+  gap: 0.5rem;
   background: var(--brown-darkest);
   border: 3px solid var(--gold);
   border-radius: 999px;
-  padding: 0.55rem 1.1rem;
-  margin: 0 auto 2rem;
+  padding: 0.4rem 0.9rem;
+  margin: 0;
   font-weight: 700;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: var(--on-dark);
   box-shadow: var(--shadow-hard);
 }
@@ -585,19 +600,20 @@ button { font-family: inherit; }
 .status-dot.online { background: #57d97a; box-shadow: 0 0 8px #57d97a; }
 .status-dot.offline { background: #e2513a; }
 
-.hero-silhouette {
-  /* cancel the hero's horizontal padding so the treeline reaches both edges */
-  width: calc(100% + 2.5rem);
-  margin-left: -1.25rem;
-  margin-right: -1.25rem;
-  max-width: none;
-  height: 110px;
-  display: block;
-  margin-top: 1.5rem;
-  position: relative;
-  z-index: 1;
+/* Keep Discord/IP/Store side by side even on narrow phones instead of
+   stacking, shrinking each item to fit. */
+@media (max-width: 560px) {
+  .hero-actions { flex-wrap: nowrap; gap: 0.5rem; }
+  .action-badge { height: 78px; }
+  .action-btn { min-width: 0; }
+  .ip-stack { min-width: 0; flex: 1; gap: 0.35rem; }
+  .action-btn.server-ip { padding: 0.4rem 0.5rem; }
+  .action-btn.server-ip .ip-text { font-size: 0.74rem; }
+  .action-btn.server-ip small { font-size: 0.58rem; }
+  .status-pill { padding: 0.3rem 0.55rem; font-size: 0.62rem; gap: 0.35rem; }
+  .status-dot { width: 8px; height: 8px; }
 }
-@media (max-width: 520px) { .hero-silhouette { height: 65px; } }
+
 
 .toast {
   position: fixed;
