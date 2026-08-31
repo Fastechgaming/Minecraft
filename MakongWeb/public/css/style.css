@@ -162,7 +162,12 @@ button { font-family: inherit; }
   padding: 0 1.25rem;
 }
 
-.flower-accent {
+/* Scoped to .hero (rather than bare .flower-accent) so this reliably beats
+   the later, equal-specificity ".hero > *" rule that flips absolutely
+   positioned hero decorations to position:relative for z-index stacking -
+   without this, each flower-accent <img> (display:block globally) would
+   fall back into normal flow and stack up real page height above the logo. */
+.hero .flower-accent {
   position: absolute;
   width: 30px;
   height: 30px;
