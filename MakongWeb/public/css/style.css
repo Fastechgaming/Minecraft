@@ -683,16 +683,13 @@ button { font-family: inherit; }
 .section h2::after {
   content: "";
   display: block;
-  width: 130px;
-  height: 11px;
+  width: min(85%, 260px);
+  aspect-ratio: 900 / 133;
   margin: 0.75rem auto 0;
-  border-radius: 6px;
-  border: 2px solid var(--stone-darkest);
-  background:
-    radial-gradient(circle at 7px 50%, var(--stone-darkest) 0 3px, transparent 3.5px),
-    radial-gradient(circle at calc(100% - 7px) 50%, var(--stone-darkest) 0 3px, transparent 3.5px),
-    var(--stone-surface);
-  box-shadow: var(--stone-bevel);
+  background: url("/images/site/divider-vine-night.png") center / contain no-repeat;
+}
+:root[data-theme="light"] .section h2::after {
+  background-image: url("/images/site/divider-vine-day.png");
 }
 
 /* Heading with its carved divider suppressed (used when a subtitle follows). */
@@ -711,16 +708,13 @@ button { font-family: inherit; }
 .section-subtitle::after {
   content: "";
   display: block;
-  width: 130px;
-  height: 11px;
+  width: min(85%, 260px);
+  aspect-ratio: 900 / 133;
   margin: 0.7rem auto 0;
-  border-radius: 6px;
-  border: 2px solid var(--stone-darkest);
-  background:
-    radial-gradient(circle at 7px 50%, var(--stone-darkest) 0 3px, transparent 3.5px),
-    radial-gradient(circle at calc(100% - 7px) 50%, var(--stone-darkest) 0 3px, transparent 3.5px),
-    var(--stone-surface);
-  box-shadow: var(--stone-bevel);
+  background: url("/images/site/divider-vine-night.png") center / contain no-repeat;
+}
+:root[data-theme="light"] .section-subtitle::after {
+  background-image: url("/images/site/divider-vine-day.png");
 }
 
 .info-grid {
