@@ -25,6 +25,7 @@
   --water-blue: #57d0e8;
   --firefly-glow: #ddff7e;
   --firefly-glow-2: #8ce8ff;
+  --click-blink: #9dff57;
   /* Vivid leaf-green button surface — replaces the old wood-plank look on
      the hero action buttons and other primary "pill" controls. */
   --leaf-surface:
@@ -614,6 +615,29 @@ button { font-family: inherit; }
   font-weight: 700;
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* Tap feedback - a quick bright-green blink wherever you tap a button,
+   link, or card, spawned by main.js on every click. */
+.click-blink {
+  position: fixed;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff 0%, var(--click-blink) 40%, rgba(157, 255, 87, 0) 75%);
+  box-shadow: 0 0 16px 5px rgba(157, 255, 87, 0.65);
+  pointer-events: none;
+  z-index: 9999;
+  transform: translate(-50%, -50%) scale(0.3);
+  animation: click-blink 0.42s ease-out forwards;
+}
+@keyframes click-blink {
+  0% { opacity: 1; transform: translate(-50%, -50%) scale(0.3); }
+  35% { opacity: 1; transform: translate(-50%, -50%) scale(1.4); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(2.3); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .click-blink { display: none; }
+}
 
 /* ---------- Sections ---------- */
 .section { padding: 1.5rem 0 3rem; }

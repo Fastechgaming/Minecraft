@@ -37,6 +37,55 @@ function toggleTheme() {
   }
 }
 
+/* ---------------- Tap/click blink feedback ---------------- */
+// A quick bright-green flash wherever the visitor taps something clickable,
+// so every button/link/card on the site gives instant visual feedback.
+function isInteractiveEl(el) {
+  if (!el || el.disabled || el.getAttribute?.("aria-disabled") === "true") return false;
+  if (el.matches?.("button, a, input[type='submit'], input[type='button'], input[type='checkbox'], input[type='radio'], select, label, [role='button'], [onclick]")) {
+    return true;
+  }
+  try {
+    return getComputedStyle(el).cursor === "pointer";
+  } catch {
+    return false;
+  }
+}
+
+function findInteractiveAncestor(el) {
+  let node = el;
+  let depth = 0;
+  while (node && node.nodeType === 1 && depth < 8) {
+    if (isInteractiveEl(node)) return node;
+    node = node.parentElement;
+    depth++;
+  }
+  return null;
+}
+
+function spawnClickBlink(x, y) {
+  const blink = document.createElement("span");
+  blink.className = "click-blink";
+  blink.style.left = `${x}px`;
+  blink.style.top = `${y}px`;
+  document.body.appendChild(blink);
+  blink.addEventListener("animationend", () => blink.remove(), { once: true });
+}
+
+document.addEventListener("click", (e) => {
+  const target = findInteractiveAncestor(e.target);
+  if (!target) return;
+  let { clientX: x, clientY: y } = e;
+  if (!x && !y) {
+    // Keyboard-triggered activation (Enter/Space) has no pointer position -
+    // center the blink on the element instead.
+    const rect = target.getBoundingClientRect();
+    x = rect.left + rect.width / 2;
+    y = rect.top + rect.height / 2;
+  }
+  spawnClickBlink(x, y);
+});
+
 function toggleNav() {
   document.querySelector(".lang-menu")?.classList.remove("open");
   document.querySelector(".nav-links")?.classList.toggle("open");
