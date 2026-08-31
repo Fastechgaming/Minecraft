@@ -59,7 +59,7 @@ try { if (localStorage.getItem("makong-theme") === "light") document.documentEle
   <main>
     <section class="section">
       <div class="container">
-        <h2 class="no-rule">🌿 Makong 🌿</h2>
+        <h2 class="no-rule"><img class="heading-leaf" src="/images/site/icon-leaf.png" alt="" />Makong<img class="heading-leaf" src="/images/site/icon-leaf.png" alt="" /></h2>
         <p class="section-subtitle" data-i18n="store.subtitle">STORE</p>
         <!-- Sign in first: the store needs to know who it is selling to -->
         <div class="checkout-panel games-gate" id="store-gate">
@@ -102,13 +102,13 @@ try { if (localStorage.getItem("makong-theme") === "light") document.documentEle
         <div id="store-body" hidden>
           <div class="player-bar checkout-panel store-profile">
             <div class="player-id">
-              <span class="player-avatar" id="store-rank-icon">🧑‍🌾</span>
+              <div class="avatar-wrap">
+                <span class="player-avatar" id="store-rank-icon">🧑‍🌾</span>
+                <img class="avatar-leaf-badge" src="/images/site/icon-leaf.png" alt="" />
+              </div>
               <div>
                 <div class="player-label" data-i18n="store.loggedInAs">Logged in as</div>
-                <div class="player-name-row">
-                  <img class="player-name-leaf" src="/images/site/icon-leaf.png" alt="" />
-                  <div class="player-name" id="store-player-name">—</div>
-                </div>
+                <div class="player-name" id="store-player-name">—</div>
                 <div class="profile-meta">
                   <span id="store-rank-chip"></span>
                   <span class="profile-chip coins" id="store-coins-chip"></span>
@@ -121,11 +121,13 @@ try { if (localStorage.getItem("makong-theme") === "light") document.documentEle
             </div>
           </div>
 
-          <div class="gamemode-select-wrap">
-            <label for="gamemode-select" class="sr-only" data-i18n="store.gamemode">Gamemode</label>
-            <select class="gamemode-select" id="gamemode-select"></select>
+          <div class="store-controls checkout-panel">
+            <div class="gamemode-select-wrap">
+              <label for="gamemode-select" class="sr-only" data-i18n="store.gamemode">Gamemode</label>
+              <select class="gamemode-select" id="gamemode-select"></select>
+            </div>
+            <div class="store-tabs" id="store-tabs"></div>
           </div>
-          <div class="store-tabs" id="store-tabs"></div>
           <div class="item-grid" id="item-grid"></div>
         </div>
       </div>

@@ -202,7 +202,7 @@ function renderGamemodeTabs() {
   gamemodes.forEach((gm) => {
     const opt = document.createElement("option");
     opt.value = gm.id;
-    opt.textContent = gm.name;
+    opt.textContent = `${t("store.gamemode")}: ${gm.name}`;
     select.appendChild(opt);
   });
   select.value = activeGamemode;
@@ -754,7 +754,10 @@ async function bootStore() {
     return;
   }
 
-  activeGamemode = gamemodes[0] ? gamemodes[0].id : null;
+  // BoxPvP is the default gamemode shown when the store first loads,
+  // falling back to whatever's first if it's ever missing from the catalogue.
+  const defaultGamemode = gamemodes.find((g) => g.id === "boxpvp") || gamemodes[0];
+  activeGamemode = defaultGamemode ? defaultGamemode.id : null;
   if (activeGamemode) {
     const gm = gamemodes.find((g) => g.id === activeGamemode);
     activeCategory = gm.categories[0];

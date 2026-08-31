@@ -38,7 +38,7 @@ const I18n = (() => {
       "home.online": "{online} Players",
       "home.offline": "Server offline",
       "home.statusUnavailable": "Status unavailable",
-      "home.welcome": "🌿 Welcome 🌿",
+      "home.welcome": "Welcome",
       "home.copied": 'Copied "{ip}" — paste it into Minecraft > Multiplayer > Add Server',
       "home.opening": "Opening Minecraft (Bedrock)… Java IP also copied just in case!",
 
@@ -316,7 +316,7 @@ const I18n = (() => {
       "home.online": "អ្នកលេង {online} នាក់",
       "home.offline": "Server Offline",
       "home.statusUnavailable": "មិនអាចពិនិត្យស្ថានភាពបានទេ",
-      "home.welcome": "🌿 សូមស្វាគមន៍ 🌿",
+      "home.welcome": "សូមស្វាគមន៍",
       "home.copied": 'បានចម្លង "{ip}" — សូមដាក់ក្នុង Minecraft > Multiplayer > Add Server',
       "home.opening": "កំពុងបើក Minecraft (Bedrock)… IP Java ក៏បានចម្លងទុកដែរ!",
 
