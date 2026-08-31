@@ -11,7 +11,6 @@ async function loadHome() {
   const navLogo = document.getElementById("nav-logo");
   if (navLogo) navLogo.src = cfg.logoIcon || cfg.logo || "/images/site/logo-icon.png";
   document.getElementById("hero-title").textContent = cfg.serverName;
-  document.getElementById("hero-tagline").textContent = cfg.tagline || "";
   document.getElementById("welcome-message").textContent = cfg.welcomeMessage || "";
 
   document.getElementById("discord-btn").href = cfg.discordLink || "#";

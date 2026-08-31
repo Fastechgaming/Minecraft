@@ -9,10 +9,12 @@
    Brand accents (gold, moss, terracotta) stay the same in both.
    --------------------------------------------------------------- */
 :root {
-  /* shared brand accents */
-  --gold: #ffca4d;
-  --gold-light: #ffe38a;
-  --gold-deep: #d99a1f;
+  /* shared brand accents - a white/lime-green "sunlight" family, standing
+     in for the old gold/amber accent everywhere it showed up (buttons,
+     borders, highlighted text). */
+  --gold: #d7ffa0;
+  --gold-light: #ffffff;
+  --gold-deep: #8fd94f;
   --jungle: #34b358;
   --jungle-dark: #1d6b34;
   --moss: #7fd858;
@@ -46,15 +48,14 @@
   --ink: #eef7ea;
   --ink-soft: #a2c69c;
   --brown: #7c5a34;
-  --brown-dark: #ffdb70;
+  --brown-dark: #ffffff;
   --brown-darkest: #050d08;
-  --terracotta: #ff6a52;
+  --terracotta: #9dff57;
   --success: #7ad06a;
   --sky-top: #173a2b;
   --sky-bottom: #0b2118;
   --sky-deep: #050f0a;
   --input-bg: #17301f;
-  --tagline-shadow: 0 2px 6px rgba(0, 0, 0, 0.75), 0 1px 2px rgba(0, 0, 0, 0.9);
 
   --stone-light: #3f6b46;
   --stone: #2c4f34;
@@ -86,13 +87,12 @@
   --brown: #8a6030;
   --brown-dark: #1c4a22;
   --brown-darkest: #0f2812;
-  --terracotta: #e2483a;
+  --terracotta: #4c9a2a;
   --success: #2f8a4a;
   --sky-top: #bdeaff;
   --sky-bottom: #cdf0a0;
   --sky-deep: #9fdd7a;
   --input-bg: #ffffff;
-  --tagline-shadow: none;
 
   --stone-light: #f5fbe8;
   --stone: #e2f2c8;
@@ -382,7 +382,7 @@ button { font-family: inherit; }
 .hero {
   position: relative;
   background: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-bottom) 60%, var(--sky-deep) 100%);
-  padding: 2.75rem 1.25rem 0;
+  padding: 1.25rem 1.25rem 0;
   text-align: center;
   overflow: hidden;
 }
@@ -470,16 +470,8 @@ button { font-family: inherit; }
 .hero-logo-full {
   max-width: 420px;
   width: 80%;
-  margin: 0 auto 0.75rem;
+  margin: 0 auto 1.25rem;
   filter: drop-shadow(4px 6px 0 rgba(42, 22, 8, 0.25));
-}
-.hero p.tagline {
-  color: var(--brown-dark);
-  font-weight: 600;
-  margin: 0 auto 1.5rem;
-  max-width: 42ch;
-  font-size: 1.05rem;
-  text-shadow: var(--tagline-shadow);
 }
 
 .hero-actions {
