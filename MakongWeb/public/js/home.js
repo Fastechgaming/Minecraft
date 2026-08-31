@@ -82,7 +82,7 @@ function renderStatus(status) {
   }
   dot.className = `status-dot ${status.online ? "online" : "offline"}`;
   text.textContent = status.online
-    ? t("home.online", { online: status.players.online, max: status.players.max })
+    ? t("home.online", { online: status.players.online })
     : t("home.offline");
 }
 

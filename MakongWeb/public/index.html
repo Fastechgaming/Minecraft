@@ -108,12 +108,8 @@ try { if (localStorage.getItem("makong-theme") === "light") document.documentEle
     <img id="hero-logo" class="hero-logo-full" src="/images/site/logo-full.png" alt="Makong Network" />
 
     <div class="hero-actions">
-      <a id="discord-btn" class="action-btn discord" href="#" target="_blank" rel="noopener">
-        <span class="btn-icon">💬</span>
-        <span class="btn-text">
-          <span class="btn-title" data-i18n="home.discord">Discord</span>
-          <small data-i18n="home.discordSub">Join our community</small>
-        </span>
+      <a id="discord-btn" class="action-btn action-btn-badge discord" href="#" target="_blank" rel="noopener" data-i18n-aria="home.discord" aria-label="Discord">
+        <img class="action-badge" src="/images/site/discord-badge.png" alt="" />
       </a>
       <a id="ip-btn" class="action-btn server-ip" href="#">
         <span class="btn-icon">📋</span>
@@ -122,12 +118,8 @@ try { if (localStorage.getItem("makong-theme") === "light") document.documentEle
           <small data-i18n="home.copyIp">Click to copy IP</small>
         </span>
       </a>
-      <a class="action-btn store" href="/store">
-        <span class="btn-icon">🛒</span>
-        <span class="btn-text">
-          <span class="btn-title" data-i18n="home.store">Store</span>
-          <small data-i18n="home.storeSub">Ranks, coins &amp; more</small>
-        </span>
+      <a class="action-btn action-btn-badge store" href="/store" data-i18n-aria="home.store" aria-label="Store">
+        <img class="action-badge" src="/images/site/store-badge.png" alt="" />
       </a>
     </div>
 

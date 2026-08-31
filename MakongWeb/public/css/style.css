@@ -522,6 +522,25 @@ button { font-family: inherit; }
   transform: scaleY(-1);
   pointer-events: none;
 }
+
+/* Discord/Store as bare glowing badge art instead of a pill button - the
+   artwork already carries its own icon, label, and leaf sprigs, so the
+   pill background/border/shadow and the moss-sprig corner are dropped. */
+.action-btn.action-btn-badge {
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  box-shadow: none;
+}
+.action-btn.action-btn-badge::after { content: none; }
+.action-btn.action-btn-badge:active { box-shadow: none; }
+.action-badge {
+  height: 130px;
+  width: auto;
+  filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.35));
+}
+@media (max-width: 560px) { .action-badge { height: 100px; } }
 .action-btn .btn-icon {
   flex-shrink: 0;
   width: 2.5rem;
@@ -534,9 +553,7 @@ button { font-family: inherit; }
   border: 2px solid var(--stone-darkest);
   box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.35), inset 0 -2px 0 rgba(0, 0, 0, 0.25);
 }
-.action-btn.discord .btn-icon { background: #5865f2; }
 .action-btn.server-ip .btn-icon { background: linear-gradient(180deg, var(--gold-light), var(--gold)); }
-.action-btn.store .btn-icon { background: linear-gradient(180deg, var(--moss-light), var(--moss)); }
 .action-btn .btn-text { display: flex; flex-direction: column; gap: 0.1rem; }
 .action-btn small { font-weight: 600; opacity: 0.85; font-size: 0.72rem; color: #ffe8c2; }
 .action-btn .ip-text { font-size: 1.05rem; }
