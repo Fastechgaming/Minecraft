@@ -46,11 +46,11 @@ try { if (localStorage.getItem("makong-theme") === "light") document.documentEle
             <li role="none"><button type="button" role="menuitem" class="lang-option" data-lang="km" onclick="setLang('km')">ខ្មែរ</button></li>
           </ul>
         </div>
-        <button class="theme-toggle" onclick="toggleTheme()" aria-label="Switch theme">☀️</button>
+        <button class="theme-toggle" onclick="toggleTheme()" aria-label="Switch theme"><img class="theme-icon" src="/images/site/sun-icon.png" alt="" /></button>
       </div>
       <ul class="nav-links">
-        <li><a href="/" data-i18n="nav.home">🏠 Home</a></li>
-        <li><a href="/store" class="active" data-i18n="nav.store">💰 Store</a></li>
+        <li><a href="/"><img class="nav-icon" src="/images/site/icon-home.png" alt="" /><span data-i18n="nav.home">Home</span></a></li>
+        <li><a href="/store" class="active"><img class="nav-icon" src="/images/site/icon-store-nav.png" alt="" /><span data-i18n="nav.store">Store</span></a></li>
       </ul>
       <button class="nav-toggle" onclick="toggleNav()" aria-label="Menu" data-i18n-aria="nav.menu">&#9776;</button>
     </div>
@@ -112,7 +112,10 @@ try { if (localStorage.getItem("makong-theme") === "light") document.documentEle
                 </div>
               </div>
             </div>
-            <button class="change-name-btn" id="store-change-btn" data-i18n="games.changeName">Change name</button>
+            <div class="profile-actions">
+              <button class="change-name-btn" id="store-change-btn" data-i18n="games.changeName">Change name</button>
+              <button class="change-name-btn" id="store-change-region-btn" data-i18n="store.changeRegion">Change store</button>
+            </div>
           </div>
 
           <div class="gamemode-select-wrap">
@@ -139,12 +142,12 @@ try { if (localStorage.getItem("makong-theme") === "light") document.documentEle
       </p>
       <div class="region-choice">
         <button type="button" class="region-btn" id="region-khmer">
-          <span class="region-flag">🇰🇭</span>
+          <img class="region-flag" src="/images/site/flag-cambodia.png" alt="" />
           <span class="region-name" data-i18n="region.khmer">Cambodia</span>
           <span class="region-desc" data-i18n="region.khmerDesc">Pay with KHQR</span>
         </button>
         <button type="button" class="region-btn" id="region-global">
-          <span class="region-flag">🌍</span>
+          <img class="region-flag" src="/images/site/icon-global.png" alt="" />
           <span class="region-name" data-i18n="region.global">Global</span>
           <span class="region-desc" data-i18n="region.globalDesc">Pay via Tebex</span>
         </button>

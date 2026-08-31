@@ -209,9 +209,11 @@ button { font-family: inherit; }
   height: 42px;
   width: 42px;
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 10px;
   cursor: pointer;
-  font-size: 1.15rem;
   line-height: 1;
   color: var(--on-dark);
   background: linear-gradient(180deg, var(--jungle), var(--jungle-dark));
@@ -220,6 +222,7 @@ button { font-family: inherit; }
   transition: transform 0.18s cubic-bezier(.34,1.56,.64,1), box-shadow 0.15s;
 }
 .theme-toggle:hover { transform: translateY(-2px) scale(1.06); }
+.theme-icon { width: 24px; height: 24px; object-fit: contain; }
 .theme-toggle:active { transform: translateY(1px); box-shadow: 0 1px 0 var(--stone-darkest); }
 
 /* Language switch - a custom dropdown card styled the same as the mobile
@@ -244,7 +247,6 @@ button { font-family: inherit; }
   box-shadow: 0 3px 0 var(--stone-darkest);
   transition: transform 0.18s cubic-bezier(.34,1.56,.64,1), box-shadow 0.15s;
 }
-.lang-toggle::after { content: "▾"; font-size: 0.7rem; opacity: 0.85; }
 .lang-toggle:hover { transform: translateY(-2px) scale(1.06); }
 .lang-toggle:active { transform: translateY(1px); box-shadow: 0 1px 0 var(--stone-darkest); }
 .lang-toggle:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
@@ -329,6 +331,7 @@ button { font-family: inherit; }
 }
 .nav-links a:hover { transform: translateY(-2px) scale(1.04); }
 .nav-links a.active { background: var(--stone-surface); color: var(--ink); border-color: var(--gold); box-shadow: var(--stone-bevel), 0 3px 0 var(--gold-deep); }
+.nav-icon { width: 18px; height: 18px; object-fit: contain; flex-shrink: 0; }
 .nav-toggle {
   display: none;
   background: none;
@@ -1060,7 +1063,7 @@ a.feature-card.linked .feature-title { color: var(--link-accent); }
   color: var(--on-dark); transition: transform 0.15s ease;
 }
 .region-btn:hover { transform: translateY(-2px) scale(1.02); }
-.region-flag { font-size: 2rem; }
+.region-flag { width: 44px; height: 44px; object-fit: contain; }
 .region-name { font-weight: 800; font-size: 1.05rem; }
 .region-desc { font-size: 0.8rem; opacity: 0.85; }
 
@@ -1419,9 +1422,11 @@ a.feature-card.linked .feature-title { color: var(--link-accent); }
   border-bottom: 3px solid var(--stone-darkest);
 }
 
+.profile-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; }
 @media (max-width: 620px) {
   .player-bar { flex-direction: column; align-items: stretch; text-align: center; }
   .player-id { justify-content: center; }
+  .profile-actions { flex-direction: column; width: 100%; }
 }
 
 /* =========================================================

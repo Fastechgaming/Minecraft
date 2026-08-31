@@ -21,7 +21,8 @@ function applyTheme(theme) {
 
   document.querySelectorAll(".theme-toggle").forEach((btn) => {
     // Show the theme you'd switch TO, which is the common convention.
-    btn.textContent = isLight ? "🌙" : "☀️";
+    const icon = btn.querySelector(".theme-icon");
+    if (icon) icon.src = isLight ? "/images/site/moon-icon.png" : "/images/site/sun-icon.png";
     btn.setAttribute("aria-label", isLight ? "Switch to dark theme" : "Switch to light theme");
     btn.setAttribute("title", isLight ? "Switch to dark theme" : "Switch to light theme");
   });
@@ -38,30 +39,8 @@ function toggleTheme() {
 }
 
 /* ---------------- Tap/click blink feedback ---------------- */
-// A quick bright-green flash wherever the visitor taps something clickable,
-// so every button/link/card on the site gives instant visual feedback.
-function isInteractiveEl(el) {
-  if (!el || el.disabled || el.getAttribute?.("aria-disabled") === "true") return false;
-  if (el.matches?.("button, a, input[type='submit'], input[type='button'], input[type='checkbox'], input[type='radio'], select, label, [role='button'], [onclick]")) {
-    return true;
-  }
-  try {
-    return getComputedStyle(el).cursor === "pointer";
-  } catch {
-    return false;
-  }
-}
-
-function findInteractiveAncestor(el) {
-  let node = el;
-  let depth = 0;
-  while (node && node.nodeType === 1 && depth < 8) {
-    if (isInteractiveEl(node)) return node;
-    node = node.parentElement;
-    depth++;
-  }
-  return null;
-}
+// A quick bright-green flash wherever the visitor taps - anywhere on the
+// page, not just buttons/links - so every click gives instant feedback.
 
 // A tiny firework: one quick center flash plus a handful of sparks that
 // shoot outward at random angles/distances, all lime-green.
@@ -92,13 +71,11 @@ function spawnClickSparkle(x, y) {
 }
 
 document.addEventListener("click", (e) => {
-  const target = findInteractiveAncestor(e.target);
-  if (!target) return;
   let { clientX: x, clientY: y } = e;
-  if (!x && !y) {
+  if (!x && !y && e.target instanceof Element) {
     // Keyboard-triggered activation (Enter/Space) has no pointer position -
-    // center the sparkle on the element instead.
-    const rect = target.getBoundingClientRect();
+    // center the sparkle on whatever was activated instead.
+    const rect = e.target.getBoundingClientRect();
     x = rect.left + rect.width / 2;
     y = rect.top + rect.height / 2;
   }

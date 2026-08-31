@@ -634,6 +634,17 @@ function renderCooldownNote() {
   editionField.hidden = locked;
 }
 
+// "Change store" re-opens the region picker so the player can switch
+// between Cambodia (stays on this site) and Global (Tebex) again.
+document.getElementById("store-change-region-btn").addEventListener("click", () => {
+  try {
+    sessionStorage.removeItem(REGION_KEY);
+  } catch {
+    /* private browsing — the modal still opens, just won't remember the choice */
+  }
+  document.getElementById("region-modal").classList.add("open");
+});
+
 document.getElementById("store-change-btn").addEventListener("click", () => {
   changeEdition = account ? account.edition : "java";
   document

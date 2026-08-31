@@ -21,8 +21,8 @@ const I18n = (() => {
   const DICT = {
     en: {
       /* ---- nav / chrome ---- */
-      "nav.home": "🏠 Home",
-      "nav.store": "💰 Store",
+      "nav.home": "Home",
+      "nav.store": "Store",
       "nav.menu": "Menu",
       "nav.language": "Language",
       "footer.copy": "© {year} Makong Network · Asia Minecraft Server 🌏",
@@ -45,6 +45,7 @@ const I18n = (() => {
       /* ---- store ---- */
       "store.subtitle": "STORE",
       "store.gamemode": "Gamemode",
+      "store.changeRegion": "Change store",
       "region.title": "Select your region",
       "region.subtitle": "This decides how you'll pay. You can change it any time.",
       "region.khmer": "Cambodia",
@@ -298,8 +299,8 @@ const I18n = (() => {
 
     km: {
       /* ---- nav / chrome ---- */
-      "nav.home": "🏠 ទំព័រដើម",
-      "nav.store": "💰 ហាង",
+      "nav.home": "ទំព័រដើម",
+      "nav.store": "ហាង",
       "nav.menu": "ម៉ឺនុយ",
       "nav.language": "ភាសា",
       "footer.copy": "© {year} Makong Network · Minecraft Server អាស៊ី 🌏",
@@ -322,6 +323,7 @@ const I18n = (() => {
       /* ---- store ---- */
       "store.subtitle": "ហាង",
       "store.gamemode": "ប្រភេទហ្គេម",
+      "store.changeRegion": "ប្តូរតំបន់ហាង",
       "region.title": "ជ្រើសរើសតំបន់របស់អ្នក",
       "region.subtitle": "វានឹងកំណត់វិធីបង់ប្រាក់របស់អ្នក។ អ្នកអាចផ្លាស់ប្តូរបានគ្រប់ពេល។",
       "region.khmer": "កម្ពុជា",

@@ -65,11 +65,11 @@ try { if (localStorage.getItem("makong-theme") === "light") document.documentEle
             <li role="none"><button type="button" role="menuitem" class="lang-option" data-lang="km" onclick="setLang('km')">ខ្មែរ</button></li>
           </ul>
         </div>
-        <button class="theme-toggle" onclick="toggleTheme()" aria-label="Switch theme">☀️</button>
+        <button class="theme-toggle" onclick="toggleTheme()" aria-label="Switch theme"><img class="theme-icon" src="/images/site/sun-icon.png" alt="" /></button>
       </div>
       <ul class="nav-links">
-        <li><a href="/" data-i18n="nav.home">🏠 Home</a></li>
-        <li><a href="/store" data-i18n="nav.store">💰 Store</a></li>
+        <li><a href="/"><img class="nav-icon" src="/images/site/icon-home.png" alt="" /><span data-i18n="nav.home">Home</span></a></li>
+        <li><a href="/store"><img class="nav-icon" src="/images/site/icon-store-nav.png" alt="" /><span data-i18n="nav.store">Store</span></a></li>
       </ul>
       <button class="nav-toggle" onclick="toggleNav()" aria-label="Menu" data-i18n-aria="nav.menu">&#9776;</button>
     </div>
