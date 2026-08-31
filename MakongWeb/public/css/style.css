@@ -541,22 +541,31 @@ button { font-family: inherit; }
   filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.35));
 }
 @media (max-width: 560px) { .action-badge { height: 100px; } }
-.action-btn .btn-icon {
-  flex-shrink: 0;
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.25rem;
-  border: 2px solid var(--stone-darkest);
-  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.35), inset 0 -2px 0 rgba(0, 0, 0, 0.25);
-}
-.action-btn.server-ip .btn-icon { background: linear-gradient(180deg, var(--gold-light), var(--gold)); }
 .action-btn .btn-text { display: flex; flex-direction: column; gap: 0.1rem; }
 .action-btn small { font-weight: 600; opacity: 0.85; font-size: 0.72rem; color: #ffe8c2; }
 .action-btn .ip-text { font-size: 1.05rem; }
+
+/* Flat green button with a bold white border and centered white text, no
+   icon - matches the reference the badges were designed alongside. */
+.action-btn.server-ip {
+  justify-content: center;
+  text-align: center;
+  padding: 1rem 1.75rem;
+  background: #28b400;
+  border: 4px solid #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 6px 0 rgba(0, 0, 0, 0.35), 0 10px 16px rgba(0, 0, 0, 0.3);
+}
+.action-btn.server-ip:active { box-shadow: 0 2px 0 rgba(0, 0, 0, 0.35); }
+.action-btn.server-ip::after { content: none; }
+.action-btn.server-ip .btn-text { align-items: center; }
+.action-btn.server-ip .ip-text { font-size: 1.15rem; }
+.action-btn.server-ip .btn-title,
+.action-btn.server-ip small {
+  color: #ffffff;
+  opacity: 1;
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.35);
+}
 
 .status-pill {
   display: inline-flex;
