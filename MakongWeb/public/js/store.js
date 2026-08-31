@@ -178,28 +178,37 @@ function renderProfile() {
 
 /* ---------------- Catalogue ---------------- */
 
-// Gamemode tabs (Arcade / EcoSMP / BoxPvP / PlotCity / HyperClash). Switching
-// gamemode also re-picks the active category, since not every gamemode
-// sells the same ones (only EcoSMP/BoxPvP have Keys and Other), and
-// re-fetches the rank ladder, since ranks are priced per gamemode.
+// Gamemode picker (Arcade / EcoSMP / BoxPvP / PlotCity / HyperClash), a
+// dropdown rather than a tab row so it scales to more gamemodes without
+// wrapping. Switching gamemode also re-picks the active category, since not
+// every gamemode sells the same ones (only EcoSMP/BoxPvP have Keys and
+// Other), and re-fetches the rank ladder, since ranks are priced per
+// gamemode.
+let gamemodeSelectWired = false;
 function renderGamemodeTabs() {
-  const wrap = document.getElementById("gamemode-tabs");
-  wrap.innerHTML = "";
+  const select = document.getElementById("gamemode-select");
+  if (!select) return;
+  select.innerHTML = "";
   gamemodes.forEach((gm) => {
-    const btn = document.createElement("button");
-    btn.textContent = gm.name;
-    btn.className = gm.id === activeGamemode ? "active" : "";
-    btn.addEventListener("click", async () => {
-      if (gm.id === activeGamemode) return;
+    const opt = document.createElement("option");
+    opt.value = gm.id;
+    opt.textContent = gm.name;
+    select.appendChild(opt);
+  });
+  select.value = activeGamemode;
+
+  if (!gamemodeSelectWired) {
+    gamemodeSelectWired = true;
+    select.addEventListener("change", async () => {
+      const gm = gamemodes.find((g) => g.id === select.value);
+      if (!gm || gm.id === activeGamemode) return;
       activeGamemode = gm.id;
       if (!gm.categories.includes(activeCategory)) activeCategory = gm.categories[0];
-      renderGamemodeTabs();
       await loadLadder();
       renderTabs();
       renderGrid();
     });
-    wrap.appendChild(btn);
-  });
+  }
 }
 
 // Category tabs (Ranks / Keys / Other) — only the ones the active gamemode sells.

@@ -117,7 +117,10 @@ try { if (localStorage.getItem("makong-theme") === "light") document.documentEle
             <button class="change-name-btn" id="store-change-btn" data-i18n="games.changeName">Change name</button>
           </div>
 
-          <div class="store-tabs gamemode-tabs" id="gamemode-tabs"></div>
+          <div class="gamemode-select-wrap">
+            <label for="gamemode-select" class="sr-only" data-i18n="store.gamemode">Gamemode</label>
+            <select class="gamemode-select" id="gamemode-select"></select>
+          </div>
           <div class="store-tabs" id="store-tabs"></div>
           <div class="item-grid" id="item-grid"></div>
         </div>

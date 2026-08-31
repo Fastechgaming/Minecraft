@@ -44,6 +44,7 @@ const I18n = (() => {
 
       /* ---- store ---- */
       "store.subtitle": "STORE",
+      "store.gamemode": "Gamemode",
       "region.title": "Select your region",
       "region.subtitle": "This decides how you'll pay. You can change it any time.",
       "region.khmer": "Cambodia",
@@ -320,6 +321,7 @@ const I18n = (() => {
 
       /* ---- store ---- */
       "store.subtitle": "ហាង",
+      "store.gamemode": "ប្រភេទហ្គេម",
       "region.title": "ជ្រើសរើសតំបន់របស់អ្នក",
       "region.subtitle": "វានឹងកំណត់វិធីបង់ប្រាក់របស់អ្នក។ អ្នកអាចផ្លាស់ប្តូរបានគ្រប់ពេល។",
       "region.khmer": "កម្ពុជា",
