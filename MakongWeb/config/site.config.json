@@ -12,9 +12,9 @@
   "bedrockIp": "makongmc.com",
   "bedrockPort": 19132,
   "serverFeatures": [
-    { "icon": "🎮", "title": "Gamemodes", "desc": "BoxPvP, SMP, PlotCity, and more." },
-    { "icon": "🛡️", "title": "Good Anticheat", "desc": "Fair play enforced across every gamemode." },
-    { "icon": "🧑‍💼", "title": "Active Staff", "desc": "Our team is online and ready to help." }
+    { "icon": "/images/site/icon-gamemodes.png", "title": "Gamemodes", "desc": "BoxPvP, SMP, PlotCity, and more." },
+    { "icon": "/images/site/icon-anticheat.png", "title": "Good Anticheat", "desc": "Fair play enforced across every gamemode." },
+    { "icon": "/images/site/icon-staff.png", "title": "Active Staff", "desc": "Our team is online and ready to help." }
   ],
   "socials": {
     "discord": "https://discord.gg/makong",

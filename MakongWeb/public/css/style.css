@@ -806,6 +806,7 @@ button { font-family: inherit; }
   border: 2px solid var(--stone-darkest);
   box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.5), inset 0 -2px 0 rgba(0, 0, 0, 0.15), 0 2px 0 var(--stone-dark);
 }
+.feature-card .feature-icon img { width: 68%; height: 68%; object-fit: contain; }
 .feature-card .feature-title { font-family: "Baloo 2", sans-serif; font-weight: 800; color: var(--brown-dark); font-size: 1.02rem; margin-bottom: 0.2rem; }
 .feature-card .feature-desc { color: var(--ink-soft); font-size: 0.85rem; font-weight: 600; }
 a.feature-card.linked { border-color: var(--moss); }
@@ -1400,6 +1401,8 @@ a.feature-card.linked .feature-title { color: var(--link-accent); }
 }
 .player-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; color: var(--ink-soft); }
 .player-name { font-family: "Baloo 2", sans-serif; font-weight: 800; font-size: 1.25rem; color: var(--brown-dark); }
+.player-name-row { display: inline-flex; align-items: center; gap: 0.3rem; }
+.player-name-leaf { width: 18px; height: 18px; object-fit: contain; flex-shrink: 0; }
 
 .games-stats { margin-bottom: 1.1rem; max-width: none; }
 .games-stats .info-card .value { color: var(--gold); }

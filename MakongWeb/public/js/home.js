@@ -61,9 +61,14 @@ function renderFeatures(features) {
       const tag = f.link ? "a" : "div";
       const href = f.link ? ` href="${escapeHtml(f.link)}"` : "";
       const cls = f.link ? "feature-card linked" : "feature-card";
+      // An icon can be a plain emoji (rendered as text) or an image path
+      // (starts with "/"), rendered as an <img> instead.
+      const icon = f.icon && f.icon.startsWith("/")
+        ? `<img src="${escapeHtml(f.icon)}" alt="" />`
+        : escapeHtml(f.icon || "");
       return `
         <${tag} class="${cls}"${href}>
-          <div class="feature-icon">${escapeHtml(f.icon || "")}</div>
+          <div class="feature-icon">${icon}</div>
           <div class="feature-title">${escapeHtml(f.title || "")}</div>
           <div class="feature-desc">${escapeHtml(f.desc || "")}</div>
         </${tag}>`;
