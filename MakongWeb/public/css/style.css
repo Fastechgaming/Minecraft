@@ -680,21 +680,9 @@ button { font-family: inherit; }
 /* ---------- Sections ---------- */
 .section { padding: 1.5rem 0 3rem; }
 .section h2 { text-align: center; font-size: 1.9rem; margin-bottom: 1.75rem; }
-.section h2::after {
-  content: "";
-  display: block;
-  width: min(85%, 260px);
-  aspect-ratio: 900 / 133;
-  margin: 0.75rem auto 0;
-  background: url("/images/site/divider-vine-night.png") center / contain no-repeat;
-}
-:root[data-theme="light"] .section h2::after {
-  background-image: url("/images/site/divider-vine-day.png");
-}
 
-/* Heading with its carved divider suppressed (used when a subtitle follows). */
+/* Heading with extra bottom margin trimmed (used when a subtitle follows). */
 .section h2.no-rule { margin-bottom: 0.2rem; }
-.section h2.no-rule::after { display: none; }
 .section-subtitle {
   text-align: center;
   font-family: "Baloo 2", sans-serif;
@@ -704,17 +692,6 @@ button { font-family: inherit; }
   text-indent: 0.32em;
   color: var(--terracotta);
   margin: 0 0 1.4rem;
-}
-.section-subtitle::after {
-  content: "";
-  display: block;
-  width: min(85%, 260px);
-  aspect-ratio: 900 / 133;
-  margin: 0.7rem auto 0;
-  background: url("/images/site/divider-vine-night.png") center / contain no-repeat;
-}
-:root[data-theme="light"] .section-subtitle::after {
-  background-image: url("/images/site/divider-vine-day.png");
 }
 
 .info-grid {

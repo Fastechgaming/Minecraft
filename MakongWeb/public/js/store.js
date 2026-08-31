@@ -60,6 +60,16 @@ function chooseKhmer() {
 document.getElementById("region-khmer").addEventListener("click", chooseKhmer);
 document.getElementById("region-global").addEventListener("click", goGlobal);
 
+// Clicking the backdrop closes the modal - but only once the store is
+// already loaded (i.e. this is a "Change store" reopen). During the
+// mandatory first-visit gate there's no page behind it to fall back to,
+// so a backdrop click is ignored there and a region must be picked.
+document.getElementById("region-modal").addEventListener("click", (e) => {
+  if (e.target.id === "region-modal" && !body.hidden) {
+    document.getElementById("region-modal").classList.remove("open");
+  }
+});
+
 function initRegionGate() {
   if (storedRegion() === "khmer") {
     bootStore();
