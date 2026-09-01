@@ -175,7 +175,7 @@ function renderProfile() {
       icon.textContent = "🏅";
     }
   } else {
-    icon.textContent = "🧑‍🌾";
+    icon.innerHTML = `<img src="/images/site/steve-head.png" alt="" />`;
   }
 
   if (typeof account.coins === "number") {
