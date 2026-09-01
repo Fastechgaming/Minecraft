@@ -122,9 +122,12 @@ try { if (localStorage.getItem("makong-theme") === "light") document.documentEle
           </div>
 
           <div class="store-controls checkout-panel">
-            <div class="gamemode-select-wrap">
-              <label for="gamemode-select" class="sr-only" data-i18n="store.gamemode">Gamemode</label>
-              <select class="gamemode-select" id="gamemode-select"></select>
+            <div class="gamemode-dropdown">
+              <button type="button" class="gamemode-toggle" id="gamemode-toggle" aria-haspopup="true" aria-expanded="false">
+                <span class="gamemode-current" id="gamemode-current"></span>
+                <span class="gamemode-chevron" aria-hidden="true">▾</span>
+              </button>
+              <ul class="gamemode-menu" id="gamemode-menu" role="menu"></ul>
             </div>
             <div class="store-tabs" id="store-tabs"></div>
           </div>

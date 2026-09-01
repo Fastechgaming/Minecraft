@@ -189,37 +189,68 @@ function renderProfile() {
 /* ---------------- Catalogue ---------------- */
 
 // Gamemode picker (Arcade / EcoSMP / BoxPvP / PlotCity / HyperClash), a
-// dropdown rather than a tab row so it scales to more gamemodes without
-// wrapping. Switching gamemode also re-picks the active category, since not
-// every gamemode sells the same ones (only EcoSMP/BoxPvP have Keys and
-// Other), and re-fetches the rank ladder, since ranks are priced per
-// gamemode.
-let gamemodeSelectWired = false;
+// custom dropdown (same open/close pattern as the language switcher)
+// rather than a tab row so it scales to more gamemodes without wrapping.
+// The closed button reads "Gamemode: BoxPvP"; the open list just shows
+// the plain names ("BoxPvP", "SMP", ...) since the "Gamemode:" label
+// would be redundant repeated on every option. Switching gamemode also
+// re-picks the active category, since not every gamemode sells the same
+// ones (only EcoSMP/BoxPvP have Keys and Other), and re-fetches the rank
+// ladder, since ranks are priced per gamemode.
 function renderGamemodeTabs() {
-  const select = document.getElementById("gamemode-select");
-  if (!select) return;
-  select.innerHTML = "";
-  gamemodes.forEach((gm) => {
-    const opt = document.createElement("option");
-    opt.value = gm.id;
-    opt.textContent = `${t("store.gamemode")}: ${gm.name}`;
-    select.appendChild(opt);
-  });
-  select.value = activeGamemode;
-
-  if (!gamemodeSelectWired) {
-    gamemodeSelectWired = true;
-    select.addEventListener("change", async () => {
-      const gm = gamemodes.find((g) => g.id === select.value);
-      if (!gm || gm.id === activeGamemode) return;
-      activeGamemode = gm.id;
-      if (!gm.categories.includes(activeCategory)) activeCategory = gm.categories[0];
-      await loadLadder();
-      renderTabs();
-      renderGrid();
-    });
-  }
+  const menu = document.getElementById("gamemode-menu");
+  const current = document.getElementById("gamemode-current");
+  if (!menu || !current) return;
+  const activeGm = gamemodes.find((g) => g.id === activeGamemode);
+  current.textContent = activeGm ? `${t("store.gamemode")}: ${activeGm.name}` : "";
+  menu.innerHTML = gamemodes
+    .map(
+      (gm) => `
+        <li>
+          <button type="button" class="gamemode-option${gm.id === activeGamemode ? " active" : ""}" data-gamemode-option="${gm.id}">
+            ${escapeHtml(gm.name)}
+          </button>
+        </li>`
+    )
+    .join("");
 }
+
+async function selectGamemode(gm) {
+  activeGamemode = gm.id;
+  if (!gm.categories.includes(activeCategory)) activeCategory = gm.categories[0];
+  renderGamemodeTabs();
+  await loadLadder();
+  renderTabs();
+  renderGrid();
+}
+
+document.addEventListener("click", (e) => {
+  const toggle = e.target.closest("#gamemode-toggle");
+  if (toggle) {
+    e.stopPropagation();
+    const wrap = toggle.closest(".gamemode-dropdown");
+    const wasOpen = wrap.classList.contains("open");
+    document.querySelectorAll(".gamemode-dropdown.open").forEach((el) => el.classList.remove("open"));
+    wrap.classList.toggle("open", !wasOpen);
+    toggle.setAttribute("aria-expanded", String(!wasOpen));
+    return;
+  }
+
+  const option = e.target.closest("[data-gamemode-option]");
+  if (option) {
+    e.stopPropagation();
+    document.querySelectorAll(".gamemode-dropdown.open").forEach((el) => el.classList.remove("open"));
+    document.getElementById("gamemode-toggle")?.setAttribute("aria-expanded", "false");
+    const gm = gamemodes.find((g) => g.id === option.dataset.gamemodeOption);
+    if (gm && gm.id !== activeGamemode) selectGamemode(gm);
+    return;
+  }
+
+  if (!e.target.closest(".gamemode-dropdown")) {
+    document.querySelectorAll(".gamemode-dropdown.open").forEach((el) => el.classList.remove("open"));
+    document.getElementById("gamemode-toggle")?.setAttribute("aria-expanded", "false");
+  }
+});
 
 // Category tabs (Ranks / Keys / Other) — only the ones the active gamemode sells.
 function renderTabs() {

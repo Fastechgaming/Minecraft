@@ -847,25 +847,24 @@ a.feature-card.linked .feature-title { color: var(--link-accent); }
   flex-wrap: wrap;
   margin-bottom: 1.6rem;
 }
-.store-controls .gamemode-select-wrap { justify-content: flex-start; margin-bottom: 0; }
+.store-controls .gamemode-dropdown { margin-bottom: 0; }
 .store-controls .store-tabs { justify-content: flex-end; margin-bottom: 0; }
 @media (max-width: 620px) {
   .store-controls { flex-direction: column; align-items: stretch; }
-  .store-controls .gamemode-select-wrap { justify-content: center; }
+  .store-controls .gamemode-dropdown { justify-content: center; align-self: center; }
   .store-controls .store-tabs { justify-content: center; }
 }
 
-/* Gamemode picker - a dropdown instead of a tab row, so it scales cleanly
-   as more gamemodes are added instead of wrapping into extra rows. */
-.gamemode-select-wrap { display: flex; justify-content: center; margin-bottom: 1.4rem; }
-.gamemode-select {
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
+/* Gamemode picker - a custom dropdown (same pattern as the language
+   switcher) instead of a native <select>, so the closed button can read
+   "Gamemode: BoxPvP" while the open list just shows "BoxPvP", "SMP", etc. */
+.gamemode-dropdown { position: relative; display: inline-flex; margin-bottom: 1.4rem; }
+.gamemode-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
   min-width: 220px;
-  text-align: center;
-  text-align-last: center;
-  padding: 0.65rem 2.6rem 0.65rem 1.5rem;
+  padding: 0.65rem 1.4rem;
   border: 3px solid var(--moss-dark);
   border-radius: 999px;
   font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", sans-serif;
@@ -873,20 +872,65 @@ a.feature-card.linked .feature-title { color: var(--link-accent); }
   font-size: 1rem;
   color: var(--brown-darkest);
   cursor: pointer;
-  background-color: var(--moss);
-  background-image:
-    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='%23163a1c' d='M7 10l5 5 5-5z'/></svg>"),
-    linear-gradient(180deg, var(--moss-light), var(--moss));
-  background-repeat: no-repeat, no-repeat;
-  background-position: right 16px center, 0 0;
-  background-size: 18px 18px, 100% 100%;
+  background: linear-gradient(180deg, var(--moss-light), var(--moss));
   box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.4), inset 0 -3px 0 rgba(0, 0, 0, 0.2), 0 4px 0 var(--moss-dark), 0 7px 12px rgba(42, 22, 8, 0.22);
   transition: transform 0.18s cubic-bezier(.34,1.56,.64,1), box-shadow 0.15s;
 }
-.gamemode-select:hover { transform: scale(1.05); }
-.gamemode-select:active { transform: translateY(3px); box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.4), inset 0 -3px 0 rgba(0, 0, 0, 0.2), 0 1px 0 var(--moss-dark); }
-.gamemode-select:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
-.gamemode-select option { background: var(--cream); color: var(--ink); font-weight: 700; }
+.gamemode-toggle:hover { transform: scale(1.05); }
+.gamemode-toggle:active { transform: translateY(3px); box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.4), inset 0 -3px 0 rgba(0, 0, 0, 0.2), 0 1px 0 var(--moss-dark); }
+.gamemode-toggle:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+.gamemode-current { flex: 1; text-align: left; }
+.gamemode-chevron { font-size: 0.75rem; transition: transform 0.22s cubic-bezier(.34,1.4,.64,1); }
+.gamemode-dropdown.open .gamemode-chevron { transform: rotate(180deg); }
+
+.gamemode-menu {
+  position: absolute;
+  top: calc(100% + 12px);
+  left: 0;
+  min-width: 220px;
+  margin: 0;
+  padding: 0.5rem;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  background: var(--stone-surface);
+  border: 3px solid var(--stone-darkest);
+  border-radius: 16px;
+  box-shadow: var(--stone-bevel), 0 10px 24px rgba(0, 0, 0, 0.45);
+  transform: translateY(-6px) scale(0.97);
+  transform-origin: top left;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.22s cubic-bezier(.34,1.4,.64,1);
+  z-index: 80;
+}
+.gamemode-dropdown.open .gamemode-menu { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
+.gamemode-option {
+  display: flex;
+  width: 100%;
+  height: 42px;
+  justify-content: center;
+  align-items: center;
+  color: var(--on-dark);
+  font-weight: 700;
+  font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", sans-serif;
+  font-size: 0.95rem;
+  border-radius: 10px;
+  background: linear-gradient(180deg, var(--jungle), var(--jungle-dark));
+  border: 2px solid var(--stone-darkest);
+  box-shadow: 0 3px 0 var(--stone-darkest);
+  cursor: pointer;
+  transition: transform 0.18s cubic-bezier(.34,1.56,.64,1), box-shadow 0.15s;
+}
+.gamemode-option:hover { transform: scale(1.04); }
+.gamemode-option:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--stone-darkest); }
+.gamemode-option.active {
+  background: linear-gradient(180deg, var(--moss-light), var(--moss));
+  color: var(--brown-darkest);
+  border-color: var(--gold);
+  box-shadow: var(--stone-bevel), 0 3px 0 var(--gold-deep);
+}
 
 .item-grid {
   display: grid;
