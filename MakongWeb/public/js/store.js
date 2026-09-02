@@ -14,6 +14,7 @@ let account = null;
 let activeCategory = "ranks";
 let pendingItem = null; // the item sitting in the confirmation dialog
 let pendingUpgradeFrom = null; // rank id being traded in, or null for a plain buy
+let pendingDuration = "monthly"; // "monthly" | "permanent" - rank purchases only, meaningless for upgrades
 
 const CATEGORY_KEYS = { ranks: "store.tab.ranks", keys: "store.tab.keys", other: "store.tab.other" };
 const REGION_KEY = "makong-region";
@@ -329,6 +330,14 @@ function armedFor(item, state) {
   return armedId ? state.eligible.find((r) => r.id === armedId) || null : null;
 }
 
+// Mirrors lib/store.js's permanentPriceFor - permanent defaults to 3x the
+// monthly price unless the admin set an explicit permanentPrice. Only ever
+// used to preview a price client-side; /api/checkout recomputes it for real.
+function permanentPriceFor(item) {
+  if (item && typeof item.permanentPrice === "number" && item.permanentPrice >= 0) return item.permanentPrice;
+  return Math.round((item ? item.price : 0) * 3 * 100) / 100;
+}
+
 // Plain price, or once a trade-in is armed: "$20.00 → $5.00" plus a small
 // caption naming the two ranks. Shared by the card and the info popup.
 function priceMarkup(item) {
@@ -564,6 +573,7 @@ function closeBuyModal() {
   buyModal.classList.remove("open");
   pendingItem = null;
   pendingUpgradeFrom = null;
+  pendingDuration = "monthly";
 }
 document.getElementById("buy-modal-close").addEventListener("click", closeBuyModal);
 buyModal.addEventListener("click", (e) => {
@@ -581,10 +591,19 @@ function openConfirm(item, fromRankId) {
   const fromEntry = fromRankId ? ladderEntry(fromRankId) : null;
   const toEntry = ladderEntry(item.id.replace(/^rank-/, ""));
   pendingUpgradeFrom = fromEntry ? fromEntry.id : null;
+  pendingDuration = "monthly";
 
   const toName = (toEntry && toEntry.displayName) || item.name;
-  const displayPrice =
-    fromEntry && toEntry ? Math.max(0, toEntry.priceUsd - fromEntry.priceUsd) : item.price;
+  // A trade-in upgrade prices its own ladder step and ignores duration - only
+  // a plain rank purchase (not owned, not being traded into) offers 1 Month
+  // vs Permanent.
+  const showDuration = item.category === "ranks" && !fromEntry;
+  const priceFor = (duration) =>
+    fromEntry && toEntry
+      ? Math.max(0, toEntry.priceUsd - fromEntry.priceUsd)
+      : duration === "permanent"
+      ? permanentPriceFor(item)
+      : item.price;
 
   buyModalBody.innerHTML = `
     <div class="confirm-head">
@@ -604,12 +623,30 @@ function openConfirm(item, fromRankId) {
         t(account.edition === "bedrock" ? "buy.bedrock" : "buy.java")
       )}</strong></div>
     </div>
-    <div class="confirm-price">${escapeHtml(formatPrice(displayPrice))}</div>
+    ${
+      showDuration
+        ? `<div class="edition-toggle duration-toggle" id="confirm-duration">
+            <button type="button" data-duration="monthly" class="active">${escapeHtml(t("store.duration1Month"))}</button>
+            <button type="button" data-duration="permanent">${escapeHtml(t("store.durationPermanent"))}</button>
+          </div>`
+        : ""
+    }
+    <div class="confirm-price" id="confirm-price">${escapeHtml(formatPrice(priceFor(pendingDuration)))}</div>
     <div class="confirm-actions">
       <button class="continue-btn" id="confirm-buy">${escapeHtml(t("store.confirm"))}</button>
       <button class="back-link" id="cancel-buy">${escapeHtml(t("store.cancel"))}</button>
     </div>
   `;
+  if (showDuration) {
+    const durationBtns = document.querySelectorAll("#confirm-duration [data-duration]");
+    durationBtns.forEach((btn) =>
+      btn.addEventListener("click", () => {
+        pendingDuration = btn.dataset.duration;
+        durationBtns.forEach((b) => b.classList.toggle("active", b === btn));
+        document.getElementById("confirm-price").textContent = formatPrice(priceFor(pendingDuration));
+      })
+    );
+  }
   document.getElementById("confirm-buy").addEventListener("click", startCheckout);
   document.getElementById("cancel-buy").addEventListener("click", closeBuyModal);
   buyModal.classList.add("open");
@@ -624,7 +661,11 @@ async function startCheckout() {
     const result = await fetchJSON("/api/checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ itemId: pendingItem.id, upgradeFromRankId: pendingUpgradeFrom || undefined }),
+      body: JSON.stringify({
+        itemId: pendingItem.id,
+        upgradeFromRankId: pendingUpgradeFrom || undefined,
+        duration: pendingDuration,
+      }),
     });
     window.location.href = `/checkout?order=${encodeURIComponent(result.orderId)}`;
   } catch (err) {

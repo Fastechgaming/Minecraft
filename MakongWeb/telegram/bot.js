@@ -311,6 +311,7 @@ function orderSummaryText(order) {
     "",
     `*Item:* ${order.itemName}`,
     order.upgrade ? `*Upgrade:* ${order.upgrade.fromRankId} → ${order.upgrade.toRankId}` : "",
+    order.duration ? `*Duration:* ${order.duration === "permanent" ? "Permanent" : "1 Month"}` : "",
     `*Price:* $${Number(order.amount).toFixed(2)} ${order.currency}`,
     `*In-server name:* \`${order.playerName}\``,
     `*Edition:* ${order.edition === "bedrock" ? "Bedrock" : "Java"}`,

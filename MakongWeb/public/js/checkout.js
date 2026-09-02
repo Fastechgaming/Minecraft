@@ -44,6 +44,11 @@ async function loadCheckout() {
         <div class="checkout-rows">
           <div><span>${escapeHtml(t("checkout.inServerName"))}</span><strong>${escapeHtml(order.playerName)}</strong></div>
           <div><span>${escapeHtml(t("checkout.edition"))}</span><strong>${escapeHtml(t(order.edition === "bedrock" ? "buy.bedrock" : "buy.java"))}</strong></div>
+          ${
+            order.duration
+              ? `<div><span>${escapeHtml(t("checkout.duration"))}</span><strong>${escapeHtml(t(order.duration === "permanent" ? "store.durationPermanent" : "store.duration1Month"))}</strong></div>`
+              : ""
+          }
           <div><span>${escapeHtml(t("checkout.total"))}</span><strong class="price">${escapeHtml(formatPrice(order.amount))}</strong></div>
         </div>
       </div>

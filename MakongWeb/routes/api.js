@@ -81,6 +81,7 @@ router.get("/order/:id", (req, res) => {
     currency: order.currency,
     playerName: order.playerName,
     edition: order.edition,
+    duration: order.duration || null,
     status: order.status,
     createdAt: order.createdAt,
   });
@@ -103,7 +104,7 @@ router.post("/checkout", async (req, res) => {
       return res.status(401).json({ error: "Verify your Minecraft name before buying.", code: "NOT_SIGNED_IN" });
     }
 
-    const { itemId, upgradeFromRankId } = req.body || {};
+    const { itemId, upgradeFromRankId, duration } = req.body || {};
     if (!itemId) return res.status(400).json({ error: "itemId is required" });
 
     const item = store.findItem(itemId);
@@ -123,6 +124,15 @@ router.post("/checkout", async (req, res) => {
     let amount = item.price;
     let upgrade = null;
     const isRankItem = store.getItems().ranks.some((i) => i.id === item.id);
+
+    // Ranks are sold for 1 month or permanently - never trust the client's
+    // price, recompute from the catalogue. Permanent defaults to 3x the
+    // monthly price unless the admin set an explicit permanentPrice.
+    // Meaningless for a trade-in upgrade (that path prices its own ladder
+    // step below), so it's resolved first and simply overridden there.
+    const rankDuration = isRankItem && duration === "permanent" ? "permanent" : isRankItem ? "monthly" : null;
+    if (rankDuration === "permanent") amount = store.permanentPriceFor(item);
+
     if (upgradeFromRankId && isRankItem) {
       const { ranks } = await getRankLadder(item.gamemode);
       const toRank = ranks.find((r) => r.itemId === item.id || `rank-${r.id}` === item.id);
@@ -153,6 +163,7 @@ router.post("/checkout", async (req, res) => {
       playerUuid: account.uuid || null,
       edition,
       upgrade, // null for a plain purchase; {fromRankId, fromGroup, toRankId, toGroup} for an upgrade
+      duration: upgrade ? null : rankDuration, // "monthly" | "permanent" for a plain rank buy, null otherwise
       status: "awaiting_payment",
       createdAt: Date.now(),
     };

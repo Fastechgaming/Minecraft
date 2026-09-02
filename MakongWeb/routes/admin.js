@@ -69,7 +69,7 @@ function slugify(str) {
 
 router.post("/items", requireAuth, upload.single("imageFile"), (req, res, next) => {
   try {
-    const { category, gamemode, name, price, shortDesc, infoText, videoUrl, imageUrl, deliveryCommand } = req.body;
+    const { category, gamemode, name, price, permanentPrice, shortDesc, infoText, videoUrl, imageUrl, deliveryCommand } = req.body;
     if (!store.CATEGORIES.includes(category)) throw new Error("Invalid category");
     if (!store.GAMEMODES.some((g) => g.id === gamemode)) throw new Error("Invalid gamemode");
 
@@ -97,6 +97,7 @@ router.post("/items", requireAuth, upload.single("imageFile"), (req, res, next) 
       id,
       name,
       price: Number(price),
+      permanentPrice: permanentPrice === "" || permanentPrice == null ? null : Number(permanentPrice),
       currency: "USD",
       shortDesc: shortDesc || "",
       infoText: infoText || "",
@@ -130,7 +131,7 @@ router.post("/items/:id", requireAuth, upload.single("imageFile"), (req, res, ne
     const existing = store.findItem(req.params.id);
     if (!existing) return res.status(404).send("Item not found");
 
-    const { category, gamemode, name, price, shortDesc, infoText, videoUrl, imageUrl, deliveryCommand } = req.body;
+    const { category, gamemode, name, price, permanentPrice, shortDesc, infoText, videoUrl, imageUrl, deliveryCommand } = req.body;
     if (!store.CATEGORIES.includes(category)) throw new Error("Invalid category");
     if (!store.GAMEMODES.some((g) => g.id === gamemode)) throw new Error("Invalid gamemode");
 
@@ -138,6 +139,7 @@ router.post("/items/:id", requireAuth, upload.single("imageFile"), (req, res, ne
       ...existing,
       name,
       price: Number(price),
+      permanentPrice: permanentPrice === "" || permanentPrice == null ? null : Number(permanentPrice),
       shortDesc: shortDesc || "",
       infoText: infoText || "",
       videoUrl: videoUrl || "",

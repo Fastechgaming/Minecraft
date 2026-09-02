@@ -43,6 +43,11 @@ function render() {
   receipt.innerHTML = `
     <div><span>${escapeHtml(t("success.item"))}</span><strong>${escapeHtml(successOrder.itemName)}</strong></div>
     <div><span>${escapeHtml(t("checkout.inServerName"))}</span><strong>${escapeHtml(successOrder.playerName)}</strong></div>
+    ${
+      successOrder.duration
+        ? `<div><span>${escapeHtml(t("checkout.duration"))}</span><strong>${escapeHtml(t(successOrder.duration === "permanent" ? "store.durationPermanent" : "store.duration1Month"))}</strong></div>`
+        : ""
+    }
     <div><span>${escapeHtml(t("success.amount"))}</span><strong>${escapeHtml(formatPrice(successOrder.amount))}</strong></div>
     <div><span>${escapeHtml(t("success.orderId"))}</span><strong>${escapeHtml(successOrder.id)}</strong></div>
   `;

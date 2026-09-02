@@ -70,6 +70,8 @@ const I18n = (() => {
       "store.upgradeCaption": "You are upgrading {from} to {to}",
       "store.confirmName": "Name",
       "store.confirmPlatform": "Platform",
+      "store.duration1Month": "1 Month",
+      "store.durationPermanent": "Permanent",
       "store.confirm": "Confirm",
       "store.cancel": "Cancel",
       "store.changeHint":
@@ -97,6 +99,7 @@ const I18n = (() => {
       "checkout.loading": "Loading your order…",
       "checkout.inServerName": "In server name",
       "checkout.edition": "Edition",
+      "checkout.duration": "Duration",
       "checkout.total": "Total",
       "checkout.step1": "1. Scan to pay",
       "checkout.scanHint": "Scan this KHQR with any Cambodian banking app and pay exactly {amount}.",
@@ -348,6 +351,8 @@ const I18n = (() => {
       "store.upgradeCaption": "អ្នកកំពុងដំឡើងពី {from} ទៅ {to}",
       "store.confirmName": "ឈ្មោះ",
       "store.confirmPlatform": "Platform",
+      "store.duration1Month": "១ ខែ",
+      "store.durationPermanent": "អចិន្ត្រៃយ៍",
       "store.confirm": "បញ្ជាក់",
       "store.cancel": "បោះបង់",
       "store.changeHint":
@@ -375,6 +380,7 @@ const I18n = (() => {
       "checkout.loading": "កំពុងផ្ទុកការបញ្ជាទិញ…",
       "checkout.inServerName": "ឈ្មោះក្នុង Server",
       "checkout.edition": "Edition",
+      "checkout.duration": "រយៈពេល",
       "checkout.total": "សរុប",
       "checkout.step1": "១. ស្កេនដើម្បីបង់ប្រាក់",
       "checkout.scanHint": "ស្កេន KHQR នេះជាមួយ App ធនាគារកម្ពុជាណាមួយ ហើយបង់ឲ្យត្រូវ {amount}។",

@@ -38,6 +38,11 @@
         <input type="number" step="0.01" min="0" name="price" value="<%= item ? item.price : '' %>" required />
       </label>
 
+      <label>Permanent price (USD, ranks only)
+        <input type="number" step="0.01" min="0" name="permanentPrice" value="<%= item && item.permanentPrice != null ? item.permanentPrice : '' %>" placeholder="Defaults to 3x price" />
+        <small style="font-weight:400; color:#7a7060;">Ranks sell for 1 Month at Price above, or Permanent at this price. Leave blank to default to 3x Price.</small>
+      </label>
+
       <label>Short description (shown on the store card)
         <input type="text" name="shortDesc" value="<%= item ? item.shortDesc : '' %>" />
       </label>

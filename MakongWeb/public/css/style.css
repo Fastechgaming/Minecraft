@@ -862,7 +862,7 @@ a.feature-card.linked .feature-title { color: var(--link-accent); }
 .gamemode-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 0.7rem;
+  justify-content: center;
   min-width: 220px;
   padding: 0.65rem 1.4rem;
   border: 3px solid var(--moss-dark);
@@ -879,14 +879,11 @@ a.feature-card.linked .feature-title { color: var(--link-accent); }
 .gamemode-toggle:hover { transform: scale(1.05); }
 .gamemode-toggle:active { transform: translateY(3px); box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.4), inset 0 -3px 0 rgba(0, 0, 0, 0.2), 0 1px 0 var(--moss-dark); }
 .gamemode-toggle:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
-.gamemode-current { flex: 1; text-align: left; }
-.gamemode-chevron { font-size: 0.75rem; transition: transform 0.22s cubic-bezier(.34,1.4,.64,1); }
-.gamemode-dropdown.open .gamemode-chevron { transform: rotate(180deg); }
 
 .gamemode-menu {
   position: absolute;
   top: calc(100% + 12px);
-  left: 0;
+  left: 50%;
   min-width: 220px;
   margin: 0;
   padding: 0.5rem;
@@ -898,14 +895,14 @@ a.feature-card.linked .feature-title { color: var(--link-accent); }
   border: 3px solid var(--stone-darkest);
   border-radius: 16px;
   box-shadow: var(--stone-bevel), 0 10px 24px rgba(0, 0, 0, 0.45);
-  transform: translateY(-6px) scale(0.97);
-  transform-origin: top left;
+  transform: translateX(-50%) translateY(-6px) scale(0.97);
+  transform-origin: top center;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.18s ease, transform 0.22s cubic-bezier(.34,1.4,.64,1);
   z-index: 80;
 }
-.gamemode-dropdown.open .gamemode-menu { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
+.gamemode-dropdown.open .gamemode-menu { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); pointer-events: auto; }
 .gamemode-option {
   display: flex;
   width: 100%;
@@ -1079,17 +1076,24 @@ a.feature-card.linked .feature-title { color: var(--link-accent); }
   position: absolute;
   top: 0.7rem;
   right: 0.7rem;
-  background: #fff;
-  border: 2px solid var(--brown-darkest);
-  border-radius: 8px;
-  width: 32px;
-  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
   font-size: 1.2rem;
   line-height: 1;
   cursor: pointer;
-  color: var(--terracotta);
+  color: var(--on-dark);
   font-weight: 800;
+  border-radius: 10px;
+  background: linear-gradient(180deg, var(--jungle), var(--jungle-dark));
+  border: 2px solid var(--stone-darkest);
+  box-shadow: 0 3px 0 var(--stone-darkest);
+  transition: transform 0.18s cubic-bezier(.34,1.56,.64,1), box-shadow 0.15s;
 }
+.modal-close:hover { transform: translateY(-2px) scale(1.06); }
+.modal-close:active { transform: translateY(1px); box-shadow: 0 1px 0 var(--stone-darkest); }
 .modal-box h3 { margin-top: 0; }
 .modal-box video, .modal-box iframe.video-embed {
   width: 100%;
@@ -1371,13 +1375,17 @@ a.feature-card.linked .feature-title { color: var(--link-accent); }
   border-top: 2px dashed var(--stone-dark);
 }
 .info-buy-row .price { font-family: "Minecraft", "Baloo 2", sans-serif; font-size: 1.4rem; font-weight: 800; color: var(--terracotta); }
-.info-buy-row .item-actions { flex: 1; min-width: 180px; }
+.info-buy-row .item-actions { flex: 1; min-width: 180px; display: flex; justify-content: flex-end; }
+.info-buy-row .buy-btn { flex: 0 1 260px; padding: 0.9rem; font-size: 1.05rem; }
+.info-buy-row .rank-split { flex: 0 1 260px; }
 
 @media (max-width: 560px) {
   .checkout-summary { flex-direction: column; align-items: center; text-align: center; }
   .checkout-rows div { justify-content: space-between; }
   .info-buy-row { flex-direction: column; align-items: stretch; }
   .info-buy-row .price { text-align: center; }
+  .info-buy-row .item-actions { justify-content: stretch; }
+  .info-buy-row .buy-btn, .info-buy-row .rank-split { flex: 1 1 auto; }
 }
 
 /* Coming-soon placeholder items in the Other category */
@@ -2185,6 +2193,7 @@ html[lang="km"] .board-mini-title { text-transform: none; letter-spacing: 0; }
 .confirm-rows div { display: flex; justify-content: space-between; gap: 1rem; padding: 0.28rem 0; border-bottom: 1px dashed var(--stone-dark); font-size: 0.88rem; color: var(--ink-soft); font-weight: 600; }
 .confirm-rows div:last-child { border-bottom: none; }
 .confirm-rows strong { color: var(--ink); text-align: right; }
+.duration-toggle { margin-bottom: 1rem; }
 .confirm-price {
   text-align: center;
   font-family: "Minecraft", "Baloo 2", sans-serif;
