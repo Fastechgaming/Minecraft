@@ -1,42 +1,46 @@
 import type { AudioPlayer, VoiceConnection } from '@discordjs/voice';
-import type { Track } from '../providers/music/types';
+import type { FilterName } from './filters';
 
-export type LoopMode = 'off' | 'track' | 'queue';
+export interface Track {
+  title: string;
+  url: string;
+  durationSec: number;
+  requestedById: string;
+  thumbnail?: string;
+}
 
-export interface GuildMusicState {
+export interface GuildQueue {
   guildId: string;
+  voiceChannelId: string;
+  textChannelId: string;
   connection: VoiceConnection;
   player: AudioPlayer;
-  textChannelId: string;
-  voiceChannelId: string;
-  queue: Track[];
+  tracks: Track[];
   current: Track | null;
-  startedAt: number;
-  pausedAt: number | null;
-  loop: LoopMode;
   volume: number;
-  nowPlayingMessageId?: string;
-  updateInterval?: NodeJS.Timeout;
-  tracksPlayed: number;
+  filter: FilterName | null;
+  loop: 'off' | 'track' | 'queue';
+  nowPlayingMessageId: string | null;
+  elapsedSec: number;
+  destroyed: boolean;
 }
 
-const states = new Map<string, GuildMusicState>();
-
-export function getMusicState(guildId: string): GuildMusicState | undefined {
-  return states.get(guildId);
+declare global {
+  // eslint-disable-next-line no-var
+  var __makongosMusicQueues: Map<string, GuildQueue> | undefined;
 }
 
-export function setMusicState(guildId: string, state: GuildMusicState): void {
-  states.set(guildId, state);
+const queues: Map<string, GuildQueue> = global.__makongosMusicQueues ?? new Map();
+global.__makongosMusicQueues = queues;
+
+export function getQueue(guildId: string): GuildQueue | undefined {
+  return queues.get(guildId);
 }
 
-export function deleteMusicState(guildId: string): void {
-  const state = states.get(guildId);
-  if (state?.updateInterval) clearInterval(state.updateInterval);
-  states.delete(guildId);
+export function setQueue(guildId: string, queue: GuildQueue): void {
+  queues.set(guildId, queue);
 }
 
-export function elapsedSeconds(state: GuildMusicState): number {
-  const end = state.pausedAt ?? Date.now();
-  return Math.max(0, Math.floor((end - state.startedAt) / 1000));
+export function deleteQueue(guildId: string): void {
+  queues.delete(guildId);
 }

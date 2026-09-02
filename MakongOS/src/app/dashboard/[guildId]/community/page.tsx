@@ -1,39 +1,21 @@
-import { getGuildSettings } from '../../../../database/settingsCache';
-import { getLeaderboard } from '../../../../stats/xp';
-import { CommunitySettingsForm } from '../../../../components/dashboard/forms/CommunitySettingsForm';
+import { prisma } from '../../../../database/prisma';
+import { getBotClient } from '../../../../bot/globalClient';
+import { ChannelType } from 'discord.js';
+import { CommunityForm } from '../../../../components/dashboard/forms/CommunityForm';
 
 export default async function CommunityPage({ params }: { params: { guildId: string } }) {
-  const settings = await getGuildSettings(params.guildId);
-  const leaderboard = await getLeaderboard(params.guildId, 10);
+  const settings = await prisma.guildSettings.upsert({ where: { guildId: params.guildId }, update: {}, create: { guildId: params.guildId } });
+  const guild = getBotClient()?.guilds.cache.get(params.guildId);
+  const roles = guild ? [...guild.roles.cache.filter((r) => r.id !== guild.id).values()].map((r) => ({ id: r.id, name: r.name })) : [];
+  const textChannels = guild ? [...guild.channels.cache.filter((c) => c.type === ChannelType.GuildText).values()].map((c) => ({ id: c.id, name: c.name })) : [];
 
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-bold text-white">Community</h1>
-        <p className="text-discord-muted">XP rates and the server's top members.</p>
+        <h1 className="text-2xl font-bold text-white">Welcome & Leave</h1>
+        <p className="text-discord-muted">Greeting messages and automatic roles for new members.</p>
       </div>
-
-      <div className="card p-5">
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-discord-muted">Top Members</h2>
-        {leaderboard.length === 0 ? (
-          <p className="text-discord-muted">No XP data yet.</p>
-        ) : (
-          <ol className="flex flex-col gap-2">
-            {leaderboard.map((row, i) => (
-              <li key={row.id} className="flex items-center justify-between rounded-lg bg-discord-panel2 px-3 py-2 text-sm">
-                <span className="text-white">
-                  {['🥇', '🥈', '🥉'][i] ?? `${i + 1}.`} <span className="font-mono text-xs">{row.userId}</span>
-                </span>
-                <span className="text-discord-muted">
-                  Level {row.level} · {row.xp} XP
-                </span>
-              </li>
-            ))}
-          </ol>
-        )}
-      </div>
-
-      <CommunitySettingsForm guildId={params.guildId} initial={settings} />
+      <CommunityForm guildId={params.guildId} initialSettings={settings} roles={roles} textChannels={textChannels} />
     </div>
   );
 }

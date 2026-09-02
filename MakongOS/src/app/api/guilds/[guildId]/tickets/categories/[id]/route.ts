@@ -4,7 +4,7 @@ import { prisma } from '../../../../../../../database/prisma';
 
 export async function DELETE(_req: Request, { params }: { params: { guildId: string; id: string } }) {
   const auth = await authorizeGuildRequest(params.guildId, 'administrator');
-  if (!auth) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  await prisma.ticketCategory.delete({ where: { id: params.id } });
+  if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  await prisma.ticketCategory.deleteMany({ where: { id: params.id, guildId: params.guildId } });
   return NextResponse.json({ ok: true });
 }

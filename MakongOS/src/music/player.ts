@@ -1,208 +1,172 @@
-import {
-  AudioPlayerStatus,
-  createAudioPlayer,
-  createAudioResource,
-  entersState,
-  joinVoiceChannel,
-  NoSubscriberBehavior,
-  StreamType,
-  VoiceConnectionStatus
-} from '@discordjs/voice';
-import type { VoiceBasedChannel, TextBasedChannel, TextChannel } from 'discord.js';
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'discord.js';
-import { playDlProvider } from '../providers/music/playDlProvider';
-import type { Track } from '../providers/music/types';
-import { getMusicState, setMusicState, deleteMusicState, elapsedSeconds, type GuildMusicState } from './queueManager';
-import { prisma } from '../database/prisma';
+import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
+import ffmpegPath from 'ffmpeg-static';
+import playdl from 'play-dl';
+import { createAudioResource, StreamType, AudioPlayerStatus, entersState, VoiceConnectionStatus } from '@discordjs/voice';
+import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, type TextChannel } from 'discord.js';
+import type { GuildQueue, Track } from './queueManager';
+import { deleteQueue } from './queueManager';
+import { buildAudioFilterChain, FILTER_LABELS, type FilterName } from './filters';
 import { createLogger } from '../services/logger';
-import { getBotClient } from '../bot/globalClient';
 
 const log = createLogger('music');
-const provider = playDlProvider;
-const BAR_LENGTH = 18;
 
-function formatTime(totalSeconds: number): string {
-  const m = Math.floor(totalSeconds / 60);
-  const s = Math.floor(totalSeconds % 60);
+export async function resolveTracks(query: string, requestedById: string): Promise<Track[]> {
+  const trimmed = query.trim();
+
+  if (playdl.yt_validate(trimmed) === 'video') {
+    const info = await playdl.video_basic_info(trimmed);
+    const d = info.video_details;
+    return [{ title: d.title ?? 'Unknown title', url: d.url, durationSec: d.durationInSec, requestedById, thumbnail: d.thumbnails?.[0]?.url }];
+  }
+
+  const spotifyType = playdl.sp_validate(trimmed);
+  if (spotifyType === 'track') {
+    const track = await playdl.spotify(trimmed);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const t = track as any;
+    const search = `${t.name} ${(t.artists ?? []).map((a: { name: string }) => a.name).join(' ')}`;
+    const results = await playdl.search(search, { limit: 1, source: { youtube: 'video' } });
+    if (results[0]) return [{ title: results[0].title ?? search, url: results[0].url, durationSec: results[0].durationInSec ?? 0, requestedById, thumbnail: results[0].thumbnails?.[0]?.url }];
+    return [];
+  }
+
+  const results = await playdl.search(trimmed, { limit: 1, source: { youtube: 'video' } });
+  if (!results[0]) return [];
+  return [{ title: results[0].title ?? trimmed, url: results[0].url, durationSec: results[0].durationInSec ?? 0, requestedById, thumbnail: results[0].thumbnails?.[0]?.url }];
+}
+
+function formatDuration(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-function progressBar(elapsed: number, duration: number): string {
-  if (duration <= 0) return '🔴 LIVE'.padEnd(BAR_LENGTH, ' ');
-  const ratio = Math.min(1, elapsed / duration);
-  const filled = Math.round(ratio * BAR_LENGTH);
-  return '█'.repeat(filled) + '░'.repeat(Math.max(0, BAR_LENGTH - filled));
-}
-
-export function buildNowPlayingEmbed(state: GuildMusicState): EmbedBuilder {
-  const track = state.current!;
-  const elapsed = elapsedSeconds(state);
-  const bar = progressBar(elapsed, track.durationSec);
-  const paused = state.pausedAt !== null;
-
-  return new EmbedBuilder()
-    .setColor(0x5865f2)
-    .setAuthor({ name: paused ? '⏸️ Paused' : '🎵 Now Playing' })
-    .setTitle(track.title)
-    .setURL(track.url)
+export function nowPlayingEmbed(queue: GuildQueue): EmbedBuilder {
+  const track = queue.current;
+  const embed = new EmbedBuilder().setColor(0x1db954);
+  if (!track) return embed.setTitle('Nothing playing').setDescription('Queue is empty.');
+  return embed
+    .setTitle('🎶 Now Playing')
+    .setDescription(`**[${track.title}](${track.url})**`)
     .setThumbnail(track.thumbnail ?? null)
-    .setDescription(`\`${bar}\`\n${formatTime(elapsed)} / ${formatTime(track.durationSec)}`)
     .addFields(
+      { name: 'Duration', value: formatDuration(track.durationSec), inline: true },
       { name: 'Requested by', value: `<@${track.requestedById}>`, inline: true },
-      { name: 'Loop', value: loopLabel(state.loop), inline: true },
-      { name: 'Queue', value: `${state.queue.length} song${state.queue.length === 1 ? '' : 's'}`, inline: true }
-    )
-    .setFooter({ text: 'MakongOS Music' });
+      { name: 'Volume', value: `${queue.volume}%`, inline: true },
+      { name: 'Filter', value: queue.filter ? FILTER_LABELS[queue.filter] : 'None', inline: true },
+      { name: 'Loop', value: queue.loop, inline: true },
+      { name: 'Up next', value: queue.tracks[0] ? queue.tracks[0].title : '—', inline: true }
+    );
 }
 
-function loopLabel(loop: GuildMusicState['loop']): string {
-  return loop === 'track' ? '🔂 Track' : loop === 'queue' ? '🔁 Queue' : '➡️ Off';
-}
-
-export function buildControlRow(state: GuildMusicState) {
-  const paused = state.pausedAt !== null;
-  return new ActionRowBuilder<ButtonBuilder>().addComponents(
-    new ButtonBuilder().setCustomId('music_playpause').setEmoji(paused ? '▶️' : '⏸️').setStyle(ButtonStyle.Primary),
-    new ButtonBuilder().setCustomId('music_skip').setEmoji('⏭️').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId('music_stop').setEmoji('⏹️').setStyle(ButtonStyle.Danger),
-    new ButtonBuilder().setCustomId('music_shuffle').setEmoji('🔀').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId('music_loop').setEmoji('🔁').setStyle(ButtonStyle.Secondary)
+export function nowPlayingComponents(queue: GuildQueue): ActionRowBuilder<ButtonBuilder | StringSelectMenuBuilder>[] {
+  const paused = queue.player.state.status === AudioPlayerStatus.Paused;
+  const buttonRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder().setCustomId('music_pause').setLabel(paused ? 'Resume' : 'Pause').setEmoji(paused ? '▶️' : '⏸️').setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId('music_skip').setLabel('Skip').setEmoji('⏭️').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('music_stop').setLabel('Stop').setEmoji('⏹️').setStyle(ButtonStyle.Danger),
+    new ButtonBuilder().setCustomId('music_loop').setLabel(`Loop: ${queue.loop}`).setEmoji('🔁').setStyle(ButtonStyle.Secondary)
   );
+  const filterSelect = new StringSelectMenuBuilder()
+    .setCustomId('music_filter_select')
+    .setPlaceholder('Audio filter...')
+    .addOptions([
+      { label: 'None', value: 'none', default: !queue.filter },
+      ...Object.entries(FILTER_LABELS).map(([value, label]) => ({ label, value, default: queue.filter === value }))
+    ]);
+  const selectRow = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(filterSelect);
+  return [buttonRow, selectRow];
 }
 
-async function refreshNowPlaying(state: GuildMusicState, textChannel: TextBasedChannel) {
-  if (!state.nowPlayingMessageId || !state.current) return;
-  const message = await textChannel.messages.fetch(state.nowPlayingMessageId).catch(() => null);
-  if (!message) return;
-  await message.edit({ embeds: [buildNowPlayingEmbed(state)], components: [buildControlRow(state)] }).catch(() => undefined);
+async function updateNowPlayingMessage(queue: GuildQueue, textChannel: TextChannel) {
+  if (!queue.nowPlayingMessageId) return;
+  const message = await textChannel.messages.fetch(queue.nowPlayingMessageId).catch(() => null);
+  await message?.edit({ embeds: [nowPlayingEmbed(queue)], components: nowPlayingComponents(queue) }).catch(() => undefined);
 }
 
-export async function joinAndGetState(
-  guildId: string,
-  voiceChannel: VoiceBasedChannel,
-  textChannel: TextBasedChannel
-): Promise<GuildMusicState> {
-  let state = getMusicState(guildId);
-  if (state) return state;
-
-  const connection = joinVoiceChannel({
-    channelId: voiceChannel.id,
-    guildId,
-    adapterCreator: voiceChannel.guild.voiceAdapterCreator
-  });
-  await entersState(connection, VoiceConnectionStatus.Ready, 15_000);
-
-  const player = createAudioPlayer({ behaviors: { noSubscriber: NoSubscriberBehavior.Pause } });
-  connection.subscribe(player);
-
-  state = {
-    guildId,
-    connection,
-    player,
-    textChannelId: textChannel.id,
-    voiceChannelId: voiceChannel.id,
-    queue: [],
-    current: null,
-    startedAt: Date.now(),
-    pausedAt: null,
-    loop: 'off',
-    volume: 80,
-    tracksPlayed: 0
-  };
-  setMusicState(guildId, state);
-
-  player.on(AudioPlayerStatus.Idle, () => {
-    void playNext(guildId).catch((err) => log.error('playNext failed', err));
-  });
-  player.on('error', (err) => log.error('Audio player error', err));
-
-  await prisma.musicSession.create({ data: { guildId, channelId: voiceChannel.id, startedById: '' } }).catch(() => undefined);
-
-  return state;
+let ffmpegBin: string | null = null;
+function spawnFfmpeg(filterChain: string): ChildProcessWithoutNullStreams {
+  ffmpegBin = ffmpegBin ?? (ffmpegPath as unknown as string);
+  return spawn(ffmpegBin, ['-i', 'pipe:0', '-analyzeduration', '0', '-loglevel', '0', '-af', filterChain, '-f', 'ogg', '-c:a', 'libopus', '-b:a', '128k', '-ar', '48000', '-ac', '2', 'pipe:1']);
 }
 
-export async function enqueue(state: GuildMusicState, tracks: Track[]): Promise<void> {
-  state.queue.push(...tracks);
-  if (!state.current) await playNext(state.guildId);
-}
+export async function playNext(queue: GuildQueue, textChannel: TextChannel): Promise<void> {
+  if (queue.destroyed) return;
 
-export async function playNext(guildId: string): Promise<void> {
-  const state = getMusicState(guildId);
-  if (!state) return;
-
-  if (state.loop === 'track' && state.current) {
-    state.queue.unshift(state.current);
-  } else if (state.loop === 'queue' && state.current) {
-    state.queue.push(state.current);
+  if (queue.loop === 'track' && queue.current) {
+    queue.tracks.unshift(queue.current);
+  } else if (queue.loop === 'queue' && queue.current) {
+    queue.tracks.push(queue.current);
   }
 
-  const next = state.queue.shift();
+  const next = queue.tracks.shift();
   if (!next) {
-    state.current = null;
-    if (state.updateInterval) clearInterval(state.updateInterval);
+    queue.current = null;
+    await textChannel.send('📭 Queue finished.').catch(() => undefined);
     return;
   }
 
-  state.current = next;
-  state.startedAt = Date.now();
-  state.pausedAt = null;
-  state.tracksPlayed++;
+  queue.current = next;
+  queue.elapsedSec = 0;
 
-  const { stream, type } = await provider.getStream(next);
-  const resource = createAudioResource(stream, {
-    inputType: type === 'opus' ? StreamType.Opus : type === 'webm/opus' ? StreamType.WebmOpus : StreamType.Arbitrary,
-    inlineVolume: true
+  try {
+    const source = await playdl.stream(next.url, { discordPlayerCompatibility: false });
+    const ffmpeg = spawnFfmpeg(buildAudioFilterChain(queue.volume, queue.filter));
+    source.stream.pipe(ffmpeg.stdin);
+    ffmpeg.stderr.resume();
+    const resource = createAudioResource(ffmpeg.stdout, { inputType: StreamType.OggOpus });
+    queue.player.play(resource);
+  } catch (err) {
+    log.error('Failed to start track', err);
+    await textChannel.send(`⚠️ Failed to play **${next.title}**, skipping.`).catch(() => undefined);
+    return playNext(queue, textChannel);
+  }
+
+  const embed = nowPlayingEmbed(queue);
+  const components = nowPlayingComponents(queue);
+  if (queue.nowPlayingMessageId) {
+    await textChannel.messages
+      .fetch(queue.nowPlayingMessageId)
+      .then((m) => m.edit({ embeds: [embed], components }))
+      .catch(async () => {
+        const message = await textChannel.send({ embeds: [embed], components });
+        queue.nowPlayingMessageId = message.id;
+      });
+  } else {
+    const message = await textChannel.send({ embeds: [embed], components });
+    queue.nowPlayingMessageId = message.id;
+  }
+}
+
+export function attachPlayerEvents(queue: GuildQueue, textChannel: TextChannel): void {
+  queue.player.on(AudioPlayerStatus.Idle, () => {
+    if (!queue.destroyed) playNext(queue, textChannel).catch((err) => log.error('playNext failed', err));
   });
-  resource.volume?.setVolume(state.volume / 100);
-  state.player.play(resource);
-
-  const client = getBotClient();
-  const fetched = client ? await client.channels.fetch(state.textChannelId).catch(() => null) : null;
-  if (fetched?.isTextBased() && 'send' in fetched) {
-    const textChannel = fetched as TextChannel;
-    if (state.updateInterval) clearInterval(state.updateInterval);
-    const message = await textChannel.send({ embeds: [buildNowPlayingEmbed(state)], components: [buildControlRow(state)] });
-    state.nowPlayingMessageId = message.id;
-    state.updateInterval = setInterval(() => {
-      void refreshNowPlaying(state, textChannel).catch(() => undefined);
-    }, 10_000);
-  }
+  queue.player.on('error', (err) => {
+    log.error('Audio player error', err);
+    if (!queue.destroyed) playNext(queue, textChannel).catch(() => undefined);
+  });
 }
 
-export function togglePause(state: GuildMusicState): boolean {
-  if (state.pausedAt) {
-    const pausedDuration = Date.now() - state.pausedAt;
-    state.startedAt += pausedDuration;
-    state.pausedAt = null;
-    state.player.unpause();
-    return false;
-  }
-  state.pausedAt = Date.now();
-  state.player.pause();
-  return true;
+export async function restartCurrentTrack(queue: GuildQueue, textChannel: TextChannel): Promise<void> {
+  if (!queue.current) return;
+  queue.tracks.unshift(queue.current);
+  await playNext(queue, textChannel);
 }
 
-export function skip(state: GuildMusicState): void {
-  state.player.stop();
+export async function refreshNowPlaying(queue: GuildQueue, textChannel: TextChannel): Promise<void> {
+  await updateNowPlayingMessage(queue, textChannel);
 }
 
-export function shuffleQueue(state: GuildMusicState): void {
-  for (let i = state.queue.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [state.queue[i], state.queue[j]] = [state.queue[j]!, state.queue[i]!];
-  }
+export async function waitForConnection(connection: import('@discordjs/voice').VoiceConnection): Promise<void> {
+  await entersState(connection, VoiceConnectionStatus.Ready, 15_000);
 }
 
-export function cycleLoop(state: GuildMusicState): void {
-  state.loop = state.loop === 'off' ? 'queue' : state.loop === 'queue' ? 'track' : 'off';
+export function stopQueue(queue: GuildQueue): void {
+  queue.destroyed = true;
+  queue.player.stop(true);
+  queue.connection.destroy();
+  deleteQueue(queue.guildId);
 }
 
-export async function stopAndLeave(guildId: string): Promise<void> {
-  const state = getMusicState(guildId);
-  if (!state) return;
-  state.queue = [];
-  state.player.stop();
-  state.connection.destroy();
-  deleteMusicState(guildId);
-  await prisma.musicSession.updateMany({ where: { guildId, endedAt: null }, data: { endedAt: new Date() } }).catch(() => undefined);
-}
+export type { FilterName };

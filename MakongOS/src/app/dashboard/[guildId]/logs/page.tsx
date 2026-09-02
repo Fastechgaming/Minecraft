@@ -1,58 +1,53 @@
 import { prisma } from '../../../../database/prisma';
-import { LogFilters } from '../../../../components/dashboard/forms/LogFilters';
 
-const TYPES = ['ticket', 'command', 'ai', 'error', 'member_join', 'member_leave', 'suggestion', 'giveaway'];
+const TYPES = ['moderation', 'ticket', 'modmail', 'command', 'ai', 'error', 'member_join', 'member_leave', 'giveaway', 'economy', 'voice_hub'];
 
-export default async function LogsPage({ params, searchParams }: { params: { guildId: string }; searchParams: Record<string, string | undefined> }) {
-  const { type, userId, moderatorId, channelId } = searchParams;
-
+export default async function LogsPage({ params, searchParams }: { params: { guildId: string }; searchParams: { type?: string } }) {
+  const type = searchParams.type;
   const logs = await prisma.auditLog.findMany({
-    where: {
-      guildId: params.guildId,
-      ...(type ? { type } : {}),
-      ...(userId ? { userId } : {}),
-      ...(moderatorId ? { moderatorId } : {}),
-      ...(channelId ? { channelId } : {})
-    },
+    where: { guildId: params.guildId, ...(type ? { type } : {}) },
     orderBy: { createdAt: 'desc' },
-    take: 150
+    take: 100
   });
 
   return (
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-bold text-white">Audit Logs</h1>
-        <p className="text-discord-muted">Searchable history across every system: tickets, commands, AI, suggestions, giveaways, and more.</p>
+        <p className="text-discord-muted">The last 100 events across every module.</p>
       </div>
 
-      <LogFilters types={TYPES} current={{ type, userId, moderatorId, channelId }} />
+      <div className="flex flex-wrap gap-2">
+        <a href={`/dashboard/${params.guildId}/logs`} className={`pill border ${!type ? 'border-discord-blurple bg-discord-blurple/20 text-white' : 'border-discord-border text-discord-muted'}`}>
+          All
+        </a>
+        {TYPES.map((t) => (
+          <a
+            key={t}
+            href={`/dashboard/${params.guildId}/logs?type=${t}`}
+            className={`pill border ${type === t ? 'border-discord-blurple bg-discord-blurple/20 text-white' : 'border-discord-border text-discord-muted'}`}
+          >
+            {t}
+          </a>
+        ))}
+      </div>
 
-      <div className="card overflow-x-auto">
-        <table className="w-full min-w-[720px] text-sm">
-          <thead className="text-left text-xs uppercase tracking-wide text-discord-muted">
-            <tr className="border-b border-discord-border">
-              <th className="px-4 py-3">Type</th>
-              <th className="px-4 py-3">Action</th>
-              <th className="px-4 py-3">User</th>
-              <th className="px-4 py-3">Channel</th>
-              <th className="px-4 py-3">Date</th>
-            </tr>
-          </thead>
-          <tbody>
+      <div className="card p-4">
+        {logs.length === 0 ? (
+          <p className="text-sm text-discord-muted">No events yet.</p>
+        ) : (
+          <ul className="flex flex-col gap-2">
             {logs.map((log) => (
-              <tr key={log.id} className="border-b border-discord-border/50 last:border-0">
-                <td className="px-4 py-3">
-                  <span className="pill bg-discord-blurple/20 text-discord-blurple">{log.type}</span>
-                </td>
-                <td className="px-4 py-3 text-white">{log.action}</td>
-                <td className="px-4 py-3 font-mono text-xs text-discord-muted">{log.userId ?? '—'}</td>
-                <td className="px-4 py-3 font-mono text-xs text-discord-muted">{log.channelId ?? '—'}</td>
-                <td className="px-4 py-3 text-xs text-discord-muted">{log.createdAt.toLocaleString()}</td>
-              </tr>
+              <li key={log.id} className="flex items-center justify-between rounded-lg bg-discord-panel2 px-3 py-2 text-sm">
+                <span className="text-white">
+                  <span className="pill mr-2 bg-discord-blurple/20 text-discord-blurple">{log.type}</span>
+                  {log.summary}
+                </span>
+                <span className="text-xs text-discord-muted">{log.createdAt.toLocaleString()}</span>
+              </li>
             ))}
-          </tbody>
-        </table>
-        {logs.length === 0 && <p className="p-6 text-center text-discord-muted">No matching log entries.</p>}
+          </ul>
+        )}
       </div>
     </div>
   );

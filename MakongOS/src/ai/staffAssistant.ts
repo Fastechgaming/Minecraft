@@ -1,163 +1,82 @@
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, type Message, type TextChannel } from 'discord.js';
+import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, type Client } from 'discord.js';
 import type { GuildSettings } from '@prisma/client';
-import { geminiProvider } from '../providers/ai/geminiProvider';
-import { getGuildSettings } from '../database/settingsCache';
+import type { Content } from '@google/generative-ai';
 import { prisma } from '../database/prisma';
-import { searchKnowledge, formatKnowledgeForPrompt } from './knowledge';
-import { getMemories, formatMemoryForPrompt, getRecentConversation, saveConversationTurn } from './memory';
-import { isWithinLimits, incrementUsage } from './usage';
-import { createLogger } from '../services/logger';
-import { createTicketChannel } from '../tickets/service';
-
-const log = createLogger('ai-staff');
+import { chatReply } from './gemini';
+import { findRelevantKnowledge } from './knowledge';
+import { getMemories, getRecentConversation, recordConversationTurn } from './memory';
 
 const MODE_PROMPTS: Record<string, string> = {
-  staff:
-    'You are a friendly, helpful staff member for a Minecraft server Discord community. Answer questions, explain rules, ' +
-    'guide new members, and direct users to the right channel or command. Be concise and warm.',
-  friend:
-    'You are a casual, fun community member bot. Joke around, be friendly, talk about Minecraft, and keep replies short and playful.',
-  hybrid:
-    'You are MakongOS, a virtual staff member for a Minecraft server Discord. Blend helpfulness with a friendly tone: answer ' +
-    'questions and help players, but keep things light when the conversation is casual.'
+  staff: 'You are a professional, concise staff assistant for a Discord community. Stick to facts from the knowledge base when available. Keep answers short and helpful.',
+  friend: 'You are a friendly, casual community member. Chat naturally, use emoji sparingly, and keep things light.',
+  hybrid: 'You are a helpful community assistant. Be friendly and conversational, but give clear, accurate answers, especially about server rules or info from the knowledge base.'
 };
 
-function buildSystemPrompt(settings: GuildSettings, knowledgeText: string, memoryText: string): string {
-  const base = MODE_PROMPTS[settings.aiMode] ?? MODE_PROMPTS.staff;
-  return `${base}
+const UNSURE_PATTERNS = [/i('| a)?m not sure/i, /i don'?t know/i, /i'?m unable to/i, /you should ask (a )?staff/i, /contact (a )?staff/i];
 
-SERVER KNOWLEDGE BASE (use this to answer accurately; do not invent server-specific facts not listed here):
-${knowledgeText}
-
-WHAT YOU REMEMBER ABOUT THIS USER:
-${memoryText}
-
-RULES:
-- Keep replies under 300 words.
-- If you are not confident you can correctly resolve the user's problem (e.g. billing/payment issues, punishment appeals, bugs you cannot verify), respond with EXACTLY: "NEED_STAFF: <one line reason>" and nothing else.
-- Never claim to take an action yourself (banning, changing settings, granting items) — only human staff can do that.
-- Do not make up Minecraft server details that are not in the knowledge base above.`;
+async function bumpUsage(guildId: string, field: 'chatMessages' | 'imagesGenerated' | 'scansPerformed' | 'escalations', amount = 1): Promise<void> {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  await prisma.aIUsage.upsert({
+    where: { guildId_date: { guildId, date: today } },
+    update: { [field]: { increment: amount } },
+    create: { guildId, date: today, [field]: amount }
+  });
 }
 
-export async function handleStaffAssistantMessage(message: Message): Promise<void> {
-  if (!message.guildId) return;
-  const settings = await getGuildSettings(message.guildId);
-
-  const withinLimits = await isWithinLimits(message.guildId, settings.aiDailyLimit, settings.aiMonthlyLimit);
-  if (!withinLimits) {
-    log.warn(`AI usage limit reached for guild ${message.guildId}`);
-    return;
-  }
-
-  await incrementUsage(message.guildId, 'messagesAnalyzed');
-
-  const [knowledgeEntries, memories, history] = await Promise.all([
-    searchKnowledge(message.guildId, message.content),
-    settings.aiMemoryEnabled ? getMemories(message.guildId, message.author.id) : Promise.resolve({}),
-    getRecentConversation(message.guildId, message.channelId, message.author.id, settings.aiMaxHistoryMessages)
+export async function generateReply(guildId: string, userId: string, channelId: string, question: string, settings: GuildSettings): Promise<{ text: string; unsure: boolean }> {
+  const [knowledge, memories, history] = await Promise.all([
+    findRelevantKnowledge(guildId, question),
+    getMemories(guildId, userId),
+    getRecentConversation(guildId, userId, channelId)
   ]);
 
-  const systemPrompt = buildSystemPrompt(settings, formatKnowledgeForPrompt(knowledgeEntries), formatMemoryForPrompt(memories));
-  const imageUrls = settings.aiImageUnderstanding
-    ? [...message.attachments.values()].filter((a) => a.contentType?.startsWith('image/')).map((a) => a.url)
-    : [];
+  const modePrompt = MODE_PROMPTS[settings.aiMode] ?? MODE_PROMPTS.hybrid;
+  const personality = settings.aiPersonality ? `\nPersonality notes: ${settings.aiPersonality}` : '';
+  const knowledgeBlock = knowledge.length > 0 ? `\n\nRelevant server knowledge:\n${knowledge.map((k) => `Q: ${k.question}\nA: ${k.answer}`).join('\n\n')}` : '';
+  const memoryBlock = memories.length > 0 ? `\n\nThings you remember about this user:\n${memories.map((m) => `- ${m}`).join('\n')}` : '';
+  const systemInstruction = `${modePrompt}${personality}${knowledgeBlock}${memoryBlock}\n\nIf you genuinely don't know the answer and it's not in the knowledge base, say so plainly rather than guessing.`;
 
-  if (imageUrls.length) await incrementUsage(message.guildId, 'imageAnalyses');
+  const historyContent: Content[] = history.map((turn) => ({ role: turn.role === 'user' ? 'user' : 'model', parts: [{ text: turn.content }] }));
 
-  const channel = message.channel as TextChannel;
+  const text = await chatReply(historyContent, question, systemInstruction);
 
-  let response: string;
-  try {
-    await channel.sendTyping().catch(() => undefined);
-    response = await geminiProvider.chat({
-      systemPrompt,
-      history: history.map((h) => ({ role: h.role as 'user' | 'assistant', content: h.content })),
-      userMessage: message.content || 'The user sent an attachment with no text.',
-      imageUrls
-    });
-  } catch (err) {
-    log.error('AI chat failed', err);
-    return;
-  }
+  await recordConversationTurn(guildId, userId, channelId, 'user', question);
+  await recordConversationTurn(guildId, userId, channelId, 'model', text);
+  await bumpUsage(guildId, 'chatMessages');
 
-  await saveConversationTurn(message.guildId, message.channelId, message.author.id, 'user', message.content, settings.aiMode, imageUrls);
-
-  if (response.startsWith('NEED_STAFF:')) {
-    const reason = response.replace('NEED_STAFF:', '').trim();
-    await escalateToStaff(message, settings, reason, history.map((h) => `${h.role}: ${h.content}`).join('\n'));
-    await message.reply("I've looped in the staff team — someone will follow up with you shortly! 🙋").catch(() => undefined);
-    await saveConversationTurn(message.guildId, message.channelId, message.author.id, 'assistant', '[escalated to staff]', settings.aiMode);
-    return;
-  }
-
-  await incrementUsage(message.guildId, 'responses');
-  await saveConversationTurn(message.guildId, message.channelId, message.author.id, 'assistant', response, settings.aiMode);
-
-  const chunks = response.match(/[\s\S]{1,1900}/g) ?? [response];
-  for (const chunk of chunks) {
-    await message.reply(chunk).catch(() => channel.send(chunk));
-  }
+  const unsure = UNSURE_PATTERNS.some((p) => p.test(text));
+  return { text, unsure };
 }
 
 export function buildEscalationComponents(escalationId: string, resolved = false) {
   return new ActionRowBuilder<ButtonBuilder>().addComponents(
-    new ButtonBuilder()
-      .setCustomId(`escalation_answer_${escalationId}`)
-      .setLabel('Answer')
-      .setEmoji('✅')
-      .setStyle(ButtonStyle.Success)
-      .setDisabled(resolved),
-    new ButtonBuilder()
-      .setCustomId(`escalation_knowledge_${escalationId}`)
-      .setLabel('Add to Knowledge')
-      .setEmoji('📚')
-      .setStyle(ButtonStyle.Secondary)
+    new ButtonBuilder().setCustomId(`escalation_answer_${escalationId}`).setLabel('Answer').setStyle(ButtonStyle.Primary).setDisabled(resolved),
+    new ButtonBuilder().setCustomId(`escalation_knowledge_${escalationId}`).setLabel('Add to Knowledge').setStyle(ButtonStyle.Secondary).setDisabled(resolved)
   );
 }
 
-export async function escalateToStaff(message: Message, settings: GuildSettings, reason: string, transcript: string): Promise<void> {
-  if (!settings.aiStaffEscalation || !message.guildId) return;
-  await incrementUsage(message.guildId, 'escalations');
-
-  const escalation = await prisma.aIEscalation.create({
-    data: {
-      guildId: message.guildId,
-      userId: message.author.id,
-      channelId: message.channelId,
-      question: message.content || '(no text — attachment only)',
-      reason: reason || 'AI could not confidently resolve this request.',
-      transcript: transcript || 'No prior context.'
-    }
-  });
+export async function escalateToStaff(
+  client: Client,
+  guildId: string,
+  userId: string,
+  channelId: string,
+  question: string,
+  settings: GuildSettings
+): Promise<void> {
+  const escalation = await prisma.aIEscalation.create({ data: { guildId, userId, question, channelId } });
+  await bumpUsage(guildId, 'escalations');
 
   const embed = new EmbedBuilder()
-    .setColor(0xda373c)
-    .setTitle('🚨 AI Staff Escalation')
-    .addFields(
-      { name: 'User', value: `${message.author}`, inline: true },
-      { name: 'Channel', value: `${message.channel}`, inline: true },
-      { name: 'Reason', value: reason || 'AI could not confidently resolve this request.' },
-      { name: 'Question', value: (message.content || '(no text — attachment only)').slice(0, 1000) },
-      { name: 'AI Summary', value: transcript.slice(-900) || 'No prior context.' }
-    )
-    .setFooter({ text: `Escalation #${escalation.id}` })
-    .setTimestamp(new Date());
+    .setTitle('🆘 AI Escalation')
+    .setColor(0xed4245)
+    .setDescription(question)
+    .addFields({ name: 'From', value: `<@${userId}>`, inline: true }, { name: 'Channel', value: `<#${channelId}>`, inline: true });
 
-  const components = [buildEscalationComponents(escalation.id)];
-
-  if (settings.aiEscalationChannel) {
-    const channel = await message.guild!.channels.fetch(settings.aiEscalationChannel).catch(() => null);
-    if (channel?.isTextBased()) {
-      await (channel as TextChannel).send({ embeds: [embed], components }).catch(() => undefined);
-      return;
-    }
-  }
-
-  // Fall back to opening a ticket for the user if no escalation channel is configured.
-  try {
-    const { channel } = await createTicketChannel(message.guild!, null, { id: message.author.id, username: message.author.username });
-    await channel.send({ embeds: [embed], components });
-  } catch (err) {
-    log.error('Failed to escalate to staff', err);
+  const targetChannelId = settings.aiEscalationChannelId ?? channelId;
+  const targetChannel = await client.channels.fetch(targetChannelId).catch(() => null);
+  if (targetChannel?.isTextBased() && 'send' in targetChannel) {
+    const sent = await targetChannel.send({ embeds: [embed], components: [buildEscalationComponents(escalation.id)] }).catch(() => null);
+    if (sent) await prisma.aIEscalation.update({ where: { id: escalation.id }, data: { messageId: sent.id } });
   }
 }

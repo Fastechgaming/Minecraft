@@ -1,24 +1,75 @@
-/** Every GuildSettings column the dashboard is allowed to write, grouped for docs/UI reuse. */
+// Whitelist of GuildSettings fields the dashboard is allowed to PATCH.
+// Keeping this explicit (rather than accepting any body key) stops a crafted
+// request from writing to fields the UI never exposes.
 export const EDITABLE_SETTINGS_FIELDS = [
-  'prefix', 'language', 'timezone', 'embedColor',
-  'logChannelId', 'aiEscalationChannel', 'suggestionsChannelId', 'ticketLogChannelId', 'aiChannelIds', 'musicChannelIds',
-  'staffRoleIds', 'adminRoleIds', 'djRoleIds',
-  'aiEnabled', 'musicEnabled', 'ticketsEnabled', 'economyEnabled', 'funEnabled', 'suggestionsEnabled', 'giveawaysEnabled', 'levelingEnabled',
-  'aiMode', 'aiResponseFrequency', 'aiMentionRequired', 'aiHelpDetection', 'aiCasualConversation', 'aiStaffEscalation',
-  'aiMemoryEnabled', 'aiMemoryDurationHours', 'aiMaxHistoryMessages', 'aiImageUnderstanding', 'aiImageGeneration',
-  'aiDailyLimit', 'aiMonthlyLimit', 'aiPerUserCooldownSec', 'aiPerChannelCooldownSec',
-  'xpPerMessage', 'xpCooldownSec', 'xpPerVoiceMin', 'xpLevelUpBase',
-  'musicMaxQueue', 'musicDefaultVol',
+  'moderationEnabled',
+  'antiScamEnabled',
+  'musicEnabled',
+  'ticketsEnabled',
+  'modmailEnabled',
+  'levelingEnabled',
+  'economyEnabled',
+  'voiceHubEnabled',
+  'giveawaysEnabled',
+  'reactionRolesEnabled',
+  'socialAlertsEnabled',
+  'aiEnabled',
+  'prefix',
+  'logChannelId',
+  'staffRoleIds',
+  'adminRoleIds',
+  'automodBlockInvites',
+  'automodBlockBadWords',
+  'automodBadWords',
+  'automodBlockSpam',
+  'automodSpamMsgCount',
+  'automodSpamWindowSec',
+  'automodBlockGhostPing',
+  'automodWhitelistRoleIds',
+  'automodWhitelistChannelIds',
+  'modLogChannelId',
+  'warningDecayDays',
+  'antiScamAction',
+  'antiScamTimeoutMin',
+  'antiScamWhitelistRoleIds',
+  'antiScamWhitelistChannelIds',
+  'aiChatChannelIds',
+  'aiMode',
+  'aiPersonality',
+  'aiEscalationChannelId',
+  'aiConfidenceThreshold',
+  'xpPerMessage',
+  'xpCooldownSec',
+  'xpPerVoiceMin',
+  'xpLevelUpBase',
+  'levelUpChannelId',
+  'levelRoleRewards',
+  'economyCurrencyName',
+  'economyCurrencySymbol',
+  'economyDailyAmount',
+  'economyWorkMin',
+  'economyWorkMax',
+  'economyRobEnabled',
+  'economyRobSuccessRate',
+  'ticketLogChannelId',
   'ticketMaxOpenPerUser',
-  'economyCurrencySymbol', 'economyDailyAmount', 'economyBegMin', 'economyBegMax', 'economyBegCooldownSec'
+  'ticketReminderHours',
+  'modmailCategoryId',
+  'modmailLogChannelId',
+  'voiceHubSetupChannelId',
+  'voiceHubCategoryId',
+  'voiceHubDefaultName',
+  'voiceHubDefaultLimit',
+  'welcomeEnabled',
+  'welcomeChannelId',
+  'welcomeMessage',
+  'leaveEnabled',
+  'leaveChannelId',
+  'leaveMessage',
+  'autoRoleIds',
+  'musicMaxQueue',
+  'musicDefaultVol',
+  'musicDjRoleIds'
 ] as const;
 
 export type EditableSettingsField = (typeof EDITABLE_SETTINGS_FIELDS)[number];
-
-export function pickEditableFields(body: Record<string, unknown>): Record<string, unknown> {
-  const result: Record<string, unknown> = {};
-  for (const key of EDITABLE_SETTINGS_FIELDS) {
-    if (key in body) result[key] = body[key];
-  }
-  return result;
-}

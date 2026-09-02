@@ -1,5 +1,5 @@
 import { prisma } from '../../../database/prisma';
-import { getBotClient, getBotStartedAt } from '../../../bot/globalClient';
+import { getBotClient } from '../../../bot/globalClient';
 import { StatCard } from '../../../components/dashboard/StatCard';
 
 function formatUptime(ms: number): string {
@@ -7,23 +7,24 @@ function formatUptime(ms: number): string {
   const d = Math.floor(totalSeconds / 86400);
   const h = Math.floor((totalSeconds % 86400) / 3600);
   const m = Math.floor((totalSeconds % 3600) / 60);
-  return [d && `${d}d`, h && `${h}h`, `${m}m`].filter(Boolean).join(' ');
+  return [d && `${d}d`, h && `${h}h`, `${m}m`].filter(Boolean).join(' ') || '<1m';
 }
 
 export default async function OverviewPage({ params }: { params: { guildId: string } }) {
   const { guildId } = params;
   const client = getBotClient();
-  const startedAt = getBotStartedAt();
   const discordGuild = client?.guilds.cache.get(guildId);
 
-  const [ticketOpen, ticketTotal, aiUsageAgg, commandCount, musicSessions, activeGiveaways, pendingSuggestions, recentLogs, dbOk] = await Promise.all([
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const [ticketOpen, ticketTotal, aiUsage, commandCount, activeGiveaways, openEscalations, recentLogs, dbOk] = await Promise.all([
     prisma.ticket.count({ where: { guildId, status: { not: 'closed' } } }),
     prisma.ticket.count({ where: { guildId } }),
-    prisma.aIUsage.aggregate({ where: { guildId }, _sum: { responses: true, messagesAnalyzed: true } }),
+    prisma.aIUsage.findUnique({ where: { guildId_date: { guildId, date: today } } }),
     prisma.auditLog.count({ where: { guildId, type: 'command' } }),
-    prisma.musicSession.count({ where: { guildId } }),
     prisma.giveaway.count({ where: { guildId, ended: false } }),
-    prisma.suggestion.count({ where: { guildId, status: 'pending' } }),
+    prisma.aIEscalation.count({ where: { guildId, resolved: false } }),
     prisma.auditLog.findMany({ where: { guildId }, orderBy: { createdAt: 'desc' }, take: 8 }),
     prisma.$queryRaw`SELECT 1`.then(() => true).catch(() => false)
   ]);
@@ -37,13 +38,13 @@ export default async function OverviewPage({ params }: { params: { guildId: stri
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <StatCard label="Bot Status" value={client?.isReady() ? '🟢 Online' : '🔴 Offline'} />
-        <StatCard label="Uptime" value={startedAt ? formatUptime(Date.now() - startedAt) : '—'} />
+        <StatCard label="Uptime" value={formatUptime(client?.uptime ?? 0)} />
         <StatCard label="Members" value={discordGuild?.memberCount ?? '—'} />
         <StatCard label="Database" value={dbOk ? '🟢 Connected' : '🔴 Error'} />
         <StatCard label="Tickets" value={`${ticketOpen} open`} hint={`${ticketTotal} total`} />
-        <StatCard label="AI Responses" value={aiUsageAgg._sum.responses ?? 0} hint={`${aiUsageAgg._sum.messagesAnalyzed ?? 0} messages analyzed`} />
-        <StatCard label="Pending Suggestions" value={pendingSuggestions} />
-        <StatCard label="Commands Run" value={commandCount} hint={`${musicSessions} music sessions · ${activeGiveaways} active giveaways`} />
+        <StatCard label="AI Chats Today" value={aiUsage?.chatMessages ?? 0} hint={`${openEscalations} open escalation(s)`} />
+        <StatCard label="Active Giveaways" value={activeGiveaways} />
+        <StatCard label="Commands Run" value={commandCount} />
       </div>
 
       <div className="card p-4">
@@ -56,7 +57,7 @@ export default async function OverviewPage({ params }: { params: { guildId: stri
               <li key={log.id} className="flex items-center justify-between rounded-lg bg-discord-panel2 px-3 py-2 text-sm">
                 <span className="text-white">
                   <span className="pill mr-2 bg-discord-blurple/20 text-discord-blurple">{log.type}</span>
-                  {log.action}
+                  {log.summary}
                 </span>
                 <span className="text-xs text-discord-muted">{log.createdAt.toLocaleString()}</span>
               </li>

@@ -1,30 +1,36 @@
 import { prisma } from '../database/prisma';
 
-export async function searchKnowledge(guildId: string, query: string, limit = 4) {
+function tokenize(text: string): Set<string> {
+  return new Set(
+    text
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .split(/\s+/)
+      .filter((w) => w.length > 2)
+  );
+}
+
+export interface KnowledgeMatch {
+  question: string;
+  answer: string;
+  category: string;
+  score: number;
+}
+
+export async function findRelevantKnowledge(guildId: string, query: string, limit = 3): Promise<KnowledgeMatch[]> {
   const entries = await prisma.knowledgeBase.findMany({ where: { guildId } });
   if (entries.length === 0) return [];
 
-  const queryWords = query.toLowerCase().split(/\W+/).filter(Boolean);
-
+  const queryTokens = tokenize(query);
   const scored = entries.map((entry) => {
-    const haystack = `${entry.title} ${entry.content} ${entry.keywords.join(' ')}`.toLowerCase();
-    let score = 0;
-    for (const word of queryWords) {
-      if (word.length < 3) continue;
-      if (haystack.includes(word)) score++;
-    }
-    if (entry.keywords.some((k) => query.toLowerCase().includes(k.toLowerCase()))) score += 3;
-    return { entry, score };
+    const entryTokens = tokenize(`${entry.question} ${entry.answer} ${entry.category}`);
+    let overlap = 0;
+    for (const token of queryTokens) if (entryTokens.has(token)) overlap++;
+    return { question: entry.question, answer: entry.answer, category: entry.category, score: overlap };
   });
 
   return scored
     .filter((s) => s.score > 0)
     .sort((a, b) => b.score - a.score)
-    .slice(0, limit)
-    .map((s) => s.entry);
-}
-
-export function formatKnowledgeForPrompt(entries: { category: string; title: string; content: string }[]): string {
-  if (entries.length === 0) return 'No relevant knowledge base entries found.';
-  return entries.map((e) => `[${e.category}] ${e.title}: ${e.content}`).join('\n---\n');
+    .slice(0, limit);
 }

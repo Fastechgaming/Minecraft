@@ -1,34 +1,21 @@
-import { SlashCommandBuilder, EmbedBuilder, MessageFlags, type ChatInputCommandInteraction, type GuildMember } from 'discord.js';
+import { SlashCommandBuilder, EmbedBuilder, type TextChannel, type ChatInputCommandInteraction, type GuildMember } from 'discord.js';
+import { joinVoiceChannel, createAudioPlayer, NoSubscriberBehavior, AudioPlayerStatus } from '@discordjs/voice';
 import type { FeatureModule } from '../../../types/command';
 import { getGuildSettings } from '../../../database/settingsCache';
-import { isDJ } from '../../../services/permissions';
-import { playDlProvider } from '../../../providers/music/playDlProvider';
-import {
-  joinAndGetState,
-  enqueue,
-  togglePause,
-  skip,
-  shuffleQueue,
-  cycleLoop,
-  stopAndLeave,
-  buildNowPlayingEmbed,
-  buildControlRow
-} from '../../../music/player';
-import { getMusicState } from '../../../music/queueManager';
+import { isDj } from '../../../services/permissions';
+import { getQueue, setQueue, type GuildQueue } from '../../../music/queueManager';
+import { resolveTracks, playNext, attachPlayerEvents, waitForConnection, stopQueue, refreshNowPlaying, restartCurrentTrack, nowPlayingEmbed, nowPlayingComponents } from '../../../music/player';
+import type { FilterName } from '../../../music/filters';
 
-async function guard(interaction: ChatInputCommandInteraction): Promise<boolean> {
-  if (!interaction.guildId) return false;
-  const settings = await getGuildSettings(interaction.guildId);
+async function guardMusic(interaction: ChatInputCommandInteraction): Promise<boolean> {
+  const settings = await getGuildSettings(interaction.guildId!);
   if (!settings.musicEnabled) {
-    await interaction.reply({ content: '🚫 Music is disabled on this server.', flags: MessageFlags.Ephemeral });
+    await interaction.reply({ content: 'Music is disabled on this server.', ephemeral: true });
     return false;
   }
-  if (settings.musicChannelIds.length > 0 && !settings.musicChannelIds.includes(interaction.channelId)) {
-    await interaction.reply({ content: '🚫 Music commands are not allowed in this channel.', flags: MessageFlags.Ephemeral });
-    return false;
-  }
-  if (!isDJ(interaction.member as GuildMember, settings)) {
-    await interaction.reply({ content: '🚫 You need the DJ role to control music.', flags: MessageFlags.Ephemeral });
+  const member = interaction.member as GuildMember;
+  if (!isDj(member, settings)) {
+    await interaction.reply({ content: 'You need a DJ role to control music.', ephemeral: true });
     return false;
   }
   return true;
@@ -36,238 +23,203 @@ async function guard(interaction: ChatInputCommandInteraction): Promise<boolean>
 
 export const musicModule: FeatureModule = {
   name: 'music',
-  description: 'Queue-based music player with a live Now Playing embed and playback buttons.',
+  description: 'Queue-based music with a live Now Playing embed, buttons, and audio filters.',
   commands: [
     {
-      data: new SlashCommandBuilder()
-        .setName('play')
-        .setDescription('Play a song or add it to the queue.')
-        .addStringOption((o) => o.setName('query').setDescription('Song name or URL').setRequired(true)),
-      module: 'music',
+      data: new SlashCommandBuilder().setName('play').setDescription('Play a song from YouTube or Spotify').addStringOption((o) => o.setName('query').setDescription('URL or search terms').setRequired(true)),
       execute: async (interaction) => {
-        if (!(await guard(interaction))) return;
+        if (!(await guardMusic(interaction))) return;
         const member = interaction.member as GuildMember;
         const voiceChannel = member.voice.channel;
         if (!voiceChannel) {
-          await interaction.reply({ content: '🔊 Join a voice channel first.', flags: MessageFlags.Ephemeral });
+          await interaction.reply({ content: 'Join a voice channel first.', ephemeral: true });
           return;
         }
-
         await interaction.deferReply();
+
         const query = interaction.options.getString('query', true);
-        const settings = await getGuildSettings(interaction.guildId!);
-
-        const state = await joinAndGetState(interaction.guildId!, voiceChannel, interaction.channel!);
-        if (state.queue.length >= settings.musicMaxQueue) {
-          await interaction.editReply(`🚫 Queue is full (max ${settings.musicMaxQueue}).`);
-          return;
-        }
-        state.volume = settings.musicDefaultVol;
-
-        const results = await playDlProvider.search(query);
-        if (results.length === 0) {
+        const tracks = await resolveTracks(query, interaction.user.id).catch(() => []);
+        if (tracks.length === 0) {
           await interaction.editReply('❌ No results found.');
           return;
         }
-        const track = { ...results[0]!, requestedById: interaction.user.id };
-        await enqueue(state, [track]);
 
-        const embed = new EmbedBuilder()
-          .setColor(0x23a559)
-          .setDescription(`✅ Queued **[${track.title}](${track.url})**`)
-          .setThumbnail(track.thumbnail ?? null);
-        await interaction.editReply({ embeds: [embed] });
+        const settings = await getGuildSettings(interaction.guildId!);
+        let queue = getQueue(interaction.guildId!);
+
+        if (!queue || queue.destroyed) {
+          const connection = joinVoiceChannel({ channelId: voiceChannel.id, guildId: interaction.guildId!, adapterCreator: interaction.guild!.voiceAdapterCreator, selfDeaf: true });
+          await waitForConnection(connection).catch(() => undefined);
+          const player = createAudioPlayer({ behaviors: { noSubscriber: NoSubscriberBehavior.Pause } });
+          connection.subscribe(player);
+          queue = {
+            guildId: interaction.guildId!,
+            voiceChannelId: voiceChannel.id,
+            textChannelId: interaction.channelId,
+            connection,
+            player,
+            tracks: [],
+            current: null,
+            volume: settings.musicDefaultVol,
+            filter: null,
+            loop: 'off',
+            nowPlayingMessageId: null,
+            elapsedSec: 0,
+            destroyed: false
+          };
+          setQueue(interaction.guildId!, queue);
+          attachPlayerEvents(queue, interaction.channel as TextChannel);
+        }
+
+        if (queue.tracks.length + tracks.length > settings.musicMaxQueue) {
+          await interaction.editReply('❌ Queue is full.');
+          return;
+        }
+
+        queue.tracks.push(...tracks);
+        if (!queue.current) {
+          await playNext(queue, interaction.channel as TextChannel);
+          await interaction.editReply(`🎶 Now playing **${tracks[0].title}**.`);
+        } else {
+          await interaction.editReply(`➕ Queued **${tracks[0].title}**.`);
+        }
       }
     },
     {
-      data: new SlashCommandBuilder().setName('skip').setDescription('Skip the current song.'),
-      module: 'music',
+      data: new SlashCommandBuilder().setName('skip').setDescription('Skip the current track'),
       execute: async (interaction) => {
-        if (!(await guard(interaction))) return;
-        const state = getMusicState(interaction.guildId!);
-        if (!state?.current) {
-          await interaction.reply({ content: 'Nothing is playing.', flags: MessageFlags.Ephemeral });
+        if (!(await guardMusic(interaction))) return;
+        const queue = getQueue(interaction.guildId!);
+        if (!queue?.current) {
+          await interaction.reply({ content: 'Nothing is playing.', ephemeral: true });
           return;
         }
-        skip(state);
+        queue.player.stop(true);
         await interaction.reply('⏭️ Skipped.');
       }
     },
     {
-      data: new SlashCommandBuilder().setName('stop').setDescription('Stop playback and clear the queue.'),
-      module: 'music',
+      data: new SlashCommandBuilder().setName('stop').setDescription('Stop playback and clear the queue'),
       execute: async (interaction) => {
-        if (!(await guard(interaction))) return;
-        await stopAndLeave(interaction.guildId!);
+        if (!(await guardMusic(interaction))) return;
+        const queue = getQueue(interaction.guildId!);
+        if (!queue) {
+          await interaction.reply({ content: 'Nothing is playing.', ephemeral: true });
+          return;
+        }
+        stopQueue(queue);
         await interaction.reply('⏹️ Stopped and left the voice channel.');
       }
     },
     {
-      data: new SlashCommandBuilder().setName('pause').setDescription('Pause the current song.'),
-      module: 'music',
+      data: new SlashCommandBuilder().setName('queue').setDescription('View the music queue'),
       execute: async (interaction) => {
-        if (!(await guard(interaction))) return;
-        const state = getMusicState(interaction.guildId!);
-        if (!state?.current) {
-          await interaction.reply({ content: 'Nothing is playing.', flags: MessageFlags.Ephemeral });
+        const queue = getQueue(interaction.guildId!);
+        if (!queue?.current) {
+          await interaction.reply({ content: 'Nothing is playing.', ephemeral: true });
           return;
         }
-        togglePause(state);
-        await interaction.reply('⏸️ Paused.');
-      }
-    },
-    {
-      data: new SlashCommandBuilder().setName('resume').setDescription('Resume playback.'),
-      module: 'music',
-      execute: async (interaction) => {
-        if (!(await guard(interaction))) return;
-        const state = getMusicState(interaction.guildId!);
-        if (!state?.current) {
-          await interaction.reply({ content: 'Nothing is playing.', flags: MessageFlags.Ephemeral });
-          return;
-        }
-        togglePause(state);
-        await interaction.reply('▶️ Resumed.');
-      }
-    },
-    {
-      data: new SlashCommandBuilder().setName('shuffle').setDescription('Shuffle the queue.'),
-      module: 'music',
-      execute: async (interaction) => {
-        if (!(await guard(interaction))) return;
-        const state = getMusicState(interaction.guildId!);
-        if (!state) {
-          await interaction.reply({ content: 'Nothing is queued.', flags: MessageFlags.Ephemeral });
-          return;
-        }
-        shuffleQueue(state);
-        await interaction.reply('🔀 Queue shuffled.');
-      }
-    },
-    {
-      data: new SlashCommandBuilder().setName('loop').setDescription('Cycle loop mode: off → queue → track.'),
-      module: 'music',
-      execute: async (interaction) => {
-        if (!(await guard(interaction))) return;
-        const state = getMusicState(interaction.guildId!);
-        if (!state) {
-          await interaction.reply({ content: 'Nothing is playing.', flags: MessageFlags.Ephemeral });
-          return;
-        }
-        cycleLoop(state);
-        await interaction.reply(`🔁 Loop mode: **${state.loop}**`);
-      }
-    },
-    {
-      data: new SlashCommandBuilder()
-        .setName('volume')
-        .setDescription('Set playback volume (0-100).')
-        .addIntegerOption((o) => o.setName('level').setDescription('Volume').setRequired(true).setMinValue(0).setMaxValue(100)),
-      module: 'music',
-      execute: async (interaction) => {
-        if (!(await guard(interaction))) return;
-        const state = getMusicState(interaction.guildId!);
-        if (!state) {
-          await interaction.reply({ content: 'Nothing is playing.', flags: MessageFlags.Ephemeral });
-          return;
-        }
-        state.volume = interaction.options.getInteger('level', true);
-        await interaction.reply(`🔊 Volume set to ${state.volume}%.`);
-      }
-    },
-    {
-      data: new SlashCommandBuilder().setName('queue').setDescription('Show the current queue.'),
-      module: 'music',
-      execute: async (interaction) => {
-        if (!interaction.guildId) return;
-        const state = getMusicState(interaction.guildId);
-        if (!state || (!state.current && state.queue.length === 0)) {
-          await interaction.reply({ content: 'The queue is empty.', flags: MessageFlags.Ephemeral });
-          return;
-        }
-        const upcoming = state.queue
-          .slice(0, 10)
-          .map((t, i) => `${i + 1}. **${t.title}** — <@${t.requestedById}>`)
-          .join('\n');
         const embed = new EmbedBuilder()
-          .setColor(0x5865f2)
-          .setTitle('🎵 Queue')
+          .setTitle('🎶 Queue')
+          .setColor(0x1db954)
           .setDescription(
-            `**Now Playing:** ${state.current ? `[${state.current.title}](${state.current.url})` : 'Nothing'}\n\n${upcoming || '*Queue is empty*'}`
-          )
-          .setFooter({ text: `${state.queue.length} song(s) queued` });
+            `**Now playing:** ${queue.current.title}\n\n` +
+              (queue.tracks.length > 0 ? queue.tracks.slice(0, 15).map((t, i) => `${i + 1}. ${t.title}`).join('\n') : '*Queue is empty.*')
+          );
         await interaction.reply({ embeds: [embed] });
       }
     },
     {
-      data: new SlashCommandBuilder().setName('nowplaying').setDescription('Show the Now Playing panel again.'),
-      module: 'music',
+      data: new SlashCommandBuilder().setName('volume').setDescription('Set playback volume (0-200%)').addIntegerOption((o) => o.setName('percent').setDescription('0-200').setRequired(true).setMinValue(0).setMaxValue(200)),
       execute: async (interaction) => {
-        if (!interaction.guildId) return;
-        const state = getMusicState(interaction.guildId);
-        if (!state?.current) {
-          await interaction.reply({ content: 'Nothing is playing.', flags: MessageFlags.Ephemeral });
+        if (!(await guardMusic(interaction))) return;
+        const queue = getQueue(interaction.guildId!);
+        if (!queue?.current) {
+          await interaction.reply({ content: 'Nothing is playing.', ephemeral: true });
           return;
         }
-        const message = await interaction.reply({ embeds: [buildNowPlayingEmbed(state)], components: [buildControlRow(state)], fetchReply: true });
-        state.nowPlayingMessageId = message.id;
+        queue.volume = interaction.options.getInteger('percent', true);
+        await interaction.reply(`🔊 Volume set to ${queue.volume}%. Restarting the current track to apply it...`);
+        await restartCurrentTrack(queue, interaction.channel as TextChannel);
+      }
+    },
+    {
+      data: new SlashCommandBuilder().setName('loop').setDescription('Set loop mode').addStringOption((o) => o.setName('mode').setDescription('Loop mode').setRequired(true).addChoices({ name: 'Off', value: 'off' }, { name: 'Track', value: 'track' }, { name: 'Queue', value: 'queue' })),
+      execute: async (interaction) => {
+        if (!(await guardMusic(interaction))) return;
+        const queue = getQueue(interaction.guildId!);
+        if (!queue) {
+          await interaction.reply({ content: 'Nothing is playing.', ephemeral: true });
+          return;
+        }
+        queue.loop = interaction.options.getString('mode', true) as GuildQueue['loop'];
+        await refreshNowPlaying(queue, interaction.channel as TextChannel);
+        await interaction.reply(`🔁 Loop mode: **${queue.loop}**.`);
       }
     }
   ],
   components: [
     {
-      prefix: 'music_playpause',
-      button: async (interaction) => {
-        if (!interaction.guildId) return;
-        const state = getMusicState(interaction.guildId);
-        if (!state?.current) {
-          await interaction.reply({ content: 'Nothing is playing.', flags: MessageFlags.Ephemeral });
+      prefix: 'music_',
+      handleButton: async (interaction) => {
+        const queue = getQueue(interaction.guildId!);
+        if (!queue) {
+          await interaction.reply({ content: 'Nothing is playing.', ephemeral: true });
           return;
         }
-        togglePause(state);
-        await interaction.update({ embeds: [buildNowPlayingEmbed(state)], components: [buildControlRow(state)] });
-      }
-    },
-    {
-      prefix: 'music_skip',
-      button: async (interaction) => {
-        if (!interaction.guildId) return;
-        const state = getMusicState(interaction.guildId);
-        if (!state?.current) {
-          await interaction.reply({ content: 'Nothing is playing.', flags: MessageFlags.Ephemeral });
+        const settings = await getGuildSettings(interaction.guildId!);
+        const member = interaction.member as GuildMember;
+        if (!isDj(member, settings)) {
+          await interaction.reply({ content: 'You need a DJ role to control music.', ephemeral: true });
           return;
         }
-        skip(state);
-        await interaction.reply({ content: '⏭️ Skipped.', flags: MessageFlags.Ephemeral });
+
+        if (interaction.customId === 'music_pause') {
+          if (queue.player.state.status === AudioPlayerStatus.Paused) queue.player.unpause();
+          else queue.player.pause();
+        } else if (interaction.customId === 'music_skip') {
+          queue.player.stop(true);
+        } else if (interaction.customId === 'music_stop') {
+          stopQueue(queue);
+          await interaction.update({ content: '⏹️ Stopped.', embeds: [], components: [] });
+          return;
+        } else if (interaction.customId === 'music_loop') {
+          queue.loop = queue.loop === 'off' ? 'track' : queue.loop === 'track' ? 'queue' : 'off';
+        }
+
+        await interaction.update({ embeds: [nowPlayingEmbed(queue)], components: nowPlayingComponents(queue) });
       }
     },
     {
-      prefix: 'music_stop',
-      button: async (interaction) => {
-        if (!interaction.guildId) return;
-        await stopAndLeave(interaction.guildId);
-        await interaction.update({ content: '⏹️ Stopped.', embeds: [], components: [] });
-      }
-    },
-    {
-      prefix: 'music_shuffle',
-      button: async (interaction) => {
-        if (!interaction.guildId) return;
-        const state = getMusicState(interaction.guildId);
-        if (!state) return;
-        shuffleQueue(state);
-        await interaction.reply({ content: '🔀 Queue shuffled.', flags: MessageFlags.Ephemeral });
-      }
-    },
-    {
-      prefix: 'music_loop',
-      button: async (interaction) => {
-        if (!interaction.guildId) return;
-        const state = getMusicState(interaction.guildId);
-        if (!state) return;
-        cycleLoop(state);
-        await interaction.update({ embeds: [buildNowPlayingEmbed(state)], components: [buildControlRow(state)] });
+      prefix: 'music_filter_select',
+      handleSelect: async (interaction) => {
+        const queue = getQueue(interaction.guildId!);
+        if (!queue) {
+          await interaction.reply({ content: 'Nothing is playing.', ephemeral: true });
+          return;
+        }
+        const settings = await getGuildSettings(interaction.guildId!);
+        const member = interaction.member as GuildMember;
+        if (!isDj(member, settings)) {
+          await interaction.reply({ content: 'You need a DJ role to control music.', ephemeral: true });
+          return;
+        }
+        const value = interaction.values[0];
+        queue.filter = value === 'none' ? null : (value as FilterName);
+        await interaction.deferUpdate();
+        await restartCurrentTrack(queue, interaction.channel as TextChannel);
       }
     }
-  ]
+  ],
+  events: {
+    voiceStateUpdate: async (oldState, newState) => {
+      const guildId = oldState.guild.id;
+      const queue = getQueue(guildId);
+      if (!queue || queue.destroyed) return;
+      const voiceChannel = newState.guild.channels.cache.get(queue.voiceChannelId);
+      if (voiceChannel?.isVoiceBased() && voiceChannel.members.filter((m) => !m.user.bot).size === 0) {
+        stopQueue(queue);
+      }
+    }
+  }
 };

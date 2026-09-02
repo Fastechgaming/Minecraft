@@ -2,7 +2,7 @@
   "name": "makongos",
   "version": "1.0.0",
   "private": true,
-  "description": "MakongOS - AI-first Discord assistant bot + web dashboard in a single application",
+  "description": "MakongOS - AI-powered anti-scam, moderation, music, tickets/modmail, leveling, economy, and voice-hub Discord bot + web dashboard in a single application",
   "scripts": {
     "dev": "cross-env NODE_ENV=development tsx watch src/server.ts",
     "build": "next build && tsc -p tsconfig.server.json",
@@ -20,6 +20,7 @@
     "@discordjs/rest": "^2.4.0",
     "@discordjs/voice": "^0.19.0",
     "@google/generative-ai": "^0.21.0",
+    "@napi-rs/canvas": "^1.0.8",
     "@prisma/client": "^5.20.0",
     "discord-api-types": "^0.37.100",
     "discord.js": "^14.16.3",

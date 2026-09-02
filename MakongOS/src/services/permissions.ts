@@ -1,18 +1,12 @@
 import type { GuildMember } from 'discord.js';
+import { PermissionFlagsBits } from 'discord.js';
 import type { GuildSettings } from '@prisma/client';
 
-/** Dashboard role hierarchy, low to high. Never rely on hardcoded user IDs alone. */
-export const DASHBOARD_ROLES = ['viewer', 'support', 'dj', 'ai_manager', 'administrator', 'owner'] as const;
-
+export const DASHBOARD_ROLES = ['viewer', 'support', 'dj', 'moderator', 'ai_manager', 'administrator', 'owner'] as const;
 export type DashboardRole = (typeof DASHBOARD_ROLES)[number];
 
-export function roleRank(role: string): number {
-  const idx = DASHBOARD_ROLES.indexOf(role as DashboardRole);
-  return idx === -1 ? 0 : idx;
-}
-
-export function hasAtLeastRole(role: string, required: DashboardRole): boolean {
-  return roleRank(role) >= roleRank(required);
+export function hasAtLeastRole(role: DashboardRole, minRole: DashboardRole): boolean {
+  return DASHBOARD_ROLES.indexOf(role) >= DASHBOARD_ROLES.indexOf(minRole);
 }
 
 export function getBotOwnerIds(): string[] {
@@ -22,23 +16,26 @@ export function getBotOwnerIds(): string[] {
     .filter(Boolean);
 }
 
-/** In-Discord staff tier checks, driven entirely by dashboard-configured role IDs. */
-export function isStaff(member: GuildMember, settings: GuildSettings): boolean {
-  return isAdmin(member, settings) || settings.staffRoleIds.some((id) => member.roles.cache.has(id));
+export function isBotOwner(userId: string): boolean {
+  return getBotOwnerIds().includes(userId);
 }
 
-export function isAdmin(member: GuildMember, settings: GuildSettings): boolean {
-  return (
-    member.id === member.guild.ownerId ||
-    settings.adminRoleIds.some((id) => member.roles.cache.has(id)) ||
-    member.permissions.has('Administrator')
-  );
+export function isAdmin(member: GuildMember, settings?: Pick<GuildSettings, 'adminRoleIds'> | null): boolean {
+  if (member.permissions.has(PermissionFlagsBits.Administrator)) return true;
+  if (member.guild.ownerId === member.id) return true;
+  return settings?.adminRoleIds.some((roleId) => member.roles.cache.has(roleId)) ?? false;
 }
 
-export function isDJ(member: GuildMember, settings: GuildSettings): boolean {
-  return (
-    settings.djRoleIds.length === 0 ||
-    isStaff(member, settings) ||
-    settings.djRoleIds.some((id) => member.roles.cache.has(id))
-  );
+export function isStaff(
+  member: GuildMember,
+  settings?: Pick<GuildSettings, 'adminRoleIds' | 'staffRoleIds'> | null
+): boolean {
+  if (isAdmin(member, settings)) return true;
+  return settings?.staffRoleIds.some((roleId) => member.roles.cache.has(roleId)) ?? false;
+}
+
+export function isDj(member: GuildMember, settings?: Pick<GuildSettings, 'musicDjRoleIds' | 'adminRoleIds'> | null): boolean {
+  if (isAdmin(member, settings)) return true;
+  if (!settings?.musicDjRoleIds.length) return true; // no DJ role configured = everyone is a DJ
+  return settings.musicDjRoleIds.some((roleId) => member.roles.cache.has(roleId));
 }

@@ -1,49 +1,24 @@
 import { prisma } from '../database/prisma';
 
-export async function rememberFact(guildId: string, userId: string, key: string, value: string, durationHours: number): Promise<void> {
-  await prisma.user.upsert({ where: { id: userId }, create: { id: userId }, update: {} });
-  const expiresAt = durationHours > 0 ? new Date(Date.now() + durationHours * 60 * 60 * 1000) : null;
-  await prisma.aIMemory.upsert({
-    where: { guildId_userId_key: { guildId, userId, key } },
-    create: { guildId, userId, key, value, expiresAt },
-    update: { value, expiresAt }
-  });
+export async function getMemories(guildId: string, userId: string, limit = 10): Promise<string[]> {
+  const memories = await prisma.aIMemory.findMany({ where: { guildId, userId }, orderBy: { createdAt: 'desc' }, take: limit });
+  return memories.map((m) => m.fact);
 }
 
-export async function getMemories(guildId: string, userId: string): Promise<Record<string, string>> {
-  const rows = await prisma.aIMemory.findMany({
-    where: { guildId, userId, OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] }
-  });
-  return Object.fromEntries(rows.map((r) => [r.key, r.value]));
+export async function addMemory(guildId: string, userId: string, fact: string): Promise<void> {
+  await prisma.user.upsert({ where: { id: userId }, update: {}, create: { id: userId, username: 'unknown' } });
+  await prisma.aIMemory.create({ data: { guildId, userId, fact } });
 }
 
-export function formatMemoryForPrompt(memories: Record<string, string>): string {
-  const entries = Object.entries(memories);
-  if (entries.length === 0) return 'No stored memory for this user yet.';
-  return entries.map(([key, value]) => `${key}: ${value}`).join('\n');
+export async function forgetMemories(guildId: string, userId: string): Promise<number> {
+  const result = await prisma.aIMemory.deleteMany({ where: { guildId, userId } });
+  return result.count;
 }
 
-export async function forgetUserMemory(guildId: string, userId: string): Promise<void> {
-  await prisma.aIMemory.deleteMany({ where: { guildId, userId } });
+export async function getRecentConversation(guildId: string, userId: string, channelId: string, limit = 10) {
+  return prisma.aIConversation.findMany({ where: { guildId, userId, channelId }, orderBy: { createdAt: 'desc' }, take: limit }).then((rows) => rows.reverse());
 }
 
-export async function getRecentConversation(guildId: string, channelId: string, userId: string, limit: number) {
-  const rows = await prisma.aIConversation.findMany({
-    where: { guildId, channelId, userId },
-    orderBy: { createdAt: 'desc' },
-    take: limit
-  });
-  return rows.reverse();
-}
-
-export async function saveConversationTurn(
-  guildId: string,
-  channelId: string,
-  userId: string,
-  role: 'user' | 'assistant',
-  content: string,
-  mode: string,
-  imageUrls: string[] = []
-): Promise<void> {
-  await prisma.aIConversation.create({ data: { guildId, channelId, userId, role, content, mode, imageUrls } });
+export async function recordConversationTurn(guildId: string, userId: string, channelId: string, role: 'user' | 'model', content: string): Promise<void> {
+  await prisma.aIConversation.create({ data: { guildId, userId, channelId, role, content } });
 }

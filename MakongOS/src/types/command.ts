@@ -1,62 +1,47 @@
 import type {
   ChatInputCommandInteraction,
-  ClientEvents,
   SlashCommandBuilder,
-  SlashCommandOptionsOnlyBuilder,
   SlashCommandSubcommandsOnlyBuilder,
+  SlashCommandOptionsOnlyBuilder,
   ButtonInteraction,
   StringSelectMenuInteraction,
   ModalSubmitInteraction,
-  Client
+  Client,
+  Message,
+  VoiceState,
+  GuildMember,
+  ClientEvents
 } from 'discord.js';
 
 export type SlashCommandData =
   | SlashCommandBuilder
-  | SlashCommandOptionsOnlyBuilder
-  | SlashCommandSubcommandsOnlyBuilder;
+  | SlashCommandSubcommandsOnlyBuilder
+  | SlashCommandOptionsOnlyBuilder;
 
-export interface CommandContext {
-  client: Client;
-}
-
-export interface Command {
+export interface SlashCommand {
   data: SlashCommandData;
-  /** Module this command belongs to, used for CommandConfig lookups + dashboard grouping. */
-  module: string;
-  /** Default cooldown in seconds, overridable per-guild from the dashboard. */
-  defaultCooldownSec?: number;
-  execute: (interaction: ChatInputCommandInteraction, ctx: CommandContext) => Promise<void>;
+  /** Also usable as a Discord User App command outside of any guild. */
+  userInstallable?: boolean;
+  execute: (interaction: ChatInputCommandInteraction) => Promise<void>;
 }
 
-export type ComponentHandler<T> = (interaction: T, ctx: CommandContext) => Promise<void>;
-
-export interface ComponentRoute {
-  /** Matches customId via `startsWith`. */
+export interface ComponentHandler {
+  /** Matches a customId by string prefix. */
   prefix: string;
-  button?: ComponentHandler<ButtonInteraction>;
-  select?: ComponentHandler<StringSelectMenuInteraction>;
-  modal?: ComponentHandler<ModalSubmitInteraction>;
-}
-
-export interface EventHandler<K extends keyof ClientEvents = keyof ClientEvents> {
-  event: K;
-  once?: boolean;
-  /**
-   * Receives the event's own arguments followed by the shared CommandContext.
-   * Typed loosely (rather than as a spread tuple) because TS's structural
-   * checks reject "fewer declared params than the target" for rest-tuple
-   * function types — every module writes handlers with only the params it
-   * needs, same as an Array callback ignoring the index/array args.
-   */
-  handler: (...args: any[]) => Promise<void> | void;
+  handleButton?: (interaction: ButtonInteraction) => Promise<void>;
+  handleSelect?: (interaction: StringSelectMenuInteraction) => Promise<void>;
+  handleModal?: (interaction: ModalSubmitInteraction) => Promise<void>;
 }
 
 export interface FeatureModule {
   name: string;
   description: string;
-  commands?: Command[];
-  components?: ComponentRoute[];
-  events?: EventHandler<any>[];
-  /** Called once after the client logs in. */
-  onReady?: (ctx: CommandContext) => Promise<void> | void;
+  commands?: SlashCommand[];
+  components?: ComponentHandler[];
+  events?: {
+    [K in keyof ClientEvents]?: (...args: ClientEvents[K]) => Promise<void> | void;
+  };
+  onReady?: (client: Client) => Promise<void> | void;
 }
+
+export type { Message, VoiceState, GuildMember };

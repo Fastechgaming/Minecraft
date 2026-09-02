@@ -1,200 +1,211 @@
-import { SlashCommandBuilder, EmbedBuilder, MessageFlags, Events, version as djsVersion } from 'discord.js';
+import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 import type { FeatureModule } from '../../../types/command';
-import { getGuildSettings } from '../../../database/settingsCache';
-import { getBotStartedAt } from '../../globalClient';
-import { grantXp, getLeaderboard, xpForLevel } from '../../../stats/xp';
 import { prisma } from '../../../database/prisma';
-import { consumeCooldown } from '../../../services/cooldowns';
+import { getGuildSettings } from '../../../database/settingsCache';
+import { isAdmin } from '../../../services/permissions';
+import { createBackup, listBackups, restoreBackup } from '../../../utility/backup';
+import { pollAllAlerts } from '../../../social/alerts';
 
-async function fetchJson<T>(url: string): Promise<T | null> {
-  try {
-    const res = await fetch(url, { headers: { 'User-Agent': 'MakongOS-Discord-Bot' } });
-    if (!res.ok) return null;
-    return (await res.json()) as T;
-  } catch {
-    return null;
-  }
-}
-
-function formatDuration(totalSeconds: number): string {
+function formatUptime(ms: number): string {
+  const totalSeconds = Math.floor(ms / 1000);
   const d = Math.floor(totalSeconds / 86400);
   const h = Math.floor((totalSeconds % 86400) / 3600);
   const m = Math.floor((totalSeconds % 3600) / 60);
-  const s = totalSeconds % 60;
-  return [d && `${d}d`, h && `${h}h`, m && `${m}m`, `${s}s`].filter(Boolean).join(' ') || '0s';
+  return [d && `${d}d`, h && `${h}h`, `${m}m`].filter(Boolean).join(' ') || '<1m';
+}
+
+function interpolate(template: string, user: string, server: string): string {
+  return template.replaceAll('{user}', user).replaceAll('{server}', server);
 }
 
 export const utilityModule: FeatureModule = {
   name: 'utility',
-  description: 'Avatar/userinfo/botstats utility commands plus the XP/leveling system.',
+  description: 'Server info, welcome/leave messages, social alerts, and server backups.',
   commands: [
     {
-      data: new SlashCommandBuilder().setName('avatar').setDescription("Show a user's avatar.").addUserOption((o) => o.setName('user').setDescription('User')),
-      module: 'utility',
+      data: new SlashCommandBuilder().setName('userinfo').setDescription('Show info about a member').addUserOption((o) => o.setName('user').setDescription('Member').setRequired(false)),
+      userInstallable: true,
       execute: async (interaction) => {
         const target = interaction.options.getUser('user') ?? interaction.user;
+        const member = interaction.inGuild() ? await interaction.guild!.members.fetch(target.id).catch(() => null) : null;
         const embed = new EmbedBuilder()
+          .setTitle(target.tag)
+          .setThumbnail(target.displayAvatarURL({ size: 256 }))
           .setColor(0x5865f2)
-          .setTitle(`${target.username}'s Avatar`)
-          .setImage(target.displayAvatarURL({ size: 1024 }));
-        await interaction.reply({ embeds: [embed] });
-      }
-    },
-    {
-      data: new SlashCommandBuilder().setName('userinfo').setDescription('Show information about a member.').addUserOption((o) => o.setName('user').setDescription('User')),
-      module: 'utility',
-      execute: async (interaction) => {
-        const target = interaction.options.getUser('user') ?? interaction.user;
-        const member = interaction.guild ? await interaction.guild.members.fetch(target.id).catch(() => null) : null;
-
-        const embed = new EmbedBuilder()
-          .setColor(0x5865f2)
-          .setAuthor({ name: target.tag, iconURL: target.displayAvatarURL() })
-          .setThumbnail(target.displayAvatarURL())
           .addFields(
+            { name: 'ID', value: target.id, inline: true },
             { name: 'Account Created', value: `<t:${Math.floor(target.createdTimestamp / 1000)}:R>`, inline: true },
-            ...(member?.joinedTimestamp ? [{ name: 'Joined Server', value: `<t:${Math.floor(member.joinedTimestamp / 1000)}:R>`, inline: true }] : []),
-            ...(member ? [{ name: 'Roles', value: `${member.roles.cache.size - 1}`, inline: true }] : [])
+            ...(member ? [{ name: 'Joined Server', value: member.joinedTimestamp ? `<t:${Math.floor(member.joinedTimestamp / 1000)}:R>` : 'Unknown', inline: true }] : [])
           );
         await interaction.reply({ embeds: [embed] });
       }
     },
     {
-      data: new SlashCommandBuilder().setName('botstats').setDescription('Show bot statistics.'),
-      module: 'utility',
+      data: new SlashCommandBuilder().setName('avatar').setDescription("Show a member's avatar").addUserOption((o) => o.setName('user').setDescription('Member').setRequired(false)),
+      userInstallable: true,
       execute: async (interaction) => {
-        const startedAt = getBotStartedAt();
-        const uptimeSec = startedAt ? Math.floor((Date.now() - startedAt) / 1000) : 0;
-        const memMb = Math.round(process.memoryUsage().heapUsed / 1024 / 1024);
-
+        const target = interaction.options.getUser('user') ?? interaction.user;
+        const embed = new EmbedBuilder().setTitle(`${target.username}'s Avatar`).setImage(target.displayAvatarURL({ size: 1024 })).setColor(0x5865f2);
+        await interaction.reply({ embeds: [embed] });
+      }
+    },
+    {
+      data: new SlashCommandBuilder().setName('serverinfo').setDescription('Show info about this server'),
+      execute: async (interaction) => {
+        const guild = interaction.guild!;
         const embed = new EmbedBuilder()
+          .setTitle(guild.name)
+          .setThumbnail(guild.iconURL({ size: 256 }))
           .setColor(0x5865f2)
-          .setTitle('🤖 Bot Statistics')
           .addFields(
-            { name: 'Servers', value: `${interaction.client.guilds.cache.size}`, inline: true },
-            { name: 'Uptime', value: formatDuration(uptimeSec), inline: true },
-            { name: 'WS Ping', value: `${interaction.client.ws.ping}ms`, inline: true },
-            { name: 'Memory', value: `${memMb}MB`, inline: true },
-            { name: 'discord.js', value: djsVersion, inline: true }
+            { name: 'Members', value: guild.memberCount.toString(), inline: true },
+            { name: 'Owner', value: `<@${guild.ownerId}>`, inline: true },
+            { name: 'Created', value: `<t:${Math.floor(guild.createdTimestamp / 1000)}:R>`, inline: true },
+            { name: 'Roles', value: guild.roles.cache.size.toString(), inline: true },
+            { name: 'Channels', value: guild.channels.cache.size.toString(), inline: true },
+            { name: 'Boosts', value: (guild.premiumSubscriptionCount ?? 0).toString(), inline: true }
+          );
+        await interaction.reply({ embeds: [embed] });
+      }
+    },
+    {
+      data: new SlashCommandBuilder().setName('bot').setDescription('Show bot stats'),
+      userInstallable: true,
+      execute: async (interaction) => {
+        const client = interaction.client;
+        const embed = new EmbedBuilder()
+          .setTitle('MakongOS')
+          .setColor(0x5865f2)
+          .addFields(
+            { name: 'Servers', value: client.guilds.cache.size.toString(), inline: true },
+            { name: 'Uptime', value: formatUptime(client.uptime ?? 0), inline: true },
+            { name: 'Ping', value: `${Math.round(client.ws.ping)}ms`, inline: true },
+            { name: 'Memory', value: `${(process.memoryUsage().rss / 1024 / 1024).toFixed(0)}MB`, inline: true }
           );
         await interaction.reply({ embeds: [embed] });
       }
     },
     {
       data: new SlashCommandBuilder()
-        .setName('urban')
-        .setDescription('Look up a term on Urban Dictionary.')
-        .addStringOption((o) => o.setName('term').setDescription('Term to look up').setRequired(true)),
-      module: 'utility',
+        .setName('backup')
+        .setDescription('Backup and restore server structure')
+        .addSubcommand((s) => s.setName('create').setDescription('Create a backup').addStringOption((o) => o.setName('name').setDescription('Backup name').setRequired(true)))
+        .addSubcommand((s) => s.setName('list').setDescription('List backups'))
+        .addSubcommand((s) => s.setName('restore').setDescription('Restore missing roles/channels from a backup').addStringOption((o) => o.setName('id').setDescription('Backup ID').setRequired(true))),
       execute: async (interaction) => {
-        await interaction.deferReply();
-        const term = interaction.options.getString('term', true);
-        const data = await fetchJson<{ list: { definition: string; example: string; permalink: string; thumbs_up: number }[] }>(
-          `https://api.urbandictionary.com/v0/define?term=${encodeURIComponent(term)}`
-        );
-        const entry = data?.list?.[0];
-        if (!entry) {
-          await interaction.editReply(`❌ No definition found for **${term}**.`);
+        const settings = await getGuildSettings(interaction.guildId!);
+        const member = interaction.member;
+        if (!member || !('roles' in member) || !isAdmin(member as never, settings)) {
+          await interaction.reply({ content: 'You need to be an administrator to manage backups.', ephemeral: true });
           return;
         }
-        const clean = (s: string) => s.replace(/[[\]]/g, '').slice(0, 1000);
-        const embed = new EmbedBuilder()
-          .setColor(0x1d2439)
-          .setTitle(`📖 ${term}`)
-          .setURL(entry.permalink)
-          .addFields({ name: 'Definition', value: clean(entry.definition) }, { name: 'Example', value: clean(entry.example) || 'N/A' })
-          .setFooter({ text: `👍 ${entry.thumbs_up}` });
-        await interaction.editReply({ embeds: [embed] });
-      }
-    },
-    {
-      data: new SlashCommandBuilder().setName('bigemoji').setDescription('Get a large version of an emoji.').addStringOption((o) => o.setName('emoji').setDescription('The emoji').setRequired(true)),
-      module: 'utility',
-      execute: async (interaction) => {
-        const emoji = interaction.options.getString('emoji', true).trim();
-        const customMatch = emoji.match(/^<a?:\w+:(\d+)>$/);
-        if (customMatch) {
-          const animated = emoji.startsWith('<a:');
-          const url = `https://cdn.discordapp.com/emojis/${customMatch[1]}.${animated ? 'gif' : 'png'}?size=512`;
-          await interaction.reply({ embeds: [new EmbedBuilder().setColor(0x5865f2).setImage(url)] });
-          return;
-        }
+        const sub = interaction.options.getSubcommand();
 
-        const codepoints = [...emoji].map((c) => c.codePointAt(0)!.toString(16)).join('-');
-        const url = `https://cdn.jsdelivr.net/gh/jdecked/twemoji@latest/assets/72x72/${codepoints}.png`;
-        await interaction.reply({ embeds: [new EmbedBuilder().setColor(0x5865f2).setImage(url)] });
-      }
-    },
-    {
-      data: new SlashCommandBuilder().setName('rank').setDescription("Check a member's level and XP.").addUserOption((o) => o.setName('user').setDescription('User to check')),
-      module: 'utility',
-      execute: async (interaction) => {
-        if (!interaction.guildId) return;
-        const target = interaction.options.getUser('user') ?? interaction.user;
-        const settings = await getGuildSettings(interaction.guildId);
-        const record = await prisma.xP.findUnique({ where: { guildId_userId: { guildId: interaction.guildId, userId: target.id } } });
-        const level = record?.level ?? 0;
-        const xp = record?.xp ?? 0;
-        const nextLevelXp = xpForLevel(level + 1, settings.xpLevelUpBase);
-        const currentLevelXp = xpForLevel(level, settings.xpLevelUpBase);
-        const progress = nextLevelXp === currentLevelXp ? 1 : (xp - currentLevelXp) / (nextLevelXp - currentLevelXp);
-        const bar = '█'.repeat(Math.round(progress * 15)) + '░'.repeat(15 - Math.round(progress * 15));
-
-        const embed = new EmbedBuilder()
-          .setColor(0x5865f2)
-          .setAuthor({ name: target.username, iconURL: target.displayAvatarURL() })
-          .setTitle(`Level ${level}`)
-          .setDescription(`\`${bar}\`\n${xp} / ${nextLevelXp} XP`);
-        await interaction.reply({ embeds: [embed] });
-      }
-    },
-    {
-      data: new SlashCommandBuilder().setName('leaderboard').setDescription('Show the server XP leaderboard.'),
-      module: 'utility',
-      execute: async (interaction) => {
-        if (!interaction.guildId) return;
-        const rows = await getLeaderboard(interaction.guildId);
-        if (rows.length === 0) {
-          await interaction.reply({ content: 'No XP data yet — start chatting!', flags: MessageFlags.Ephemeral });
-          return;
-        }
-        const medals = ['🥇', '🥈', '🥉'];
-        const description = rows.map((r, i) => `${medals[i] ?? `${i + 1}.`} <@${r.userId}> — Level ${r.level} (${r.xp} XP)`).join('\n');
-        await interaction.reply({ embeds: [new EmbedBuilder().setColor(0x5865f2).setTitle('📈 XP Leaderboard').setDescription(description)] });
-      }
-    }
-  ],
-  events: [
-    {
-      event: Events.MessageCreate,
-      handler: async (message) => {
-        if (message.author.bot || !message.guildId) return;
-        const settings = await getGuildSettings(message.guildId);
-        if (!settings.levelingEnabled) return;
-
-        const key = `xp:${message.guildId}:${message.author.id}`;
-        if (!consumeCooldown(key, settings.xpCooldownSec * 1000)) return;
-
-        const result = await grantXp(message.guildId, message.author.id, settings.xpPerMessage, settings.xpLevelUpBase);
-        if (result.leveledUp) {
-          await message.channel.send(`🎉 ${message.author} leveled up to **Level ${result.newLevel}**!`).catch(() => undefined);
-        }
-      }
-    }
-  ],
-  onReady: async (ctx) => {
-    setInterval(async () => {
-      for (const guild of ctx.client.guilds.cache.values()) {
-        const settings = await getGuildSettings(guild.id).catch(() => null);
-        if (!settings?.levelingEnabled) continue;
-        for (const channel of guild.channels.cache.values()) {
-          if (!channel.isVoiceBased()) continue;
-          for (const member of channel.members.values()) {
-            if (member.user.bot) continue;
-            await grantXp(guild.id, member.id, settings.xpPerVoiceMin, settings.xpLevelUpBase).catch(() => undefined);
+        if (sub === 'create') {
+          const name = interaction.options.getString('name', true);
+          const backup = await createBackup(interaction.guild!, name, interaction.user.id);
+          await interaction.reply(`✅ Backup **${name}** created. ID: \`${backup.id}\``);
+        } else if (sub === 'list') {
+          const backups = await listBackups(interaction.guildId!);
+          if (backups.length === 0) {
+            await interaction.reply('No backups yet.');
+            return;
+          }
+          await interaction.reply(backups.map((b) => `\`${b.id}\` **${b.name}** — <t:${Math.floor(b.createdAt.getTime() / 1000)}:R>`).join('\n'));
+        } else {
+          const id = interaction.options.getString('id', true);
+          await interaction.deferReply();
+          try {
+            const result = await restoreBackup(interaction.guild!, id);
+            await interaction.editReply(`✅ Restore complete: ${result.rolesCreated} role(s) and ${result.channelsCreated} channel(s) recreated (existing structure was left untouched).`);
+          } catch {
+            await interaction.editReply('❌ Backup not found.');
           }
         }
       }
-    }, 60_000).unref();
+    },
+    {
+      data: new SlashCommandBuilder()
+        .setName('socialalert')
+        .setDescription('Manage Twitch/YouTube live & upload alerts')
+        .addSubcommand((s) =>
+          s
+            .setName('add')
+            .setDescription('Add a social alert')
+            .addStringOption((o) => o.setName('platform').setDescription('Platform').setRequired(true).addChoices({ name: 'Twitch', value: 'twitch' }, { name: 'YouTube', value: 'youtube' }))
+            .addStringOption((o) => o.setName('handle').setDescription('Twitch login or YouTube channel ID').setRequired(true))
+            .addChannelOption((o) => o.setName('channel').setDescription('Channel to announce in').setRequired(true))
+            .addStringOption((o) => o.setName('message').setDescription('Custom message ({creator}, {url})').setRequired(false))
+        )
+        .addSubcommand((s) =>
+          s
+            .setName('remove')
+            .setDescription('Remove a social alert')
+            .addStringOption((o) => o.setName('platform').setDescription('Platform').setRequired(true).addChoices({ name: 'Twitch', value: 'twitch' }, { name: 'YouTube', value: 'youtube' }))
+            .addStringOption((o) => o.setName('handle').setDescription('Twitch login or YouTube channel ID').setRequired(true))
+        )
+        .addSubcommand((s) => s.setName('list').setDescription('List social alerts')),
+      execute: async (interaction) => {
+        const settings = await getGuildSettings(interaction.guildId!);
+        const member = interaction.member;
+        if (!member || !('roles' in member) || !isAdmin(member as never, settings)) {
+          await interaction.reply({ content: 'You need to be an administrator to manage social alerts.', ephemeral: true });
+          return;
+        }
+        const sub = interaction.options.getSubcommand();
+
+        if (sub === 'add') {
+          const platform = interaction.options.getString('platform', true);
+          const handle = interaction.options.getString('handle', true);
+          const channel = interaction.options.getChannel('channel', true);
+          const message = interaction.options.getString('message') ?? '{creator} is now live! {url}';
+          await prisma.socialAlert.upsert({
+            where: { guildId_platform_channelHandle: { guildId: interaction.guildId!, platform, channelHandle: handle } },
+            update: { announceChannelId: channel.id, message },
+            create: { guildId: interaction.guildId!, platform, channelHandle: handle, announceChannelId: channel.id, message }
+          });
+          await interaction.reply(`✅ Added ${platform} alert for **${handle}**.`);
+        } else if (sub === 'remove') {
+          const platform = interaction.options.getString('platform', true);
+          const handle = interaction.options.getString('handle', true);
+          await prisma.socialAlert.deleteMany({ where: { guildId: interaction.guildId!, platform, channelHandle: handle } });
+          await interaction.reply(`🗑️ Removed ${platform} alert for **${handle}**.`);
+        } else {
+          const alerts = await prisma.socialAlert.findMany({ where: { guildId: interaction.guildId! } });
+          if (alerts.length === 0) {
+            await interaction.reply('No social alerts configured.');
+            return;
+          }
+          await interaction.reply(alerts.map((a) => `**${a.platform}**: ${a.channelHandle} → <#${a.announceChannelId}>`).join('\n'));
+        }
+      }
+    }
+  ],
+  events: {
+    guildMemberAdd: async (member) => {
+      const settings = await getGuildSettings(member.guild.id);
+      if (settings.welcomeEnabled && settings.welcomeChannelId) {
+        const channel = await member.guild.channels.fetch(settings.welcomeChannelId).catch(() => null);
+        if (channel?.isTextBased()) {
+          await channel.send(interpolate(settings.welcomeMessage, `${member}`, member.guild.name)).catch(() => undefined);
+        }
+      }
+      for (const roleId of settings.autoRoleIds) {
+        await member.roles.add(roleId).catch(() => undefined);
+      }
+    },
+    guildMemberRemove: async (member) => {
+      const settings = await getGuildSettings(member.guild.id);
+      if (settings.leaveEnabled && settings.leaveChannelId) {
+        const channel = await member.guild.channels.fetch(settings.leaveChannelId).catch(() => null);
+        const tag = 'user' in member ? member.user.tag : 'A member';
+        if (channel?.isTextBased()) {
+          await channel.send(interpolate(settings.leaveMessage, tag, member.guild.name)).catch(() => undefined);
+        }
+      }
+    }
+  },
+  onReady: (client) => {
+    setInterval(() => pollAllAlerts(client).catch(() => undefined), 5 * 60_000);
   }
 };

@@ -11,7 +11,10 @@ const nextConfig = {
       'zlib-sync',
       'bufferutil',
       'utf-8-validate',
-      '@prisma/client'
+      '@prisma/client',
+      '@napi-rs/canvas',
+      'play-dl',
+      'ffmpeg-static'
     ]
   },
   images: {

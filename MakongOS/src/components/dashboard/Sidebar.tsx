@@ -19,22 +19,21 @@ function buildNav(guildId: string): NavGroup[] {
   return [
     { title: '', items: [{ href: base, label: 'Overview', icon: '📊' }] },
     { title: 'Server', items: [{ href: `${base}/server`, label: 'General', icon: '⚙️' }] },
-    {
-      title: 'AI',
-      items: [
-        { href: `${base}/ai`, label: 'AI Staff', icon: '🤖' },
-        { href: `${base}/ai/knowledge`, label: 'Knowledge', icon: '📚' }
-      ]
-    },
-    { title: 'Economy', items: [{ href: `${base}/economy`, label: 'Settings', icon: '💰' }] },
-    { title: 'Tickets', items: [{ href: `${base}/tickets`, label: 'Panels & Categories', icon: '🎫' }] },
-    { title: 'Suggestions', items: [{ href: `${base}/suggestions`, label: 'Queue & Settings', icon: '📣' }] },
+    { title: 'Moderation', items: [{ href: `${base}/moderation`, label: 'Automod & Anti-Scam', icon: '🛡️' }] },
+    { title: 'AI', items: [{ href: `${base}/ai`, label: 'AI Assistant', icon: '🤖' }, { href: `${base}/ai/knowledge`, label: 'Knowledge Base', icon: '📚' }] },
+    { title: 'Leveling', items: [{ href: `${base}/leveling`, label: 'XP & Rewards', icon: '📈' }] },
+    { title: 'Economy', items: [{ href: `${base}/economy`, label: 'Currency & Shop', icon: '💰' }] },
+    { title: 'Tickets', items: [{ href: `${base}/tickets`, label: 'Panels & Modmail', icon: '🎫' }] },
+    { title: 'Music', items: [{ href: `${base}/music`, label: 'Playback Settings', icon: '🎵' }] },
+    { title: 'Voice Hub', items: [{ href: `${base}/voicehub`, label: 'Join to Create', icon: '🔊' }] },
     { title: 'Giveaways', items: [{ href: `${base}/giveaways`, label: 'Active & History', icon: '🎉' }] },
-    { title: 'Music', items: [{ href: `${base}/music`, label: 'Settings', icon: '🎵' }] },
-    { title: 'Community', items: [{ href: `${base}/community`, label: 'XP & Leaderboard', icon: '📈' }] },
+    { title: 'Roles', items: [{ href: `${base}/reactionroles`, label: 'Reaction Roles', icon: '🎭' }] },
+    { title: 'Community', items: [{ href: `${base}/community`, label: 'Welcome & Leave', icon: '👋' }] },
+    { title: 'Social', items: [{ href: `${base}/social`, label: 'Live Alerts', icon: '📡' }] },
+    { title: 'Backups', items: [{ href: `${base}/backups`, label: 'Server Backups', icon: '🗄️' }] },
     { title: 'Commands', items: [{ href: `${base}/commands`, label: 'Command Manager', icon: '⌨️' }] },
     { title: 'Logs', items: [{ href: `${base}/logs`, label: 'Audit Logs', icon: '🧾' }] },
-    { title: 'System', items: [{ href: `${base}/system`, label: 'Health & Providers', icon: '🩺' }] }
+    { title: 'Admin', items: [{ href: `${base}/admin`, label: 'System & Vouchers', icon: '🩺' }] }
   ];
 }
 

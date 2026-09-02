@@ -4,27 +4,13 @@ import { prisma } from '../../../../../../database/prisma';
 
 export async function PATCH(req: Request, { params }: { params: { guildId: string; name: string } }) {
   const auth = await authorizeGuildRequest(params.guildId, 'administrator');
-  if (!auth) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const body = (await req.json()) as { enabled: boolean };
 
-  const body = (await req.json().catch(() => ({}))) as {
-    enabled?: boolean;
-    cooldownSec?: number;
-    allowedRoleIds?: string[];
-    disabledChannelIds?: string[];
-  };
-
-  const data = {
-    enabled: body.enabled,
-    cooldownSec: body.cooldownSec,
-    allowedRoleIds: body.allowedRoleIds,
-    disabledChannelIds: body.disabledChannelIds
-  };
-
-  const updated = await prisma.commandConfig.upsert({
-    where: { guildId_commandName: { guildId: params.guildId, commandName: params.name } },
-    create: { guildId: params.guildId, commandName: params.name, ...data } as never,
-    update: data as never
+  const config = await prisma.commandConfig.upsert({
+    where: { guildId_name: { guildId: params.guildId, name: params.name } },
+    update: { enabled: body.enabled },
+    create: { guildId: params.guildId, name: params.name, enabled: body.enabled }
   });
-
-  return NextResponse.json(updated);
+  return NextResponse.json(config);
 }

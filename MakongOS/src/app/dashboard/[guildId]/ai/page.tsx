@@ -1,35 +1,32 @@
-import { ChannelType } from 'discord.js';
-import { getGuildSettings } from '../../../../database/settingsCache';
+import { prisma } from '../../../../database/prisma';
 import { getBotClient } from '../../../../bot/globalClient';
-import { getTodayUsage, getMonthUsageTotal } from '../../../../ai/usage';
+import { ChannelType } from 'discord.js';
+import { AIForm } from '../../../../components/dashboard/forms/AIForm';
 import { StatCard } from '../../../../components/dashboard/StatCard';
-import { AIStaffForm } from '../../../../components/dashboard/forms/AIStaffForm';
 
-export default async function AIStaffPage({ params }: { params: { guildId: string } }) {
-  const settings = await getGuildSettings(params.guildId);
-  const client = getBotClient();
-  const guild = client?.guilds.cache.get(params.guildId);
-  const channels = guild
-    ? [...guild.channels.cache.values()].filter((c) => c.type === ChannelType.GuildText).map((c) => ({ id: c.id, name: c.name }))
-    : [];
+export default async function AIPage({ params }: { params: { guildId: string } }) {
+  const settings = await prisma.guildSettings.upsert({ where: { guildId: params.guildId }, update: {}, create: { guildId: params.guildId } });
+  const guild = getBotClient()?.guilds.cache.get(params.guildId);
+  const textChannels = guild ? [...guild.channels.cache.filter((c) => c.type === ChannelType.GuildText).values()].map((c) => ({ id: c.id, name: c.name })) : [];
 
-  const [today, monthTotal] = await Promise.all([getTodayUsage(params.guildId), getMonthUsageTotal(params.guildId)]);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const usage = await prisma.aIUsage.findUnique({ where: { guildId_date: { guildId: params.guildId, date: today } } });
+  const openEscalations = await prisma.aIEscalation.count({ where: { guildId: params.guildId, resolved: false } });
 
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-bold text-white">AI Staff Assistant</h1>
-        <p className="text-discord-muted">Powered by Gemini — configure behavior, memory, and usage limits.</p>
+        <h1 className="text-2xl font-bold text-white">AI Assistant</h1>
+        <p className="text-discord-muted">Gemini-powered chat, personality, and staff escalation.</p>
       </div>
-
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <StatCard label="Messages Analyzed Today" value={today?.messagesAnalyzed ?? 0} hint={`limit ${settings.aiDailyLimit}/day`} />
-        <StatCard label="Responses Today" value={today?.responses ?? 0} />
-        <StatCard label="Escalations Today" value={today?.escalations ?? 0} />
-        <StatCard label="Responses This Month" value={monthTotal} hint={`limit ${settings.aiMonthlyLimit}/mo`} />
+        <StatCard label="Chat Messages Today" value={usage?.chatMessages ?? 0} />
+        <StatCard label="Images Generated Today" value={usage?.imagesGenerated ?? 0} />
+        <StatCard label="Scans Performed Today" value={usage?.scansPerformed ?? 0} />
+        <StatCard label="Open Escalations" value={openEscalations} />
       </div>
-
-      <AIStaffForm guildId={params.guildId} initial={settings} channels={channels} />
+      <AIForm guildId={params.guildId} initialSettings={settings} textChannels={textChannels} />
     </div>
   );
 }

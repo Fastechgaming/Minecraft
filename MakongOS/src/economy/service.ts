@@ -1,197 +1,150 @@
 import { prisma } from '../database/prisma';
+import type { GuildSettings } from '@prisma/client';
 
 export async function getProfile(guildId: string, userId: string) {
+  await prisma.user.upsert({ where: { id: userId }, update: {}, create: { id: userId, username: 'unknown' } });
   return prisma.economyProfile.upsert({
     where: { guildId_userId: { guildId, userId } },
-    create: { guildId, userId },
-    update: {}
+    update: {},
+    create: { guildId, userId }
   });
 }
 
-const HOUR_MS = 60 * 60 * 1000;
+export async function addWallet(guildId: string, userId: string, amount: number) {
+  await getProfile(guildId, userId);
+  return prisma.economyProfile.update({ where: { guildId_userId: { guildId, userId } }, data: { wallet: { increment: amount } } });
+}
 
 export interface DailyResult {
-  success: boolean;
-  message: string;
-  amount?: number;
-  streak?: number;
+  amount: number;
+  streak: number;
+  onCooldownMs?: number;
 }
 
-export async function claimDaily(guildId: string, userId: string, amount: number): Promise<DailyResult> {
+export async function claimDaily(guildId: string, userId: string, settings: GuildSettings): Promise<DailyResult> {
   const profile = await getProfile(guildId, userId);
-  const now = new Date();
-
+  const now = Date.now();
   if (profile.lastDailyAt) {
-    const hoursSince = (now.getTime() - profile.lastDailyAt.getTime()) / HOUR_MS;
-    if (hoursSince < 24) {
-      const remaining = Math.ceil(24 - hoursSince);
-      return { success: false, message: `⏳ You can claim your daily reward again in about ${remaining}h.` };
-    }
+    const elapsed = now - profile.lastDailyAt.getTime();
+    if (elapsed < 86_400_000) return { amount: 0, streak: profile.dailyStreak, onCooldownMs: 86_400_000 - elapsed };
+  }
+  const keptStreak = profile.lastDailyAt && now - profile.lastDailyAt.getTime() < 172_800_000;
+  const streak = keptStreak ? profile.dailyStreak + 1 : 1;
+  const amount = settings.economyDailyAmount + Math.min(streak * 10, 500);
+
+  await prisma.economyProfile.update({
+    where: { guildId_userId: { guildId, userId } },
+    data: { wallet: { increment: amount }, dailyStreak: streak, lastDailyAt: new Date() }
+  });
+  return { amount, streak };
+}
+
+export interface WorkResult {
+  amount: number;
+  onCooldownMs?: number;
+}
+
+export async function work(guildId: string, userId: string, settings: GuildSettings): Promise<WorkResult> {
+  const profile = await getProfile(guildId, userId);
+  const now = Date.now();
+  if (profile.lastWorkAt && now - profile.lastWorkAt.getTime() < 3_600_000) {
+    return { amount: 0, onCooldownMs: 3_600_000 - (now - profile.lastWorkAt.getTime()) };
+  }
+  const amount = Math.floor(Math.random() * (settings.economyWorkMax - settings.economyWorkMin + 1)) + settings.economyWorkMin;
+  await prisma.economyProfile.update({ where: { guildId_userId: { guildId, userId } }, data: { wallet: { increment: amount }, lastWorkAt: new Date() } });
+  return { amount };
+}
+
+export interface RobResult {
+  success: boolean;
+  amount: number;
+  onCooldownMs?: number;
+  error?: 'self' | 'too_poor' | 'target_too_poor';
+}
+
+export async function rob(guildId: string, robberId: string, targetId: string, settings: GuildSettings): Promise<RobResult> {
+  if (robberId === targetId) return { success: false, amount: 0, error: 'self' };
+  const robber = await getProfile(guildId, robberId);
+  const target = await getProfile(guildId, targetId);
+
+  const now = Date.now();
+  if (robber.lastRobAt && now - robber.lastRobAt.getTime() < 3_600_000) {
+    return { success: false, amount: 0, onCooldownMs: 3_600_000 - (now - robber.lastRobAt.getTime()) };
+  }
+  if (robber.wallet < 50) return { success: false, amount: 0, error: 'too_poor' };
+  if (target.wallet < 50) return { success: false, amount: 0, error: 'target_too_poor' };
+
+  const success = Math.random() < settings.economyRobSuccessRate;
+  if (success) {
+    const amount = Math.floor(target.wallet * (0.1 + Math.random() * 0.2));
+    await prisma.$transaction([
+      prisma.economyProfile.update({ where: { guildId_userId: { guildId, userId: robberId } }, data: { wallet: { increment: amount }, lastRobAt: new Date() } }),
+      prisma.economyProfile.update({ where: { guildId_userId: { guildId, userId: targetId } }, data: { wallet: { decrement: amount } } })
+    ]);
+    return { success: true, amount };
   }
 
-  const hoursSince = profile.lastDailyAt ? (now.getTime() - profile.lastDailyAt.getTime()) / HOUR_MS : Infinity;
-  const streak = hoursSince < 48 ? profile.dailyStreak + 1 : 1;
-
-  await prisma.economyProfile.update({
-    where: { guildId_userId: { guildId, userId } },
-    data: { coins: { increment: amount }, dailyStreak: streak, lastDailyAt: now }
-  });
-
-  return { success: true, message: `You got **${amount}** coins as your daily reward!`, amount, streak };
+  const penalty = Math.floor(robber.wallet * 0.15);
+  await prisma.economyProfile.update({ where: { guildId_userId: { guildId, userId: robberId } }, data: { wallet: { decrement: penalty }, lastRobAt: new Date() } });
+  return { success: false, amount: penalty };
 }
 
-const BEG_DONORS = [
-  'PewDiePie', 'T-Series', 'Sans', 'A Random Villager', 'A Pro Gamer', 'Zenitsu', 'Mr. Beast', 'Ur Mom',
-  'A Broke Person', 'The Ender Dragon', 'A Random Chicken', 'Steve', 'Alex', 'A Creeper (surprisingly generous)',
-  'Notch', 'The IRS', 'Joe Mama', 'A Villager With No Trades'
-];
-
-export interface BegResult {
-  success: boolean;
-  message: string;
-  amount?: number;
-  donor?: string;
-}
-
-export async function beg(guildId: string, userId: string, min: number, max: number, cooldownSec: number): Promise<BegResult> {
+export async function deposit(guildId: string, userId: string, amount: number) {
   const profile = await getProfile(guildId, userId);
-  const now = new Date();
-
-  if (profile.lastBegAt) {
-    const secondsSince = (now.getTime() - profile.lastBegAt.getTime()) / 1000;
-    if (secondsSince < cooldownSec) {
-      const remaining = Math.ceil((cooldownSec - secondsSince) / 60);
-      return { success: false, message: `⏳ You can beg again in about ${remaining}m.` };
-    }
-  }
-
-  const amount = Math.floor(Math.random() * (max - min + 1)) + min;
-  const donor = BEG_DONORS[Math.floor(Math.random() * BEG_DONORS.length)]!;
-
-  await prisma.economyProfile.update({
-    where: { guildId_userId: { guildId, userId } },
-    data: { coins: { increment: amount }, lastBegAt: now }
-  });
-
-  return { success: true, message: `**${donor}** donated you **${amount}** coins!`, amount, donor };
+  if (amount <= 0 || amount > profile.wallet) return null;
+  return prisma.economyProfile.update({ where: { guildId_userId: { guildId, userId } }, data: { wallet: { decrement: amount }, bank: { increment: amount } } });
 }
 
-const SLOT_EMOJIS = ['🍒', '🍋', '🍉', '🍇', '🍓', '🍑', '🍍', '🥝', '🍌'];
-
-export interface GambleResult {
-  success: boolean;
-  message: string;
-  slots?: string[];
-  reward?: number;
-  balance?: number;
-}
-
-export async function gamble(guildId: string, userId: string, betAmount: number): Promise<GambleResult> {
-  if (betAmount < 10) return { success: false, message: 'Bet amount cannot be less than 10 coins.' };
-
+export async function withdraw(guildId: string, userId: string, amount: number) {
   const profile = await getProfile(guildId, userId);
-  if (profile.coins < betAmount) return { success: false, message: `You do not have enough coins! Balance: **${profile.coins}**` };
-
-  const roll = () => SLOT_EMOJIS[Math.floor(Math.random() * SLOT_EMOJIS.length)]!;
-  const slots = [roll(), roll(), roll()];
-
-  let multiplier = 0;
-  if (slots[0] === slots[1] && slots[1] === slots[2]) multiplier = 3;
-  else if (slots[0] === slots[1] || slots[1] === slots[2] || slots[0] === slots[2]) multiplier = 2;
-
-  const reward = multiplier * betAmount;
-  const delta = reward - betAmount;
-
-  const updated = await prisma.economyProfile.update({
-    where: { guildId_userId: { guildId, userId } },
-    data: { coins: { increment: delta } }
-  });
-
-  return {
-    success: true,
-    message: reward > 0 ? `You won **${reward}** coins!` : `You lost **${betAmount}** coins.`,
-    slots,
-    reward,
-    balance: updated.coins
-  };
+  if (amount <= 0 || amount > profile.bank) return null;
+  return prisma.economyProfile.update({ where: { guildId_userId: { guildId, userId } }, data: { wallet: { increment: amount }, bank: { decrement: amount } } });
 }
 
-export interface BankResult {
-  success: boolean;
-  message: string;
-}
-
-export async function deposit(guildId: string, userId: string, amount: number): Promise<BankResult> {
-  if (amount <= 0) return { success: false, message: 'Amount must be positive.' };
-  const profile = await getProfile(guildId, userId);
-  if (profile.coins < amount) return { success: false, message: `You only have **${profile.coins}** coins in your wallet.` };
-
-  await prisma.economyProfile.update({
-    where: { guildId_userId: { guildId, userId } },
-    data: { coins: { decrement: amount }, bank: { increment: amount } }
-  });
-  return { success: true, message: `✅ Deposited **${amount}** coins into your bank.` };
-}
-
-export async function withdraw(guildId: string, userId: string, amount: number): Promise<BankResult> {
-  if (amount <= 0) return { success: false, message: 'Amount must be positive.' };
-  const profile = await getProfile(guildId, userId);
-  if (profile.bank < amount) return { success: false, message: `You only have **${profile.bank}** coins in your bank.` };
-
-  await prisma.economyProfile.update({
-    where: { guildId_userId: { guildId, userId } },
-    data: { coins: { increment: amount }, bank: { decrement: amount } }
-  });
-  return { success: true, message: `✅ Withdrew **${amount}** coins from your bank.` };
-}
-
-export async function transfer(guildId: string, fromUserId: string, toUserId: string, amount: number): Promise<BankResult> {
-  if (amount <= 0) return { success: false, message: 'Amount must be positive.' };
-  if (fromUserId === toUserId) return { success: false, message: 'You cannot transfer coins to yourself.' };
-
-  const from = await getProfile(guildId, fromUserId);
-  if (from.coins < amount) return { success: false, message: `You only have **${from.coins}** coins.` };
-  await getProfile(guildId, toUserId);
-
+export async function transfer(guildId: string, fromId: string, toId: string, amount: number): Promise<boolean> {
+  if (fromId === toId || amount <= 0) return false;
+  const from = await getProfile(guildId, fromId);
+  await getProfile(guildId, toId);
+  if (from.wallet < amount) return false;
   await prisma.$transaction([
-    prisma.economyProfile.update({ where: { guildId_userId: { guildId, userId: fromUserId } }, data: { coins: { decrement: amount } } }),
-    prisma.economyProfile.update({ where: { guildId_userId: { guildId, userId: toUserId } }, data: { coins: { increment: amount } } })
+    prisma.economyProfile.update({ where: { guildId_userId: { guildId, userId: fromId } }, data: { wallet: { decrement: amount } } }),
+    prisma.economyProfile.update({ where: { guildId_userId: { guildId, userId: toId } }, data: { wallet: { increment: amount } } })
   ]);
-
-  return { success: true, message: `✅ Transferred **${amount}** coins to <@${toUserId}>.` };
-}
-
-export interface RepResult {
-  success: boolean;
-  message: string;
-}
-
-export async function giveReputation(guildId: string, fromUserId: string, toUserId: string): Promise<RepResult> {
-  if (fromUserId === toUserId) return { success: false, message: 'You cannot give reputation to yourself.' };
-
-  const from = await getProfile(guildId, fromUserId);
-  const now = new Date();
-  if (from.lastRepAt) {
-    const hoursSince = (now.getTime() - from.lastRepAt.getTime()) / HOUR_MS;
-    if (hoursSince < 24) {
-      const remaining = Math.ceil(24 - hoursSince);
-      return { success: false, message: `⏳ You can give reputation again in about ${remaining}h.` };
-    }
-  }
-
-  await getProfile(guildId, toUserId);
-  await prisma.$transaction([
-    prisma.economyProfile.update({ where: { guildId_userId: { guildId, userId: fromUserId } }, data: { repGiven: { increment: 1 }, lastRepAt: now } }),
-    prisma.economyProfile.update({ where: { guildId_userId: { guildId, userId: toUserId } }, data: { repReceived: { increment: 1 } } })
-  ]);
-
-  return { success: true, message: `+1 Rep given!` };
+  return true;
 }
 
 export async function getEconomyLeaderboard(guildId: string, limit = 10) {
   return prisma.economyProfile.findMany({
     where: { guildId },
-    orderBy: [{ coins: 'desc' }],
+    orderBy: [{ wallet: 'desc' }],
     take: limit
   });
+}
+
+export async function listShopItems(guildId: string) {
+  return prisma.shopItem.findMany({ where: { guildId }, orderBy: { price: 'asc' } });
+}
+
+export async function buyItem(guildId: string, userId: string, itemId: string): Promise<{ ok: boolean; error?: string; item?: Awaited<ReturnType<typeof listShopItems>>[number] }> {
+  const item = await prisma.shopItem.findUnique({ where: { id: itemId } });
+  if (!item || item.guildId !== guildId) return { ok: false, error: 'Item not found.' };
+  if (item.stock !== null && item.stock <= 0) return { ok: false, error: 'Out of stock.' };
+  const profile = await getProfile(guildId, userId);
+  if (profile.wallet < item.price) return { ok: false, error: 'Not enough coins.' };
+
+  await prisma.$transaction([
+    prisma.economyProfile.update({ where: { guildId_userId: { guildId, userId } }, data: { wallet: { decrement: item.price } } }),
+    prisma.inventoryItem.upsert({
+      where: { profileId_itemId: { profileId: profile.id, itemId: item.id } },
+      update: { quantity: { increment: 1 } },
+      create: { profileId: profile.id, itemId: item.id, quantity: 1 }
+    }),
+    ...(item.stock !== null ? [prisma.shopItem.update({ where: { id: item.id }, data: { stock: { decrement: 1 } } })] : [])
+  ]);
+  return { ok: true, item };
+}
+
+export async function getInventory(guildId: string, userId: string) {
+  const profile = await getProfile(guildId, userId);
+  return prisma.inventoryItem.findMany({ where: { profileId: profile.id }, include: { item: true } });
 }
