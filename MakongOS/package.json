@@ -5,7 +5,7 @@
   "description": "MakongOS - AI-powered anti-scam, moderation, music, tickets/modmail, leveling, economy, and voice-hub Discord bot + web dashboard in a single application",
   "scripts": {
     "dev": "cross-env NODE_ENV=development tsx watch src/server.ts",
-    "build": "next build && tsc -p tsconfig.server.json",
+    "build": "prisma generate && next build && tsc -p tsconfig.server.json",
     "start": "prisma migrate deploy && cross-env NODE_ENV=production node dist/server.js",
     "deploy:commands": "tsx src/bot/deployCommands.ts",
     "db:generate": "prisma generate",
