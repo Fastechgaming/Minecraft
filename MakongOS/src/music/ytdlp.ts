@@ -141,5 +141,10 @@ export async function ytDlpSearch(query: string): Promise<YtDlpMeta | null> {
 /** Spawns yt-dlp streaming best-effort audio to stdout for the caller to pipe into ffmpeg. */
 export async function ytDlpStream(url: string, ffmpegLocation: string): Promise<ChildProcessWithoutNullStreams> {
   const bin = await ensureYtDlp();
-  return spawn(bin, ['--no-warnings', '--quiet', '-f', 'bestaudio/best', '--ffmpeg-location', ffmpegLocation, ...(await cookieArgs()), '-o', '-', url]);
+  // No explicit -f: some videos don't expose a distinct audio-only format (varies by video/YouTube
+  // client rollout), and a hardcoded "bestaudio/best" then fails outright with "Requested format
+  // is not available" instead of falling back. Omitting it lets yt-dlp use its default selection
+  // (best combined, or best video+audio merge), which finds a playable format far more reliably —
+  // our ffmpeg pass afterward only encodes audio anyway, so a stray video track is simply dropped.
+  return spawn(bin, ['--no-warnings', '--quiet', '--ffmpeg-location', ffmpegLocation, ...(await cookieArgs()), '-o', '-', url]);
 }
