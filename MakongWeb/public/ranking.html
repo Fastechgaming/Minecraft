@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ranking | Makong Network</title>
+<meta name="description" content="See the top teams and top players on Makong Network, ranked by Star, Points, Kills, Deaths and KDR." />
+<link rel="canonical" href="https://www.makongmc.com/ranking" />
+<meta name="theme-color" content="#f7b537" />
+<link rel="icon" href="/images/site/logo-icon.png" />
+<link rel="apple-touch-icon" href="/images/site/logo-icon.png" />
+
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Makong Network" />
+<meta property="og:url" content="https://www.makongmc.com/ranking" />
+<meta property="og:title" content="Ranking | Makong Network" />
+<meta property="og:description" content="See the top teams and top players on Makong Network, ranked by Star, Points, Kills, Deaths and KDR." />
+<meta property="og:image" content="https://www.makongmc.com/images/site/og-cover.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Ranking | Makong Network" />
+<meta name="twitter:description" content="See the top teams and top players on Makong Network, ranked by Star, Points, Kills, Deaths and KDR." />
+<meta name="twitter:image" content="https://www.makongmc.com/images/site/og-cover.png" />
+
+<link rel="stylesheet" href="/css/style.css" />
+<script>
+// Apply the saved theme before first paint so there's no flash. Dark is default.
+try { if (localStorage.getItem("makong-theme") === "light") document.documentElement.setAttribute("data-theme","light"); } catch (e) {}
+</script>
+</head>
+<body>
+  <nav class="site-nav">
+    <div class="container">
+      <a class="brand" href="/">
+        <img id="nav-logo" src="/images/site/logo-icon.png" alt="logo" onerror="this.style.display='none'" />
+        Makong Network
+      </a>
+      <div class="nav-tools">
+        <div class="lang-dropdown">
+          <button type="button" class="lang-toggle" onclick="toggleLangMenu()" aria-haspopup="true" aria-expanded="false" aria-label="Language">
+            <span class="lang-current">EN</span>
+          </button>
+          <ul class="lang-menu" role="menu">
+            <li role="none"><button type="button" role="menuitem" class="lang-option" data-lang="en" onclick="setLang('en')">English</button></li>
+            <li role="none"><button type="button" role="menuitem" class="lang-option" data-lang="km" onclick="setLang('km')">ខ្មែរ</button></li>
+          </ul>
+        </div>
+        <button class="theme-toggle" onclick="toggleTheme()" aria-label="Switch theme"><img class="theme-icon" src="/images/site/sun-icon.png" alt="" /></button>
+      </div>
+      <ul class="nav-links">
+        <li><a href="/"><img class="nav-icon" src="/images/site/icon-home.png" alt="" /><span data-i18n="nav.home">Home</span></a></li>
+        <li><a href="/store"><img class="nav-icon" src="/images/site/icon-store-nav.png" alt="" /><span data-i18n="nav.store">Store</span></a></li>
+        <li><a href="/ranking" class="active"><img class="nav-icon" src="/images/site/icon-ranking.png" alt="" onerror="this.style.display='none'" /><span data-i18n="nav.ranking">Ranking</span></a></li>
+      </ul>
+      <button class="nav-toggle" onclick="toggleNav()" aria-label="Menu" data-i18n-aria="nav.menu">&#9776;</button>
+    </div>
+  </nav>
+
+  <main>
+    <section class="section">
+      <div class="container">
+        <h2 class="no-rule"><img class="heading-leaf" src="/images/site/icon-leaf.png" alt="" />Makong<img class="heading-leaf" src="/images/site/icon-leaf.png" alt="" /></h2>
+        <p class="section-subtitle" data-i18n="ranking.subtitle">RANKING</p>
+
+        <div class="store-tabs" id="ranking-category-tabs">
+          <button type="button" data-category="teams" class="active" data-i18n="ranking.tab.teams">Top Team</button>
+          <button type="button" data-category="players" data-i18n="ranking.tab.players">Top Player</button>
+        </div>
+
+        <div class="store-tabs" id="ranking-stat-tabs">
+          <button type="button" data-stat="star" class="active" data-i18n="ranking.stat.star">Star</button>
+          <button type="button" data-stat="points" data-i18n="ranking.stat.points">Points</button>
+          <button type="button" data-stat="kills" data-i18n="ranking.stat.kills">Kills</button>
+          <button type="button" data-stat="deaths" data-i18n="ranking.stat.deaths">Deaths</button>
+          <button type="button" data-stat="kdr" data-i18n="ranking.stat.kdr">KDR</button>
+        </div>
+
+        <div class="checkout-panel board-panel" id="ranking-board"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p id="footer-copy" data-i18n="footer.copy"></p>
+  </footer>
+
+  <script src="/js/i18n.js"></script>
+  <script src="/js/main.js"></script>
+  <script src="/js/ranking.js"></script>
+</body>
+</html>

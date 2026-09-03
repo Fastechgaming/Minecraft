@@ -59,7 +59,7 @@ app.use("/admin", adminSession, adminRoutes);
 // Clean URLs: /store instead of /store.html. Old .html links (bookmarks,
 // anything already indexed) redirect permanently to the clean one instead of
 // just quietly still working, so there is one canonical URL per page.
-const CLEAN_PAGES = ["store", "checkout", "success"];
+const CLEAN_PAGES = ["store", "checkout", "success", "ranking"];
 app.get(CLEAN_PAGES.map((p) => `/${p}.html`), (req, res) => {
   const page = req.path.replace(/\.html$/, "");
   const qs = req.url.slice(req.path.length); // preserve ?order=... etc.

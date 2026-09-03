@@ -23,6 +23,7 @@ const I18n = (() => {
       /* ---- nav / chrome ---- */
       "nav.home": "Home",
       "nav.store": "Store",
+      "nav.ranking": "Ranking",
       "nav.menu": "Menu",
       "nav.language": "Language",
       "footer.copy": "© {year} Makong Network · Asia Minecraft Server 🌏",
@@ -133,6 +134,18 @@ const I18n = (() => {
       "success.supportLine": "Haven't received your items after an hour? Please contact support.",
       "success.supportLineLink": "Haven't received your items after an hour?",
       "success.back": "Back to home",
+
+      /* ---- ranking ---- */
+      "ranking.subtitle": "RANKING",
+      "ranking.tab.teams": "Top Team",
+      "ranking.tab.players": "Top Player",
+      "ranking.stat.star": "Star",
+      "ranking.stat.points": "Points",
+      "ranking.stat.kills": "Kills",
+      "ranking.stat.deaths": "Deaths",
+      "ranking.stat.kdr": "KDR",
+      "ranking.empty": "No rankings yet — check back soon!",
+      "ranking.loading": "Loading rankings…",
 
       /* ---- games: gate + hub ---- */
       "games.subtitle": "GAMES",
@@ -304,6 +317,7 @@ const I18n = (() => {
       /* ---- nav / chrome ---- */
       "nav.home": "ទំព័រដើម",
       "nav.store": "ហាង",
+      "nav.ranking": "ចំណាត់ថ្នាក់",
       "nav.menu": "ម៉ឺនុយ",
       "nav.language": "ភាសា",
       "footer.copy": "© {year} Makong Network · Minecraft Server អាស៊ី 🌏",
@@ -415,6 +429,17 @@ const I18n = (() => {
       "success.supportLineLink": "មិនទាន់ទទួលបានទំនិញក្រោយមួយម៉ោង?",
       "success.back": "ត្រឡប់ទៅទំព័រដើម",
 
+      /* ---- ranking ---- */
+      "ranking.subtitle": "ចំណាត់ថ្នាក់",
+      "ranking.tab.teams": "ក្រុមកំពូល",
+      "ranking.tab.players": "កីឡាករកំពូល",
+      "ranking.stat.star": "ផ្កាយ",
+      "ranking.stat.points": "ពិន្ទុ",
+      "ranking.stat.kills": "Kills",
+      "ranking.stat.deaths": "Deaths",
+      "ranking.stat.kdr": "KDR",
+      "ranking.empty": "មិនទាន់មានចំណាត់ថ្នាក់ទេ — សូមមកមើលម្តងទៀតឆាប់ៗ!",
+      "ranking.loading": "កំពុងផ្ទុកចំណាត់ថ្នាក់…",
 
       /* ---- games: gate + hub ---- */
       "games.subtitle": "ហ្គេម",

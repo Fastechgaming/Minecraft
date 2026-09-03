@@ -3,6 +3,7 @@ const multer = require("multer");
 const path = require("path");
 const { nanoid } = require("nanoid");
 const store = require("../lib/store");
+const rankings = require("../lib/rankings");
 
 const router = express.Router();
 
@@ -160,6 +161,73 @@ router.post("/items/:id", requireAuth, upload.single("imageFile"), (req, res, ne
 router.post("/items/:id/delete", requireAuth, (req, res) => {
   store.deleteItem(req.params.id);
   res.redirect("/admin");
+});
+
+/* ---------------- Rankings (Top Team / Top Player) ---------------- */
+
+router.get("/rankings", requireAuth, (req, res) => {
+  const data = rankings.getRankings();
+  res.render("rankings", { teams: data.teams, players: data.players });
+});
+
+router.get("/rankings/new", requireAuth, (req, res) => {
+  const category = rankings.CATEGORIES.includes(req.query.category) ? req.query.category : "players";
+  res.render("ranking-form", { entry: null, category });
+});
+
+router.post("/rankings", requireAuth, express.urlencoded({ extended: true }), (req, res, next) => {
+  try {
+    const { category, name, icon, star, points, kills, deaths } = req.body;
+    if (!rankings.CATEGORIES.includes(category)) throw new Error("Invalid category");
+    if (!name) throw new Error("Name is required");
+
+    const entry = {
+      id: rankings.newId(category),
+      name,
+      icon: icon || "",
+      star: Number(star) || 0,
+      points: Number(points) || 0,
+      kills: Number(kills) || 0,
+      deaths: Number(deaths) || 0,
+    };
+    rankings.upsertEntry(category, entry);
+    res.redirect("/admin/rankings");
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/rankings/:id/edit", requireAuth, (req, res) => {
+  const found = rankings.findAny(req.params.id);
+  if (!found) return res.status(404).send("Entry not found");
+  res.render("ranking-form", { entry: found.entry, category: found.category });
+});
+
+router.post("/rankings/:id", requireAuth, express.urlencoded({ extended: true }), (req, res, next) => {
+  try {
+    const found = rankings.findAny(req.params.id);
+    if (!found) return res.status(404).send("Entry not found");
+
+    const { name, icon, star, points, kills, deaths } = req.body;
+    const updated = {
+      ...found.entry,
+      name,
+      icon: icon || "",
+      star: Number(star) || 0,
+      points: Number(points) || 0,
+      kills: Number(kills) || 0,
+      deaths: Number(deaths) || 0,
+    };
+    rankings.upsertEntry(found.category, updated);
+    res.redirect("/admin/rankings");
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post("/rankings/:id/delete", requireAuth, (req, res) => {
+  rankings.deleteAny(req.params.id);
+  res.redirect("/admin/rankings");
 });
 
 module.exports = router;

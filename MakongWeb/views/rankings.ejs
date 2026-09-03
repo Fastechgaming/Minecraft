@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rankings · Admin</title>
+  <link rel="stylesheet" href="/css/admin.css" />
+</head>
+<body class="admin-body">
+  <header class="admin-header">
+    <h1>Makong Network Rankings Admin</h1>
+    <nav class="admin-nav">
+      <a class="btn-ghost" href="/admin">Store items</a>
+      <form method="POST" action="/admin/logout"><button class="btn-ghost">Log out</button></form>
+    </nav>
+  </header>
+
+  <main class="admin-main">
+    <% [["teams", "Top Team", teams], ["players", "Top Player", players]].forEach(function(section) { %>
+      <% var category = section[0], label = section[1], list = section[2]; %>
+      <section class="admin-section">
+        <div class="admin-section-head">
+          <h2><%= label %></h2>
+          <a class="btn" href="/admin/rankings/new?category=<%= category %>">+ Add <%= category === "teams" ? "team" : "player" %></a>
+        </div>
+        <% if (!list.length) { %>
+          <p class="muted">No entries yet.</p>
+        <% } else { %>
+          <div class="admin-table-wrap">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Star</th>
+                  <th>Points</th>
+                  <th>Kills</th>
+                  <th>Deaths</th>
+                  <th>KDR</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <% list.forEach(function(entry) { %>
+                  <tr>
+                    <td><%= entry.icon ? entry.icon + " " : "" %><%= entry.name %></td>
+                    <td><%= entry.star %></td>
+                    <td><%= entry.points %></td>
+                    <td><%= entry.kills %></td>
+                    <td><%= entry.deaths %></td>
+                    <td><%= entry.kdr %></td>
+                    <td class="admin-table-actions">
+                      <a class="btn-ghost" href="/admin/rankings/<%= entry.id %>/edit">Edit</a>
+                      <form method="POST" action="/admin/rankings/<%= entry.id %>/delete" onsubmit="return confirm('Delete this entry?')">
+                        <button class="btn-danger">Delete</button>
+                      </form>
+                    </td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        <% } %>
+      </section>
+    <% }) %>
+  </main>
+</body>
+</html>

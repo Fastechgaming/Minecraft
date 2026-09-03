@@ -71,6 +71,8 @@ button[type="submit"], .btn { background: var(--jungle); color: #fff; }
 }
 .admin-header h1 { margin: 0; font-size: 1.2rem; }
 .admin-header .btn-ghost { color: #fff; border-color: rgba(255,255,255,0.6); }
+.admin-nav { display: flex; align-items: center; gap: 0.6rem; }
+.admin-nav form { margin: 0; }
 
 .admin-main { padding: 1.5rem 2rem 3rem; max-width: 1100px; margin: 0 auto; }
 .admin-gamemode-head {
@@ -101,3 +103,11 @@ button[type="submit"], .btn { background: var(--jungle); color: #fff; }
 
 .admin-form { display: flex; flex-direction: column; gap: 1rem; background: #fff; padding: 1.5rem; border-radius: 10px; max-width: 600px; }
 .admin-form .preview { max-width: 200px; border-radius: 8px; margin-top: -0.5rem; }
+
+.admin-table-wrap { background: #fff; border-radius: 10px; overflow-x: auto; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
+.admin-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; white-space: nowrap; }
+.admin-table th, .admin-table td { padding: 0.65rem 0.9rem; text-align: left; border-bottom: 1px solid #eee0c8; }
+.admin-table th { color: #7a7060; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.admin-table tbody tr:last-child td { border-bottom: none; }
+.admin-table-actions { display: flex; gap: 0.5rem; }
+.admin-table-actions form { margin: 0; }

@@ -3,6 +3,7 @@ const path = require("path");
 const multer = require("multer");
 const { nanoid } = require("nanoid");
 const store = require("../lib/store");
+const rankings = require("../lib/rankings");
 const { getServerStatus } = require("../lib/minecraft");
 const { normalizeServerName, isValidRawName } = require("../public/js/playername");
 const telegram = require("../telegram/bot");
@@ -64,6 +65,10 @@ router.get("/status", async (req, res) => {
 
 router.get("/items", (req, res) => {
   res.json({ ...store.getItems(), gamemodes: store.GAMEMODES });
+});
+
+router.get("/rankings", (req, res) => {
+  res.json(rankings.getRankings());
 });
 
 // Public view of an order - used by /checkout and /success.

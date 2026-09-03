@@ -75,7 +75,22 @@ gamemode** — EcoSMP's VIP and BoxPvP's VIP are unrelated ranks that happen to
 share a name, so a rank id is `rank-<gamemode>-<slug>` (e.g. `rank-ecosmp-vip`),
 not just `rank-<slug>`.
 
-## 4. Purchase flow
+## 4. Managing rankings (`/ranking` — Top Team / Top Player)
+
+The `/ranking` page shows two leaderboards, **Top Team** and **Top Player**,
+each sortable by **Star**, **Points**, **Kills**, **Deaths** or **KDR**
+(kills ÷ deaths, computed automatically — it just shows Kills when Deaths is
+still 0, instead of dividing by zero).
+
+There's no live stats feed from the Minecraft server for this (AngkorStore
+doesn't track kills/deaths/star/points), so it's an **admin-curated**
+leaderboard, same idea as store items: go to `http://your-domain/admin/rankings`,
+log in, and add/edit/delete teams and players with a form — name, an optional
+emoji icon (falls back to the name's first letter), and the four raw numbers.
+Or edit `MakongWeb/data/rankings.json` directly — it's a plain JSON file with
+`teams` and `players` arrays.
+
+## 5. Purchase flow
 
 Opening `/store` first asks the shopper to pick a region:
 
@@ -116,7 +131,7 @@ LuckPerms for `lp user … parent add …`, an economy plugin for `eco give …`
 Payment screenshots are stored in `MakongWeb/data/proofs/` and are **not** served
 publicly — they only go to your Telegram.
 
-## 5. The player account
+## 6. The player account
 
 The name a player verifies before checkout is stored in a signed, httpOnly
 cookie (`makong_player`, handled by `routes/account.js`), so:
@@ -129,7 +144,7 @@ When the AngkorStore plugin is connected, verifying also **checks the name
 really exists** on the Minecraft server and brings back the player's UUID, live
 coin balance and rank(s). See "Connecting the Minecraft plugin" below.
 
-## 6. Connecting the Minecraft plugin (AngkorStore)
+## 7. Connecting the Minecraft plugin (AngkorStore)
 
 `../AngkorStore/` in this repo is the actual plugin that bridges this
 website to the server — build it with `gradle build` there and see its own
@@ -150,7 +165,7 @@ the plugin's `config.yml` exactly. The server prints which mode it started
 in. If this server isn't on localhost or a private network, put the
 plugin's port behind a tunnel/VPN, since the secret travels in the clear.
 
-## 7. Server status & the Home page IP button
+## 8. Server status & the Home page IP button
 
 - Server status (online/offline + player count) is fetched server-side via `minecraft-server-util`, checking **Java and Bedrock at the same time** (whichever answers first "wins") — cached for 10 seconds so a burst of visitors doesn't hammer your server.
 - **If it shows offline while the server is actually online:** this is almost always the *website's* host blocking the outbound connection, not the Minecraft server. Check the server console/logs for a line like `[minecraft-status] java(...): ... | bedrock(...): ...` — it prints the real error for both checks every time. `"offline or unreachable"` after a full timeout usually means the machine running this website can't reach that port at all (many cheap web hosts only allow outbound 80/443, and outbound UDP for Bedrock in particular is often blocked). To fix it: host the website somewhere that allows outbound TCP to your `javaPort` and outbound UDP to your `bedrockPort`, or double-check those two values in `config/site.config.json` actually match your real server ports.
@@ -158,7 +173,7 @@ plugin's port behind a tunnel/VPN, since the secret travels in the clear.
   - **Desktop/laptop:** click → copies the Java IP:port to the clipboard.
   - **Mobile:** tap → copies the IP too, *and* tries to open the Minecraft Bedrock app directly to your server via a `minecraft://` deep link (only works if the visitor has Minecraft Bedrock installed; there's no equivalent official deep link for Java Edition, which is why desktop uses copy).
 
-## 8. Theme & assets
+## 9. Theme & assets
 
 The site ships with a **dark theme by default** and a light theme; visitors switch with the ☀️/🌙 button in the nav (the KH/EN language button sits beside it) and the choice is remembered in their browser. Both themes are defined as CSS custom properties at the top of `public/css/style.css` (`:root` = dark, `:root[data-theme="light"]` = light), so re-colouring either one is a matter of editing those two blocks.
 
@@ -168,7 +183,7 @@ The "Chill Community / No Raiding / Live Cambodia Map" badges on the Home page c
 
 The layout is responsive: a hamburger nav under ~760px, a stacked hero on mobile, and a grid that reflows from multi-column (desktop) down to single-column (phones) throughout the store.
 
-## 9. Languages (English / ខ្មែរ)
+## 10. Languages (English / ខ្មែរ)
 
 Every page has a **KH / EN** button next to the ☀️/🌙 toggle. English is the
 default; the choice is remembered in the browser and applies to the whole site,
@@ -191,7 +206,7 @@ from Kantumruy Pro (loaded with the other Google Fonts), and the small-caps
 styling (uppercase + letter-spacing) is switched off under `html[lang="km"]`
 because letter-spacing pulls Khmer vowels away from their consonants.
 
-## 10. Running in production
+## 11. Running in production
 
 **See `DEPLOY.md` for the full walkthrough** — Node 22, `.env`, a systemd unit
 and a Cloudflare Tunnel that puts the site on your domain with HTTPS without
@@ -207,7 +222,7 @@ Whatever you host on, two rules: never commit `.env` (it's already
 git-ignored), and back up `data/` — it is the entire "database". `DEPLOY.md`
 has a one-line cron job for that.
 
-## 11. Project structure
+## 12. Project structure
 
 ```
 MakongWeb/
@@ -215,20 +230,23 @@ MakongWeb/
   config/site.config.json Public site settings (server IP, dates, links, KHQR image…)
   data/items.json         Store items (ranks/keys/other, per gamemode) + their delivery commands
   data/orders.json        Orders and their status
+  data/rankings.json      Ranking page's Top Team / Top Player leaderboards
   data/proofs/            Uploaded payment screenshots (git-ignored, never served publicly)
   lib/store.js            Tiny JSON-file data layer
+  lib/rankings.js         Tiny JSON-file data layer for the ranking page
   lib/angkorstore.js      Client for the AngkorStore Minecraft plugin
   deploy/                 systemd unit, Cloudflare Tunnel config, update script
   DEPLOY.md               How to put the site online
   lib/minecraft.js        Java+Bedrock status ping
   lib/rcon.js             Runs an item's delivery command on Accept
-  routes/api.js           Public JSON API (config, status, items, checkout, proof upload)
+  routes/api.js           Public JSON API (config, status, items, rankings, checkout, proof upload)
   routes/account.js       The player account cookie used by the store
-  routes/admin.js         Password-protected admin panel (item CRUD + image upload)
+  routes/admin.js         Password-protected admin panel (item CRUD, rankings CRUD, image upload)
   telegram/bot.js         Telegram bot: order review (Accept/Reject) + /additem etc.
   views/                  EJS templates for the admin panel
-  public/                 index / store / checkout / success / map pages, css, js, images
+  public/                 index / store / checkout / success / ranking / map pages, css, js, images
     js/playername.js      Shared Java/Bedrock name rules (used by BOTH browser and server)
     js/i18n.js            English + Khmer dictionaries and the language switch
     js/account.js         Shared sign-in used by the store
+    js/ranking.js          Ranking page: fetches, sorts, and renders the leaderboards
 ```

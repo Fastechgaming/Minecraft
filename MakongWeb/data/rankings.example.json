@@ -1,0 +1,12 @@
+{
+  "teams": [
+    { "id": "team-apsara", "name": "Apsara", "icon": "🛕", "star": 42, "points": 8200, "kills": 610, "deaths": 210 },
+    { "id": "team-naga", "name": "Naga", "icon": "🐉", "star": 37, "points": 7400, "kills": 520, "deaths": 260 },
+    { "id": "team-garuda", "name": "Garuda", "icon": "🦅", "star": 30, "points": 6100, "kills": 480, "deaths": 300 }
+  ],
+  "players": [
+    { "id": "player-sokha", "name": "Sokha", "icon": "", "star": 18, "points": 3200, "kills": 240, "deaths": 60 },
+    { "id": "player-dara", "name": "Dara", "icon": "", "star": 15, "points": 2800, "kills": 190, "deaths": 70 },
+    { "id": "player-vichea", "name": "Vichea", "icon": "", "star": 12, "points": 2100, "kills": 150, "deaths": 90 }
+  ]
+}
