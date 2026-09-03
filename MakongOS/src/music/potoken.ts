@@ -19,7 +19,7 @@ let pending: Promise<CachedToken | null> | null = null;
 /** Runs the generator's own CLI as a short-lived child process, capped at a modest heap size. */
 function runGenerator(): Promise<{ poToken: string; visitorData: string } | null> {
   return new Promise((resolve) => {
-    const proc = spawn(process.execPath, ['--max-old-space-size=256', GENERATOR_SCRIPT]);
+    const proc = spawn(process.execPath, ['--max-old-space-size=512', GENERATOR_SCRIPT]);
     let stdout = '';
     let stderr = '';
     const timer = setTimeout(() => {
@@ -35,10 +35,11 @@ function runGenerator(): Promise<{ poToken: string; visitorData: string } | null
       log.warn('Failed to spawn PO token generator', err);
       resolve(null);
     });
-    proc.on('close', (code) => {
+    proc.on('close', (code, signal) => {
       clearTimeout(timer);
       if (code !== 0) {
-        log.warn(`PO token generator exited ${code}: ${stderr.slice(0, 300) || stdout.slice(0, 300)}`);
+        const reason = signal ? `killed by signal ${signal} (likely out of memory — try raising --max-old-space-size)` : `exited ${code}`;
+        log.warn(`PO token generator ${reason}: ${stderr.slice(0, 300) || stdout.slice(0, 300)}`);
         resolve(null);
         return;
       }
@@ -62,7 +63,7 @@ function runGenerator(): Promise<{ poToken: string; visitorData: string } | null
  * IPs (confirmed on the production server: without one, the web client returns thumbnail-only
  * formats). youtube-po-token-generator solves the same challenge a real browser would via a
  * headless DOM (jsdom) — but that can use a meaningful chunk of memory, so it's run as its own
- * short-lived child process (capped at --max-old-space-size=256, killed after 30s) rather than
+ * short-lived child process (capped at --max-old-space-size=512, killed after 30s) rather than
  * in-process, so a spike or a stuck run can never take the main bot process down with it.
  */
 export async function getPoToken(): Promise<{ poToken: string; visitorData: string } | null> {
