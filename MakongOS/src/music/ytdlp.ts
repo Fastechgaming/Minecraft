@@ -5,6 +5,7 @@ import { Readable } from 'node:stream';
 import { finished } from 'node:stream/promises';
 import path from 'node:path';
 import { createLogger } from '../services/logger';
+import { getPoToken } from './potoken';
 
 const log = createLogger('yt-dlp');
 
@@ -123,26 +124,35 @@ function runYtDlpJson(bin: string, args: string[]): Promise<YtDlpMeta | null> {
   });
 }
 
-// YouTube now gates some streaming formats behind a "proof of origin" token on its default
-// web client, which yt-dlp can't always satisfy yet — that's what "Requested format is not
-// available" turned out to be here, even with valid auth cookies and no -f restriction. The
-// android client isn't gated the same way and still returns playable formats; web is kept as
-// a fallback in case a future yt-dlp release handles PO tokens and android alone regresses.
-const CLIENT_ARGS = ['--extractor-args', 'youtube:player_client=android,web'];
-
 async function cookieArgs(): Promise<string[]> {
   const cookieFile = await ensureCookieFile();
   return cookieFile ? ['--cookies', cookieFile] : [];
 }
 
+/**
+ * Confirmed on the production VPS: the "android" client gets skipped entirely by yt-dlp whenever
+ * cookies are present, which forces the "web" client — and web now requires a proof-of-origin
+ * token to get real streaming URLs at all (without one it returns thumbnail-only formats, or
+ * "Requested format is not available"). Supplying a token generated via potoken.ts directly
+ * closes that gap; without one, we fall through with just cookies and hope for the best.
+ */
+async function commonArgs(): Promise<string[]> {
+  const cookies = await cookieArgs();
+  const token = await getPoToken();
+  const extractorArgs = token
+    ? `youtube:player_client=web;po_token=web.gvs+${token.poToken};visitor_data=${token.visitorData}`
+    : 'youtube:player_client=web,android';
+  return [...cookies, '--extractor-args', extractorArgs];
+}
+
 export async function ytDlpResolveUrl(url: string): Promise<YtDlpMeta | null> {
   const bin = await ensureYtDlp();
-  return runYtDlpJson(bin, [...CLIENT_ARGS, ...(await cookieArgs()), url]);
+  return runYtDlpJson(bin, [...(await commonArgs()), url]);
 }
 
 export async function ytDlpSearch(query: string): Promise<YtDlpMeta | null> {
   const bin = await ensureYtDlp();
-  return runYtDlpJson(bin, [...CLIENT_ARGS, ...(await cookieArgs()), `ytsearch1:${query}`]);
+  return runYtDlpJson(bin, [...(await commonArgs()), `ytsearch1:${query}`]);
 }
 
 /** Spawns yt-dlp streaming best-effort audio to stdout for the caller to pipe into ffmpeg. */
@@ -153,5 +163,5 @@ export async function ytDlpStream(url: string, ffmpegLocation: string): Promise<
   // is not available" instead of falling back. Omitting it lets yt-dlp use its default selection
   // (best combined, or best video+audio merge), which finds a playable format far more reliably —
   // our ffmpeg pass afterward only encodes audio anyway, so a stray video track is simply dropped.
-  return spawn(bin, ['--no-warnings', '--quiet', '--ffmpeg-location', ffmpegLocation, ...CLIENT_ARGS, ...(await cookieArgs()), '-o', '-', url]);
+  return spawn(bin, ['--no-warnings', '--quiet', '--ffmpeg-location', ffmpegLocation, ...(await commonArgs()), '-o', '-', url]);
 }

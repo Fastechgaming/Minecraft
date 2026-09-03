@@ -9,6 +9,7 @@ import { buildAudioFilterChain, FILTER_LABELS, type FilterName } from './filters
 import { createLogger } from '../services/logger';
 import { withTimeout } from '../services/timeout';
 import { ensureYtDlp, ensureCookieFile, ytDlpResolveUrl, ytDlpSearch, ytDlpStream } from './ytdlp';
+import { getPoToken } from './potoken';
 
 const log = createLogger('music');
 
@@ -21,13 +22,17 @@ const ffmpegBinPath = ffmpegPath as unknown as string;
  * downloaded (and kept ready) here since it's actively updated to counter
  * YouTube's anti-bot changes, unlike play-dl which we only still use for
  * Spotify track metadata below. YOUTUBE_COOKIE, if set, is also converted
- * into a cookie file yt-dlp can use for extra headroom against throttling.
+ * into a cookie file yt-dlp can use for extra headroom against throttling,
+ * and a proof-of-origin token is pre-generated so the first /play doesn't
+ * eat that extra latency.
  */
 export async function prepareMusicEngine(): Promise<void> {
   try {
     await ensureYtDlp();
     const cookieFile = await ensureCookieFile();
     log.info(cookieFile ? 'yt-dlp ready with YOUTUBE_COOKIE' : 'yt-dlp ready (no YOUTUBE_COOKIE set — fine for most videos, but set one if streams keep failing)');
+    const token = await getPoToken();
+    log.info(token ? 'PO token ready' : 'PO token generation failed — streaming may still hit "Requested format is not available"');
   } catch (err) {
     log.error('Failed to prepare yt-dlp', err);
   }
