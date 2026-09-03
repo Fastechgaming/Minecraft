@@ -8,12 +8,12 @@
 
 html,
 body {
-  background-color: #1e1f22;
+  background-color: #0a0d0a;
   color: #f2f3f5;
 }
 
 * {
-  scrollbar-color: #4e5058 #2b2d31;
+  scrollbar-color: #2a3a2c #0e120e;
   scrollbar-width: thin;
 }
 

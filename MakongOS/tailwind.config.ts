@@ -7,16 +7,18 @@ const config: Config = {
     extend: {
       colors: {
         discord: {
-          blurple: '#5865F2',
+          // Kept the "blurple" key (touched by many existing classes) but repointed it
+          // to the site's green accent, per the near-black/green dashboard theme.
+          blurple: '#22C55E',
           green: '#23A559',
           yellow: '#F0B232',
           red: '#DA373C',
-          dark: '#1E1F22',
-          darker: '#111214',
-          panel: '#2B2D31',
-          panel2: '#313338',
-          border: '#3F4147',
-          muted: '#949BA4'
+          dark: '#0A0D0A',
+          darker: '#050705',
+          panel: '#0E120E',
+          panel2: '#141914',
+          border: '#1F2A20',
+          muted: '#8B968E'
         }
       },
       boxShadow: {
