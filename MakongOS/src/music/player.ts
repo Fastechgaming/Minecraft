@@ -7,6 +7,7 @@ import type { GuildQueue, Track } from './queueManager';
 import { deleteQueue } from './queueManager';
 import { buildAudioFilterChain, FILTER_LABELS, type FilterName } from './filters';
 import { createLogger } from '../services/logger';
+import { withTimeout } from '../services/timeout';
 
 const log = createLogger('music');
 
@@ -110,7 +111,7 @@ export async function playNext(queue: GuildQueue, textChannel: TextChannel): Pro
   queue.elapsedSec = 0;
 
   try {
-    const source = await playdl.stream(next.url, { discordPlayerCompatibility: false });
+    const source = await withTimeout(playdl.stream(next.url, { discordPlayerCompatibility: false }), 15_000, 'Stream fetch timed out');
     const ffmpeg = spawnFfmpeg(buildAudioFilterChain(queue.volume, queue.filter));
     source.stream.pipe(ffmpeg.stdin);
     ffmpeg.stderr.resume();

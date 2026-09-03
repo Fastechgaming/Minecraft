@@ -6,6 +6,7 @@ import { isDj } from '../../../services/permissions';
 import { getQueue, setQueue, type GuildQueue } from '../../../music/queueManager';
 import { resolveTracks, playNext, attachPlayerEvents, waitForConnection, stopQueue, refreshNowPlaying, restartCurrentTrack, nowPlayingEmbed, nowPlayingComponents } from '../../../music/player';
 import type { FilterName } from '../../../music/filters';
+import { withTimeout, TimeoutError } from '../../../services/timeout';
 
 async function guardMusic(interaction: ChatInputCommandInteraction): Promise<boolean> {
   const settings = await getGuildSettings(interaction.guildId!);
@@ -38,7 +39,17 @@ export const musicModule: FeatureModule = {
         await interaction.deferReply();
 
         const query = interaction.options.getString('query', true);
-        const tracks = await resolveTracks(query, interaction.user.id).catch(() => []);
+        let tracks: Awaited<ReturnType<typeof resolveTracks>>;
+        try {
+          tracks = await withTimeout(resolveTracks(query, interaction.user.id), 15_000, 'Search timed out');
+        } catch (err) {
+          if (err instanceof TimeoutError) {
+            await interaction.editReply('❌ The search to YouTube/Spotify timed out. The server may be having trouble reaching those services right now — try again in a bit.');
+          } else {
+            await interaction.editReply('❌ Search failed — try a different query or link.');
+          }
+          return;
+        }
         if (tracks.length === 0) {
           await interaction.editReply('❌ No results found.');
           return;
