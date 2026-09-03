@@ -48,6 +48,15 @@ plugins:
     allowSearch: true
     allowDirectVideoIds: true
     allowDirectPlaylistIds: true
+    # TV is the only client that actually uses OAuth — the others silently ignore
+    # it, which is why it must be listed explicitly rather than left to the
+    # plugin's default client list. Kept alongside WEB (search/metadata) and a
+    # couple of playback fallbacks in case TV alone gets rate-limited.
+    clients:
+      - WEB
+      - TV
+      - ANDROID_VR
+      - WEBEMBEDDED
     oauth:
       enabled: "${YOUTUBE_OAUTH_ENABLED:false}"
       refreshToken: "${YOUTUBE_REFRESH_TOKEN:}"
