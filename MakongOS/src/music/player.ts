@@ -8,42 +8,33 @@ import { deleteQueue } from './queueManager';
 import { buildAudioFilterChain, FILTER_LABELS, type FilterName } from './filters';
 import { createLogger } from '../services/logger';
 import { withTimeout } from '../services/timeout';
+import { ensureYtDlp, ensureCookieFile, ytDlpResolveUrl, ytDlpSearch, ytDlpStream } from './ytdlp';
 
 const log = createLogger('music');
 
-let playDlConfigured = false;
+const ffmpegBinPath = ffmpegPath as unknown as string;
 
 /**
- * YouTube increasingly throttles/blocks the actual stream-fetch step for
- * unauthenticated requests from datacenter IPs (search and basic page loads
- * still work fine, which is what makes this confusing to diagnose). Feeding
- * play-dl a real browser's logged-in cookie via YOUTUBE_COOKIE makes its
- * requests look like a normal signed-in user instead. No-ops if unset.
+ * YouTube blocks/throttles the actual media-stream request from datacenter
+ * IPs — search and basic page loads still succeed, which is what makes this
+ * confusing to diagnose, but the stream itself stalls or 403s. yt-dlp is
+ * downloaded (and kept ready) here since it's actively updated to counter
+ * YouTube's anti-bot changes, unlike play-dl which we only still use for
+ * Spotify track metadata below. YOUTUBE_COOKIE, if set, is also converted
+ * into a cookie file yt-dlp can use for extra headroom against throttling.
  */
-export async function configurePlayDl(): Promise<void> {
-  if (playDlConfigured) return;
-  playDlConfigured = true;
-  const cookie = process.env.YOUTUBE_COOKIE;
-  if (!cookie) {
-    log.warn('YOUTUBE_COOKIE is not set — YouTube may throttle or block streaming from this server. See README for how to obtain one.');
-    return;
-  }
+export async function prepareMusicEngine(): Promise<void> {
   try {
-    await playdl.setToken({ youtube: { cookie } });
-    log.info('play-dl configured with YOUTUBE_COOKIE');
+    await ensureYtDlp();
+    const cookieFile = await ensureCookieFile();
+    log.info(cookieFile ? 'yt-dlp ready with YOUTUBE_COOKIE' : 'yt-dlp ready (no YOUTUBE_COOKIE set — fine for most videos, but set one if streams keep failing)');
   } catch (err) {
-    log.error('Failed to configure play-dl with YOUTUBE_COOKIE', err);
+    log.error('Failed to prepare yt-dlp', err);
   }
 }
 
 export async function resolveTracks(query: string, requestedById: string): Promise<Track[]> {
   const trimmed = query.trim();
-
-  if (playdl.yt_validate(trimmed) === 'video') {
-    const info = await playdl.video_basic_info(trimmed);
-    const d = info.video_details;
-    return [{ title: d.title ?? 'Unknown title', url: d.url, durationSec: d.durationInSec, requestedById, thumbnail: d.thumbnails?.[0]?.url }];
-  }
 
   const spotifyType = playdl.sp_validate(trimmed);
   if (spotifyType === 'track') {
@@ -51,14 +42,15 @@ export async function resolveTracks(query: string, requestedById: string): Promi
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const t = track as any;
     const search = `${t.name} ${(t.artists ?? []).map((a: { name: string }) => a.name).join(' ')}`;
-    const results = await playdl.search(search, { limit: 1, source: { youtube: 'video' } });
-    if (results[0]) return [{ title: results[0].title ?? search, url: results[0].url, durationSec: results[0].durationInSec ?? 0, requestedById, thumbnail: results[0].thumbnails?.[0]?.url }];
+    const meta = await ytDlpSearch(search);
+    if (meta) return [{ title: meta.title, url: meta.url, durationSec: meta.durationSec, requestedById, thumbnail: meta.thumbnail }];
     return [];
   }
 
-  const results = await playdl.search(trimmed, { limit: 1, source: { youtube: 'video' } });
-  if (!results[0]) return [];
-  return [{ title: results[0].title ?? trimmed, url: results[0].url, durationSec: results[0].durationInSec ?? 0, requestedById, thumbnail: results[0].thumbnails?.[0]?.url }];
+  const isUrl = /^https?:\/\//i.test(trimmed);
+  const meta = isUrl ? await ytDlpResolveUrl(trimmed) : await ytDlpSearch(trimmed);
+  if (!meta) return [];
+  return [{ title: meta.title, url: meta.url, durationSec: meta.durationSec, requestedById, thumbnail: meta.thumbnail }];
 }
 
 function formatDuration(seconds: number): string {
@@ -110,10 +102,8 @@ async function updateNowPlayingMessage(queue: GuildQueue, textChannel: TextChann
   await message?.edit({ embeds: [nowPlayingEmbed(queue)], components: nowPlayingComponents(queue) }).catch(() => undefined);
 }
 
-let ffmpegBin: string | null = null;
 function spawnFfmpeg(filterChain: string): ChildProcessWithoutNullStreams {
-  ffmpegBin = ffmpegBin ?? (ffmpegPath as unknown as string);
-  return spawn(ffmpegBin, ['-i', 'pipe:0', '-analyzeduration', '0', '-loglevel', '0', '-af', filterChain, '-f', 'ogg', '-c:a', 'libopus', '-b:a', '128k', '-ar', '48000', '-ac', '2', 'pipe:1']);
+  return spawn(ffmpegBinPath, ['-i', 'pipe:0', '-analyzeduration', '0', '-loglevel', '0', '-af', filterChain, '-f', 'ogg', '-c:a', 'libopus', '-b:a', '128k', '-ar', '48000', '-ac', '2', 'pipe:1']);
 }
 
 export async function playNext(queue: GuildQueue, textChannel: TextChannel): Promise<void> {
@@ -136,9 +126,43 @@ export async function playNext(queue: GuildQueue, textChannel: TextChannel): Pro
   queue.elapsedSec = 0;
 
   try {
-    const source = await withTimeout(playdl.stream(next.url, { discordPlayerCompatibility: false }), 15_000, 'Stream fetch timed out');
+    const ytdlp = await ytDlpStream(next.url, ffmpegBinPath);
+    let stderr = '';
+    ytdlp.stderr.on('data', (chunk) => (stderr += chunk));
+
+    // Wait for yt-dlp to actually have data ready (not just for the process to spawn) before
+    // declaring success — spawning is near-instant, but the real network fetch happens after,
+    // and that's the step that can silently stall. 'readable' peeks without consuming, so the
+    // later .pipe() below still gets every byte from the start.
+    await withTimeout(
+      new Promise<void>((resolve, reject) => {
+        const onReadable = () => {
+          cleanup();
+          resolve();
+        };
+        const onError = (err: Error) => {
+          cleanup();
+          reject(err);
+        };
+        const onExit = (code: number | null) => {
+          cleanup();
+          reject(new Error(`yt-dlp exited with code ${code}: ${stderr.slice(0, 300) || '(no stderr)'}`));
+        };
+        function cleanup() {
+          ytdlp.stdout.off('readable', onReadable);
+          ytdlp.off('error', onError);
+          ytdlp.off('exit', onExit);
+        }
+        ytdlp.stdout.once('readable', onReadable);
+        ytdlp.once('error', onError);
+        ytdlp.once('exit', onExit);
+      }),
+      15_000,
+      'Stream fetch timed out'
+    );
+
     const ffmpeg = spawnFfmpeg(buildAudioFilterChain(queue.volume, queue.filter));
-    source.stream.pipe(ffmpeg.stdin);
+    ytdlp.stdout.pipe(ffmpeg.stdin);
     ffmpeg.stderr.resume();
     const resource = createAudioResource(ffmpeg.stdout, { inputType: StreamType.OggOpus });
     queue.player.play(resource);

@@ -12,7 +12,7 @@ npm start
 
 - **AI Anti-Scam & Assistant** (Gemini) — Vision-based scanning of uploaded images to auto-detect crypto scams, fake Nitro giveaways, and phishing screenshots, with configurable auto-punish and role/channel whitelists; plus a conversational assistant with a knowledge base, per-user memory, staff escalation, and free `/imagine` image generation via Pollinations.
 - **Moderation** — `/warn`, `/timeout`, `/kick`, `/ban`, auto-incrementing `/case` management, automod (invites, bad words, spam bursts, ghost pings), and cron-expiring `/temprole`.
-- **Music** — a queue-based player (discord.js voice + play-dl, not Lavalink) with Spotify/YouTube search, a live Now Playing embed with playback buttons, and audio filters (Bassboost, Nightcore, 8D, Vaporwave, Tremolo).
+- **Music** — a queue-based player (discord.js voice + yt-dlp, not Lavalink) with Spotify/YouTube search, a live Now Playing embed with playback buttons, and audio filters (Bassboost, Nightcore, 8D, Vaporwave, Tremolo).
 - **Tickets & Modmail** — multi-panel tickets with custom modal forms, staff claiming, idle reminders, HTML transcripts, and DM-based modmail threads.
 - **Join-to-Create Voice Hub** — auto-generated temporary voice channels with an owner control panel (lock, hide, rename, limit, kick).
 - **Dual Leveling** — text + voice XP with customizable canvas rank cards and a server leaderboard.
@@ -62,14 +62,16 @@ New feature idea? Add one module under `src/bot/modules/`, register it in `src/b
 3. `npx prisma migrate deploy` (or `npm run db:migrate:dev` in development)
 4. `npm run build && npm start` (or `npm run dev` for local development). Slash commands auto-sync to every guild the bot is in on startup — no separate deploy step needed.
 
-## Music: getting past YouTube throttling
+## Music: how streaming works, and getting past YouTube throttling
 
-Basic connectivity to YouTube (search, page loads) usually works fine even from a VPS, but YouTube frequently throttles or blocks the actual *streaming* request from unauthenticated datacenter IPs — this shows up as `/play` failing with "Stream fetch timed out" even though the server can clearly reach youtube.com. Fix it by giving `play-dl` a real logged-in session:
+Music streaming runs through [yt-dlp](https://github.com/yt-dlp/yt-dlp), downloaded automatically as a single binary to `.vendor/yt-dlp` the first time the bot starts (and refreshed every 14 days) — no separate install step, and it stays inside the one-process architecture. yt-dlp is used specifically because it's patched within days whenever YouTube changes its anti-bot measures, unlike most JS-only YouTube libraries.
+
+Basic connectivity to YouTube (search, page loads) usually works fine even from a VPS, but YouTube can still throttle or block the actual *streaming* request from unauthenticated datacenter IPs — this shows up as `/play` failing with "Stream fetch timed out" even though the server can clearly reach youtube.com. If that happens, give it a real logged-in session:
 
 1. Open YouTube in a normal browser (a throwaway/alt Google account is safer than your main one) and make sure you're signed in.
 2. Open DevTools → Network tab, reload the page, click any request to `youtube.com`, and copy the full value of the `Cookie` request header.
 3. Paste it into `.env` as `YOUTUBE_COOKIE=<that value>`.
-4. Redeploy (`./deploy.sh`) — the bot logs `play-dl configured with YOUTUBE_COOKIE` on startup once it's picked up, or a warning if it's still unset.
+4. Redeploy (`./deploy.sh`) — the bot logs `yt-dlp ready with YOUTUBE_COOKIE` on startup once it's picked up.
 
 That cookie will eventually expire (typically weeks to months) — if `/play` starts timing out again after working fine for a while, re-grab a fresh one the same way.
 
@@ -101,7 +103,7 @@ which does `git pull && npm install && rm -rf dist .next && npm run build`, then
 ## Notes
 
 - All secrets live in environment variables and are never sent to the browser.
-- Music runs entirely inside this one process via `@discordjs/voice` + `play-dl` + `ffmpeg-static` — there is no separate Lavalink node to host, configure, or keep online.
+- Music runs entirely inside this one process via `@discordjs/voice` + `yt-dlp` + `ffmpeg-static` — there is no separate Lavalink node to host, configure, or keep online.
 - Server backup restore is intentionally **additive only** — it recreates roles/channels missing from a snapshot by name, and never deletes, renames, or overwrites current server structure.
 - Every feature toggle, moderation rule, AI behavior setting, ticket category, shop item, and knowledge base entry is configurable from the dashboard — no code changes required for day-to-day administration.
 - The Pollinations `/imagine` command runs prompts through a keyword-based NSFW safety filter before generating.
