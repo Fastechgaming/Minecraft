@@ -123,6 +123,13 @@ function runYtDlpJson(bin: string, args: string[]): Promise<YtDlpMeta | null> {
   });
 }
 
+// YouTube now gates some streaming formats behind a "proof of origin" token on its default
+// web client, which yt-dlp can't always satisfy yet — that's what "Requested format is not
+// available" turned out to be here, even with valid auth cookies and no -f restriction. The
+// android client isn't gated the same way and still returns playable formats; web is kept as
+// a fallback in case a future yt-dlp release handles PO tokens and android alone regresses.
+const CLIENT_ARGS = ['--extractor-args', 'youtube:player_client=android,web'];
+
 async function cookieArgs(): Promise<string[]> {
   const cookieFile = await ensureCookieFile();
   return cookieFile ? ['--cookies', cookieFile] : [];
@@ -130,12 +137,12 @@ async function cookieArgs(): Promise<string[]> {
 
 export async function ytDlpResolveUrl(url: string): Promise<YtDlpMeta | null> {
   const bin = await ensureYtDlp();
-  return runYtDlpJson(bin, [...(await cookieArgs()), url]);
+  return runYtDlpJson(bin, [...CLIENT_ARGS, ...(await cookieArgs()), url]);
 }
 
 export async function ytDlpSearch(query: string): Promise<YtDlpMeta | null> {
   const bin = await ensureYtDlp();
-  return runYtDlpJson(bin, [...(await cookieArgs()), `ytsearch1:${query}`]);
+  return runYtDlpJson(bin, [...CLIENT_ARGS, ...(await cookieArgs()), `ytsearch1:${query}`]);
 }
 
 /** Spawns yt-dlp streaming best-effort audio to stdout for the caller to pipe into ffmpeg. */
@@ -146,5 +153,5 @@ export async function ytDlpStream(url: string, ffmpegLocation: string): Promise<
   // is not available" instead of falling back. Omitting it lets yt-dlp use its default selection
   // (best combined, or best video+audio merge), which finds a playable format far more reliably —
   // our ffmpeg pass afterward only encodes audio anyway, so a stray video track is simply dropped.
-  return spawn(bin, ['--no-warnings', '--quiet', '--ffmpeg-location', ffmpegLocation, ...(await cookieArgs()), '-o', '-', url]);
+  return spawn(bin, ['--no-warnings', '--quiet', '--ffmpeg-location', ffmpegLocation, ...CLIENT_ARGS, ...(await cookieArgs()), '-o', '-', url]);
 }
