@@ -60,6 +60,15 @@ plugins:
     oauth:
       enabled: "${YOUTUBE_OAUTH_ENABLED:false}"
       refreshToken: "${YOUTUBE_REFRESH_TOKEN:}"
+    # Locally parsing YouTube's player script to decrypt stream URLs is fragile —
+    # YouTube reobfuscates it often enough that the plugin's own extractor
+    # regularly falls behind ("Must find sig function from script" errors). A
+    # remote cipher server (https://github.com/kikkia/yt-cipher) does that
+    # decryption instead and is kept up to date independently of the plugin.
+    # Using the public, unauthenticated instance here — swap to a self-hosted
+    # one (see that repo's README) if it ever gets unreliable or rate-limited.
+    remoteCipher:
+      url: "https://cipher.kikkia.dev"
 
 metrics:
   prometheus:
