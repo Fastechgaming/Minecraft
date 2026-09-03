@@ -1,4 +1,4 @@
-import { LavalinkManager, type Player } from 'lavalink-client';
+import { LavalinkManager, type Player, type Track, type UnresolvedTrack } from 'lavalink-client';
 import type { Client, TextChannel } from 'discord.js';
 import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } from 'discord.js';
 import playdl from 'play-dl';
@@ -15,6 +15,11 @@ export const FILTER_LABELS: Record<FilterName, string> = {
   vaporwave: 'Vaporwave',
   tremolo: 'Tremolo'
 };
+
+// Guilds with a pending "empty voice channel" leave timer — cleared if someone rejoins
+// before it fires. Module-level since the bot runs as a single process (see server.ts).
+const emptyChannelTimers = new Map<string, NodeJS.Timeout>();
+const EMPTY_CHANNEL_LEAVE_MS = 30_000;
 
 /**
  * Builds the Lavalink connection from LAVALINK_HOST/PORT/PASSWORD. The bot's own
@@ -57,11 +62,34 @@ export function createLavalinkManager(client: Client): LavalinkManager {
     log.error('Track error', payload.exception);
     sendToTextChannel(client, player, `⚠️ Failed to play **${track?.info.title ?? 'that track'}**, skipping.`);
   });
-  manager.on('queueEnd', (player) => {
-    sendToTextChannel(client, player, '📭 Queue finished.');
+  manager.on('queueEnd', (player, track) => {
+    if (player.getData<boolean>('autoplay')) {
+      autoplayNext(player, track).catch((err) => log.error('Autoplay failed', err));
+    } else {
+      sendToTextChannel(client, player, '📭 Queue finished.');
+    }
+  });
+  manager.on('playerDestroy', (player) => {
+    clearEmptyChannelTimer(player.guildId);
   });
 
   return manager;
+}
+
+/**
+ * On queue-end with autoplay on, loads the last track's YouTube "mix" (its mix
+ * playlist id is the video id prefixed with "RD") and queues a track from it that
+ * isn't the one that just finished — a lightweight continuation, not a full
+ * recommendation engine.
+ */
+async function autoplayNext(player: Player, lastTrack: Track | UnresolvedTrack | null): Promise<void> {
+  const identifier = lastTrack?.info.identifier;
+  if (!identifier) return;
+  const result = await player.search({ query: `https://www.youtube.com/watch?v=${identifier}&list=RD${identifier}` }, 'autoplay');
+  if (result.loadType === 'error' || result.tracks.length === 0) return;
+  const next = result.tracks.find((t) => t.info.identifier !== identifier) ?? result.tracks[0];
+  await player.queue.add(next);
+  await player.play();
 }
 
 export async function searchTrack(player: Player, query: string, requesterId: string) {
@@ -102,6 +130,35 @@ export async function applyFilter(player: Player, filter: FilterName | null): Pr
   player.setData('filterName', filter);
 }
 
+/** Restarts the current track from the beginning. */
+export async function replayCurrent(player: Player): Promise<boolean> {
+  if (!player.queue.current) return false;
+  await player.seek(0);
+  return true;
+}
+
+/** Re-queues and jumps back to the most recently played track, if any. */
+export async function playPrevious(player: Player): Promise<boolean> {
+  const prev = player.queue.previous[0];
+  if (!prev) return false;
+  await player.queue.splice(0, 0, prev);
+  await player.skip();
+  return true;
+}
+
+/** Removes every upcoming track without touching what's currently playing. */
+export async function clearQueue(player: Player): Promise<void> {
+  if (player.queue.tracks.length > 0) {
+    await player.queue.splice(0, player.queue.tracks.length);
+  }
+}
+
+export function toggleAutoplay(player: Player): boolean {
+  const next = !player.getData<boolean>('autoplay');
+  player.setData('autoplay', next);
+  return next;
+}
+
 function formatDuration(ms: number): string {
   const totalSec = Math.floor(ms / 1000);
   const m = Math.floor(totalSec / 60);
@@ -111,32 +168,46 @@ function formatDuration(ms: number): string {
 
 export function nowPlayingEmbed(player: Player): EmbedBuilder {
   const track = player.queue.current;
-  const embed = new EmbedBuilder().setColor(0x1db954);
+  const embed = new EmbedBuilder().setColor(0x22c55e);
   if (!track) return embed.setTitle('Nothing playing').setDescription('Queue is empty.');
 
   const filterName = player.getData<FilterName | null>('filterName') ?? null;
+  const autoplay = Boolean(player.getData<boolean>('autoplay'));
   const upNext = player.queue.tracks[0];
+  const requesterId = typeof track.requester === 'string' ? track.requester : undefined;
+  const requestedBy = requesterId && /^\d+$/.test(requesterId) ? `<@${requesterId}>` : 'Autoplay';
 
   return embed
-    .setTitle('🎶 Now Playing')
+    .setTitle(player.paused ? '⏸️ Paused' : '🎶 Now Playing')
     .setDescription(`**[${track.info.title}](${track.info.uri})**`)
     .setThumbnail(track.info.artworkUrl ?? null)
     .addFields(
       { name: 'Duration', value: track.info.isStream ? 'Live' : formatDuration(track.info.duration), inline: true },
-      { name: 'Requested by', value: `<@${track.requester as string}>`, inline: true },
+      { name: 'Requested by', value: requestedBy, inline: true },
       { name: 'Volume', value: `${player.volume}%`, inline: true },
       { name: 'Filter', value: filterName ? FILTER_LABELS[filterName] : 'None', inline: true },
       { name: 'Loop', value: player.repeatMode, inline: true },
-      { name: 'Up next', value: upNext ? upNext.info.title : '—', inline: true }
+      { name: 'Autoplay', value: autoplay ? 'On' : 'Off', inline: true },
+      { name: 'Up next', value: upNext ? upNext.info.title : '—', inline: false }
     );
 }
 
 export function nowPlayingComponents(player: Player): ActionRowBuilder<ButtonBuilder | StringSelectMenuBuilder>[] {
   const filterName = player.getData<FilterName | null>('filterName') ?? null;
-  const buttonRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
-    new ButtonBuilder().setCustomId('music_pause').setLabel(player.paused ? 'Resume' : 'Pause').setEmoji(player.paused ? '▶️' : '⏸️').setStyle(ButtonStyle.Primary),
+  const autoplay = Boolean(player.getData<boolean>('autoplay'));
+
+  const row1 = new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder().setCustomId('music_playpause').setLabel(player.paused ? 'Play' : 'Pause').setEmoji(player.paused ? '▶️' : '⏸️').setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId('music_replay').setLabel('Replay').setEmoji('🔄').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('music_previous').setLabel('Previous').setEmoji('⏮️').setStyle(ButtonStyle.Secondary),
     new ButtonBuilder().setCustomId('music_skip').setLabel('Skip').setEmoji('⏭️').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('music_clear').setLabel('Clear').setEmoji('🗑️').setStyle(ButtonStyle.Danger)
+  );
+  const row2 = new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder().setCustomId('music_autoplay').setLabel('Autoplay').setEmoji('✨').setStyle(autoplay ? ButtonStyle.Success : ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('music_volume').setLabel('Volume').setEmoji('🔊').setStyle(ButtonStyle.Secondary),
     new ButtonBuilder().setCustomId('music_stop').setLabel('Stop').setEmoji('⏹️').setStyle(ButtonStyle.Danger),
+    new ButtonBuilder().setCustomId('music_shuffle').setLabel('Shuffle').setEmoji('🔀').setStyle(ButtonStyle.Secondary),
     new ButtonBuilder().setCustomId('music_loop').setLabel(`Loop: ${player.repeatMode}`).setEmoji('🔁').setStyle(ButtonStyle.Secondary)
   );
   const filterSelect = new StringSelectMenuBuilder()
@@ -146,7 +217,7 @@ export function nowPlayingComponents(player: Player): ActionRowBuilder<ButtonBui
       { label: 'None', value: 'none', default: !filterName },
       ...Object.entries(FILTER_LABELS).map(([value, label]) => ({ label, value, default: filterName === value }))
     ]);
-  return [buttonRow, new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(filterSelect)];
+  return [row1, row2, new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(filterSelect)];
 }
 
 async function getTextChannel(client: Client, player: Player): Promise<TextChannel | null> {
@@ -189,4 +260,39 @@ export async function refreshNowPlaying(client: Client, player: Player): Promise
     .fetch(existingId)
     .then((m) => m.edit({ embeds: [nowPlayingEmbed(player)], components: nowPlayingComponents(player) }))
     .catch(() => undefined);
+}
+
+/** Stops playback and blanks the persistent Now Playing embed in place — used by both the Stop button and the /stop command so they behave identically. */
+export async function stopAndClearNowPlaying(client: Client, player: Player): Promise<void> {
+  const messageId = player.getData<string | null>('nowPlayingMessageId');
+  const channel = await getTextChannel(client, player);
+  await player.destroy().catch(() => undefined);
+  if (!channel || !messageId) return;
+  await channel.messages
+    .fetch(messageId)
+    .then((m) => m.edit({ embeds: [new EmbedBuilder().setColor(0x22c55e).setTitle('⏹️ Stopped').setDescription('Playback stopped.')], components: [] }))
+    .catch(() => undefined);
+}
+
+export function clearEmptyChannelTimer(guildId: string): void {
+  const timer = emptyChannelTimers.get(guildId);
+  if (timer) {
+    clearTimeout(timer);
+    emptyChannelTimers.delete(guildId);
+  }
+}
+
+/**
+ * Starts (or restarts) the 30s "everyone left" grace period for a player. If the
+ * channel is still empty when it fires, the player is destroyed and a single
+ * message is posted noting why — otherwise use clearEmptyChannelTimer to cancel.
+ */
+export function scheduleEmptyChannelLeave(client: Client, player: Player, voiceChannelName: string): void {
+  clearEmptyChannelTimer(player.guildId);
+  const timer = setTimeout(() => {
+    emptyChannelTimers.delete(player.guildId);
+    sendToTextChannel(client, player, `🚪 Nobody's in **${voiceChannelName}** — music closed.`);
+    player.destroy().catch(() => undefined);
+  }, EMPTY_CHANNEL_LEAVE_MS);
+  emptyChannelTimers.set(player.guildId, timer);
 }
