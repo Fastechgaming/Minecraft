@@ -4,7 +4,7 @@ import type { FeatureModule } from '../../../types/command';
 import { getGuildSettings } from '../../../database/settingsCache';
 import { isDj } from '../../../services/permissions';
 import { getQueue, setQueue, type GuildQueue } from '../../../music/queueManager';
-import { resolveTracks, playNext, attachPlayerEvents, waitForConnection, stopQueue, refreshNowPlaying, restartCurrentTrack, nowPlayingEmbed, nowPlayingComponents } from '../../../music/player';
+import { resolveTracks, playNext, attachPlayerEvents, waitForConnection, stopQueue, refreshNowPlaying, restartCurrentTrack, nowPlayingEmbed, nowPlayingComponents, configurePlayDl } from '../../../music/player';
 import type { FilterName } from '../../../music/filters';
 import { withTimeout, TimeoutError } from '../../../services/timeout';
 
@@ -232,5 +232,6 @@ export const musicModule: FeatureModule = {
         stopQueue(queue);
       }
     }
-  }
+  },
+  onReady: () => configurePlayDl()
 };

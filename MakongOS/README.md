@@ -62,6 +62,17 @@ New feature idea? Add one module under `src/bot/modules/`, register it in `src/b
 3. `npx prisma migrate deploy` (or `npm run db:migrate:dev` in development)
 4. `npm run build && npm start` (or `npm run dev` for local development). Slash commands auto-sync to every guild the bot is in on startup — no separate deploy step needed.
 
+## Music: getting past YouTube throttling
+
+Basic connectivity to YouTube (search, page loads) usually works fine even from a VPS, but YouTube frequently throttles or blocks the actual *streaming* request from unauthenticated datacenter IPs — this shows up as `/play` failing with "Stream fetch timed out" even though the server can clearly reach youtube.com. Fix it by giving `play-dl` a real logged-in session:
+
+1. Open YouTube in a normal browser (a throwaway/alt Google account is safer than your main one) and make sure you're signed in.
+2. Open DevTools → Network tab, reload the page, click any request to `youtube.com`, and copy the full value of the `Cookie` request header.
+3. Paste it into `.env` as `YOUTUBE_COOKIE=<that value>`.
+4. Redeploy (`./deploy.sh`) — the bot logs `play-dl configured with YOUTUBE_COOKIE` on startup once it's picked up, or a warning if it's still unset.
+
+That cookie will eventually expire (typically weeks to months) — if `/play` starts timing out again after working fine for a while, re-grab a fresh one the same way.
+
 ## Docker
 
 ```

@@ -11,6 +11,31 @@ import { withTimeout } from '../services/timeout';
 
 const log = createLogger('music');
 
+let playDlConfigured = false;
+
+/**
+ * YouTube increasingly throttles/blocks the actual stream-fetch step for
+ * unauthenticated requests from datacenter IPs (search and basic page loads
+ * still work fine, which is what makes this confusing to diagnose). Feeding
+ * play-dl a real browser's logged-in cookie via YOUTUBE_COOKIE makes its
+ * requests look like a normal signed-in user instead. No-ops if unset.
+ */
+export async function configurePlayDl(): Promise<void> {
+  if (playDlConfigured) return;
+  playDlConfigured = true;
+  const cookie = process.env.YOUTUBE_COOKIE;
+  if (!cookie) {
+    log.warn('YOUTUBE_COOKIE is not set — YouTube may throttle or block streaming from this server. See README for how to obtain one.');
+    return;
+  }
+  try {
+    await playdl.setToken({ youtube: { cookie } });
+    log.info('play-dl configured with YOUTUBE_COOKIE');
+  } catch (err) {
+    log.error('Failed to configure play-dl with YOUTUBE_COOKIE', err);
+  }
+}
+
 export async function resolveTracks(query: string, requestedById: string): Promise<Track[]> {
   const trimmed = query.trim();
 
