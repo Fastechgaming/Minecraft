@@ -1,12 +1,9 @@
-import { SlashCommandBuilder, EmbedBuilder, type TextChannel, type ChatInputCommandInteraction, type GuildMember } from 'discord.js';
-import { joinVoiceChannel, createAudioPlayer, NoSubscriberBehavior, AudioPlayerStatus } from '@discordjs/voice';
+import { SlashCommandBuilder, EmbedBuilder, type ChatInputCommandInteraction, type GuildMember } from 'discord.js';
 import type { FeatureModule } from '../../../types/command';
 import { getGuildSettings } from '../../../database/settingsCache';
 import { isDj } from '../../../services/permissions';
-import { getQueue, setQueue, type GuildQueue } from '../../../music/queueManager';
-import { resolveTracks, playNext, attachPlayerEvents, waitForConnection, stopQueue, refreshNowPlaying, restartCurrentTrack, nowPlayingEmbed, nowPlayingComponents, prepareMusicEngine } from '../../../music/player';
-import type { FilterName } from '../../../music/filters';
 import { withTimeout, TimeoutError } from '../../../services/timeout';
+import { applyFilter, searchTrack, nowPlayingEmbed, nowPlayingComponents, refreshNowPlaying, type FilterName } from '../../../music/lavalink';
 
 async function guardMusic(interaction: ChatInputCommandInteraction): Promise<boolean> {
   const settings = await getGuildSettings(interaction.guildId!);
@@ -24,7 +21,7 @@ async function guardMusic(interaction: ChatInputCommandInteraction): Promise<boo
 
 export const musicModule: FeatureModule = {
   name: 'music',
-  description: 'Queue-based music with a live Now Playing embed, buttons, and audio filters.',
+  description: 'Queue-based music (powered by Lavalink) with a live Now Playing embed, buttons, and audio filters.',
   commands: [
     {
       data: new SlashCommandBuilder().setName('play').setDescription('Play a song from YouTube or Spotify').addStringOption((o) => o.setName('query').setDescription('URL or search terms').setRequired(true)),
@@ -38,61 +35,60 @@ export const musicModule: FeatureModule = {
         }
         await interaction.deferReply();
 
-        const query = interaction.options.getString('query', true);
-        let tracks: Awaited<ReturnType<typeof resolveTracks>>;
-        try {
-          tracks = await withTimeout(resolveTracks(query, interaction.user.id), 15_000, 'Search timed out');
-        } catch (err) {
-          if (err instanceof TimeoutError) {
-            await interaction.editReply('❌ The search to YouTube/Spotify timed out. The server may be having trouble reaching those services right now — try again in a bit.');
-          } else {
-            await interaction.editReply('❌ Search failed — try a different query or link.');
-          }
-          return;
-        }
-        if (tracks.length === 0) {
-          await interaction.editReply('❌ No results found.');
-          return;
-        }
-
         const settings = await getGuildSettings(interaction.guildId!);
-        let queue = getQueue(interaction.guildId!);
-
-        if (!queue || queue.destroyed) {
-          const connection = joinVoiceChannel({ channelId: voiceChannel.id, guildId: interaction.guildId!, adapterCreator: interaction.guild!.voiceAdapterCreator, selfDeaf: true });
-          await waitForConnection(connection).catch(() => undefined);
-          const player = createAudioPlayer({ behaviors: { noSubscriber: NoSubscriberBehavior.Pause } });
-          connection.subscribe(player);
-          queue = {
+        const client = interaction.client;
+        const player =
+          client.lavalink.getPlayer(interaction.guildId!) ??
+          client.lavalink.createPlayer({
             guildId: interaction.guildId!,
             voiceChannelId: voiceChannel.id,
             textChannelId: interaction.channelId,
-            connection,
-            player,
-            tracks: [],
-            current: null,
             volume: settings.musicDefaultVol,
-            filter: null,
-            loop: 'off',
-            nowPlayingMessageId: null,
-            elapsedSec: 0,
-            destroyed: false
-          };
-          setQueue(interaction.guildId!, queue);
-          attachPlayerEvents(queue, interaction.channel as TextChannel);
+            selfDeaf: true
+          });
+        if (!player.connected) {
+          await player.connect();
         }
 
-        if (queue.tracks.length + tracks.length > settings.musicMaxQueue) {
-          await interaction.editReply('❌ Queue is full.');
+        const query = interaction.options.getString('query', true);
+        let result: Awaited<ReturnType<typeof searchTrack>>;
+        try {
+          result = await withTimeout(searchTrack(player, query, interaction.user.id), 15_000, 'Search timed out');
+        } catch (err) {
+          if (err instanceof TimeoutError) {
+            await interaction.editReply('❌ The search to YouTube/Spotify timed out. The Lavalink server may be having trouble reaching those services right now — try again in a bit.');
+          } else {
+            await interaction.editReply('❌ Search failed — try a different query or link.');
+          }
+          if (!player.queue.current && player.queue.tracks.length === 0) await player.destroy().catch(() => undefined);
           return;
         }
 
-        queue.tracks.push(...tracks);
-        if (!queue.current) {
-          await playNext(queue, interaction.channel as TextChannel);
-          await interaction.editReply(`🎶 Now playing **${tracks[0].title}**.`);
+        if (result.loadType === 'error' || result.loadType === 'empty' || result.tracks.length === 0) {
+          await interaction.editReply('❌ No results found.');
+          if (!player.queue.current && player.queue.tracks.length === 0) await player.destroy().catch(() => undefined);
+          return;
+        }
+
+        const isPlaylist = result.loadType === 'playlist';
+        const tracksToAdd = isPlaylist ? result.tracks : [result.tracks[0]];
+        const remaining = settings.musicMaxQueue - player.queue.tracks.length - (player.queue.current ? 1 : 0);
+        if (remaining <= 0) {
+          await interaction.editReply('❌ Queue is full.');
+          return;
+        }
+        const toQueue = tracksToAdd.slice(0, remaining);
+
+        const hadCurrent = !!player.queue.current;
+        await player.queue.add(toQueue);
+        if (!hadCurrent) await player.play();
+
+        if (isPlaylist) {
+          await interaction.editReply(`➕ Queued **${toQueue.length}** tracks from the playlist.`);
+        } else if (!hadCurrent) {
+          await interaction.editReply(`🎶 Now playing **${toQueue[0].info.title}**.`);
         } else {
-          await interaction.editReply(`➕ Queued **${tracks[0].title}**.`);
+          await interaction.editReply(`➕ Queued **${toQueue[0].info.title}**.`);
         }
       }
     },
@@ -100,12 +96,12 @@ export const musicModule: FeatureModule = {
       data: new SlashCommandBuilder().setName('skip').setDescription('Skip the current track'),
       execute: async (interaction) => {
         if (!(await guardMusic(interaction))) return;
-        const queue = getQueue(interaction.guildId!);
-        if (!queue?.current) {
+        const player = interaction.client.lavalink.getPlayer(interaction.guildId!);
+        if (!player?.queue.current) {
           await interaction.reply({ content: 'Nothing is playing.', ephemeral: true });
           return;
         }
-        queue.player.stop(true);
+        await player.skip();
         await interaction.reply('⏭️ Skipped.');
       }
     },
@@ -113,20 +109,20 @@ export const musicModule: FeatureModule = {
       data: new SlashCommandBuilder().setName('stop').setDescription('Stop playback and clear the queue'),
       execute: async (interaction) => {
         if (!(await guardMusic(interaction))) return;
-        const queue = getQueue(interaction.guildId!);
-        if (!queue) {
+        const player = interaction.client.lavalink.getPlayer(interaction.guildId!);
+        if (!player) {
           await interaction.reply({ content: 'Nothing is playing.', ephemeral: true });
           return;
         }
-        stopQueue(queue);
+        await player.destroy();
         await interaction.reply('⏹️ Stopped and left the voice channel.');
       }
     },
     {
       data: new SlashCommandBuilder().setName('queue').setDescription('View the music queue'),
       execute: async (interaction) => {
-        const queue = getQueue(interaction.guildId!);
-        if (!queue?.current) {
+        const player = interaction.client.lavalink.getPlayer(interaction.guildId!);
+        if (!player?.queue.current) {
           await interaction.reply({ content: 'Nothing is playing.', ephemeral: true });
           return;
         }
@@ -134,8 +130,10 @@ export const musicModule: FeatureModule = {
           .setTitle('🎶 Queue')
           .setColor(0x1db954)
           .setDescription(
-            `**Now playing:** ${queue.current.title}\n\n` +
-              (queue.tracks.length > 0 ? queue.tracks.slice(0, 15).map((t, i) => `${i + 1}. ${t.title}`).join('\n') : '*Queue is empty.*')
+            `**Now playing:** ${player.queue.current.info.title}\n\n` +
+              (player.queue.tracks.length > 0
+                ? player.queue.tracks.slice(0, 15).map((t, i) => `${i + 1}. ${t.info.title}`).join('\n')
+                : '*Queue is empty.*')
           );
         await interaction.reply({ embeds: [embed] });
       }
@@ -144,37 +142,63 @@ export const musicModule: FeatureModule = {
       data: new SlashCommandBuilder().setName('volume').setDescription('Set playback volume (0-200%)').addIntegerOption((o) => o.setName('percent').setDescription('0-200').setRequired(true).setMinValue(0).setMaxValue(200)),
       execute: async (interaction) => {
         if (!(await guardMusic(interaction))) return;
-        const queue = getQueue(interaction.guildId!);
-        if (!queue?.current) {
+        const player = interaction.client.lavalink.getPlayer(interaction.guildId!);
+        if (!player?.queue.current) {
           await interaction.reply({ content: 'Nothing is playing.', ephemeral: true });
           return;
         }
-        queue.volume = interaction.options.getInteger('percent', true);
-        await interaction.reply(`🔊 Volume set to ${queue.volume}%. Restarting the current track to apply it...`);
-        await restartCurrentTrack(queue, interaction.channel as TextChannel);
+        const percent = interaction.options.getInteger('percent', true);
+        await player.setVolume(percent);
+        await interaction.reply(`🔊 Volume set to ${percent}%.`);
+        await refreshNowPlaying(interaction.client, player);
       }
     },
     {
-      data: new SlashCommandBuilder().setName('loop').setDescription('Set loop mode').addStringOption((o) => o.setName('mode').setDescription('Loop mode').setRequired(true).addChoices({ name: 'Off', value: 'off' }, { name: 'Track', value: 'track' }, { name: 'Queue', value: 'queue' })),
+      data: new SlashCommandBuilder()
+        .setName('loop')
+        .setDescription('Set loop mode')
+        .addStringOption((o) => o.setName('mode').setDescription('Loop mode').setRequired(true).addChoices({ name: 'Off', value: 'off' }, { name: 'Track', value: 'track' }, { name: 'Queue', value: 'queue' })),
       execute: async (interaction) => {
         if (!(await guardMusic(interaction))) return;
-        const queue = getQueue(interaction.guildId!);
-        if (!queue) {
+        const player = interaction.client.lavalink.getPlayer(interaction.guildId!);
+        if (!player) {
           await interaction.reply({ content: 'Nothing is playing.', ephemeral: true });
           return;
         }
-        queue.loop = interaction.options.getString('mode', true) as GuildQueue['loop'];
-        await refreshNowPlaying(queue, interaction.channel as TextChannel);
-        await interaction.reply(`🔁 Loop mode: **${queue.loop}**.`);
+        const mode = interaction.options.getString('mode', true) as 'off' | 'track' | 'queue';
+        await player.setRepeatMode(mode);
+        await refreshNowPlaying(interaction.client, player);
+        await interaction.reply(`🔁 Loop mode: **${mode}**.`);
       }
     }
   ],
   components: [
+    // Checked before the generic "music_" prefix below so a select-menu customId
+    // (which also starts with "music_") doesn't get swallowed by the button handler.
+    {
+      prefix: 'music_filter_select',
+      handleSelect: async (interaction) => {
+        const player = interaction.client.lavalink.getPlayer(interaction.guildId!);
+        if (!player) {
+          await interaction.reply({ content: 'Nothing is playing.', ephemeral: true });
+          return;
+        }
+        const settings = await getGuildSettings(interaction.guildId!);
+        const member = interaction.member as GuildMember;
+        if (!isDj(member, settings)) {
+          await interaction.reply({ content: 'You need a DJ role to control music.', ephemeral: true });
+          return;
+        }
+        const value = interaction.values[0];
+        await applyFilter(player, value === 'none' ? null : (value as FilterName));
+        await interaction.update({ embeds: [nowPlayingEmbed(player)], components: nowPlayingComponents(player) });
+      }
+    },
     {
       prefix: 'music_',
       handleButton: async (interaction) => {
-        const queue = getQueue(interaction.guildId!);
-        if (!queue) {
+        const player = interaction.client.lavalink.getPlayer(interaction.guildId!);
+        if (!player) {
           await interaction.reply({ content: 'Nothing is playing.', ephemeral: true });
           return;
         }
@@ -186,52 +210,32 @@ export const musicModule: FeatureModule = {
         }
 
         if (interaction.customId === 'music_pause') {
-          if (queue.player.state.status === AudioPlayerStatus.Paused) queue.player.unpause();
-          else queue.player.pause();
+          if (player.paused) await player.resume();
+          else await player.pause();
         } else if (interaction.customId === 'music_skip') {
-          queue.player.stop(true);
+          await player.skip();
         } else if (interaction.customId === 'music_stop') {
-          stopQueue(queue);
+          await player.destroy();
           await interaction.update({ content: '⏹️ Stopped.', embeds: [], components: [] });
           return;
         } else if (interaction.customId === 'music_loop') {
-          queue.loop = queue.loop === 'off' ? 'track' : queue.loop === 'track' ? 'queue' : 'off';
+          const next = player.repeatMode === 'off' ? 'track' : player.repeatMode === 'track' ? 'queue' : 'off';
+          await player.setRepeatMode(next);
         }
 
-        await interaction.update({ embeds: [nowPlayingEmbed(queue)], components: nowPlayingComponents(queue) });
-      }
-    },
-    {
-      prefix: 'music_filter_select',
-      handleSelect: async (interaction) => {
-        const queue = getQueue(interaction.guildId!);
-        if (!queue) {
-          await interaction.reply({ content: 'Nothing is playing.', ephemeral: true });
-          return;
-        }
-        const settings = await getGuildSettings(interaction.guildId!);
-        const member = interaction.member as GuildMember;
-        if (!isDj(member, settings)) {
-          await interaction.reply({ content: 'You need a DJ role to control music.', ephemeral: true });
-          return;
-        }
-        const value = interaction.values[0];
-        queue.filter = value === 'none' ? null : (value as FilterName);
-        await interaction.deferUpdate();
-        await restartCurrentTrack(queue, interaction.channel as TextChannel);
+        await interaction.update({ embeds: [nowPlayingEmbed(player)], components: nowPlayingComponents(player) });
       }
     }
   ],
   events: {
     voiceStateUpdate: async (oldState, newState) => {
-      const guildId = oldState.guild.id;
-      const queue = getQueue(guildId);
-      if (!queue || queue.destroyed) return;
-      const voiceChannel = newState.guild.channels.cache.get(queue.voiceChannelId);
+      const client = oldState.client;
+      const player = client.lavalink.getPlayer(oldState.guild.id);
+      if (!player?.voiceChannelId) return;
+      const voiceChannel = newState.guild.channels.cache.get(player.voiceChannelId);
       if (voiceChannel?.isVoiceBased() && voiceChannel.members.filter((m) => !m.user.bot).size === 0) {
-        stopQueue(queue);
+        await player.destroy().catch(() => undefined);
       }
     }
-  },
-  onReady: () => prepareMusicEngine()
+  }
 };

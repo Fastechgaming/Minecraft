@@ -1,11 +1,19 @@
 import { Client, GatewayIntentBits, Partials, Events } from 'discord.js';
 import type { ChatInputCommandInteraction, ButtonInteraction, StringSelectMenuInteraction, ModalSubmitInteraction } from 'discord.js';
+import type { LavalinkManager } from 'lavalink-client';
 import { modules } from './registry';
 import { registerCommandsForGuilds, registerCommandsForGuild } from './registerCommands';
 import { setBotClient } from './globalClient';
 import { prisma } from '../database/prisma';
 import { createLogger } from '../services/logger';
+import { createLavalinkManager } from '../music/lavalink';
 import type { SlashCommand, ComponentHandler } from '../types/command';
+
+declare module 'discord.js' {
+  interface Client {
+    lavalink: LavalinkManager;
+  }
+}
 
 const log = createLogger('bot');
 
@@ -48,11 +56,18 @@ export async function startBot(): Promise<void> {
     partials: [Partials.Message, Partials.Channel, Partials.Reaction, Partials.GuildMember, Partials.User]
   });
 
+  client.lavalink = createLavalinkManager(client);
+  client.on('raw', (d) => client.lavalink.sendRawData(d));
+
   const commandMap = buildCommandMap();
 
   client.once(Events.ClientReady, async (readyClient) => {
     log.info(`Logged in as ${readyClient.user.tag}`);
     setBotClient(readyClient);
+
+    await client.lavalink.init({ id: readyClient.user.id, username: readyClient.user.username }).catch((err) => {
+      log.error('Failed to initialize Lavalink — is the "lavalink" PM2 process running? See scripts/setup-lavalink.sh', err);
+    });
 
     for (const guild of readyClient.guilds.cache.values()) {
       await prisma.guild.upsert({

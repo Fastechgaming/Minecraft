@@ -6,8 +6,9 @@ node_modules/
 dist/
 next-env.d.ts
 
-# downloaded at runtime — yt-dlp binary + derived YouTube cookie file
-.vendor/
+# Lavalink server jar (downloaded by scripts/setup-lavalink.sh) and its logs
+lavalink/Lavalink.jar
+lavalink/logs/
 
 # env
 .env

@@ -1,0 +1,60 @@
+# Lavalink server config for MakongOS's music engine. Bound to 127.0.0.1 only —
+# the bot connects to it locally; it's never meant to be reachable from the internet.
+server:
+  port: 2333
+  address: 127.0.0.1
+
+lavalink:
+  server:
+    password: "${LAVALINK_PASSWORD}"
+    sources:
+      youtube: false # replaced by the youtube-plugin below (the built-in source was removed upstream)
+      bandcamp: true
+      soundcloud: true
+      twitch: true
+      vimeo: true
+      http: true
+      local: false
+    filters:
+      volume: true
+      equalizer: true
+      karaoke: true
+      timescale: true
+      tremolo: true
+      vibrato: true
+      distortion: true
+      rotation: true
+      channelMix: true
+      lowPass: true
+    bufferDurationMs: 400
+    frameBufferDurationMs: 5000
+    trackStuckThresholdMs: 10000
+
+  plugins:
+    - dependency: "dev.lavalink.youtube:youtube-plugin:1.11.4"
+      repository: "https://maven.lavalink.dev/releases"
+
+# The youtube-plugin itself — see https://github.com/lavalink-devs/youtube-source.
+# oauth lets it authenticate as a real (throwaway) Google account, which is what
+# actually gets past YouTube's proof-of-origin gate on datacenter IPs — set
+# YOUTUBE_REFRESH_TOKEN in .env once you've generated one (see README).
+plugins:
+  youtube:
+    enabled: true
+    allowSearch: true
+    allowDirectVideoIds: true
+    allowDirectPlaylistIds: true
+    oauth:
+      enabled: "${YOUTUBE_OAUTH_ENABLED:false}"
+      refreshToken: "${YOUTUBE_REFRESH_TOKEN:}"
+
+metrics:
+  prometheus:
+    enabled: false
+
+logging:
+  level:
+    root: INFO
+    lavalink: INFO
+  file:
+    path: ./logs

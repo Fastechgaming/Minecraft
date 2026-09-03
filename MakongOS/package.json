@@ -18,23 +18,19 @@
   "dependencies": {
     "@discordjs/builders": "^1.9.0",
     "@discordjs/rest": "^2.4.0",
-    "@discordjs/voice": "^0.19.0",
     "@google/generative-ai": "^0.21.0",
     "@napi-rs/canvas": "^1.0.8",
     "@prisma/client": "^5.20.0",
     "discord-api-types": "^0.37.100",
     "discord.js": "^14.16.3",
     "dotenv": "^16.4.5",
-    "ffmpeg-static": "^5.2.0",
-    "libsodium-wrappers": "^0.7.15",
+    "lavalink-client": "^2.11.0",
     "next": "^14.2.15",
     "next-auth": "^4.24.8",
     "play-dl": "^1.9.7",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "sodium-native": "^4.3.1",
-    "ws": "^8.18.0",
-    "youtube-po-token-generator": "^0.6.0"
+    "ws": "^8.18.0"
   },
   "devDependencies": {
     "@types/node": "^20.16.10",

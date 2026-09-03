@@ -1,6 +1,6 @@
 # MakongOS
 
-A feature-packed Discord bot + web dashboard for a Minecraft community — the bot and its dashboard ship as **one application, one process, one deploy**. There is nothing else to host separately (music included — no external Lavalink server required).
+A feature-packed Discord bot + web dashboard for a Minecraft community — the bot and its dashboard ship as **one application, one process, one deploy**. Music playback is the one exception: it's powered by [Lavalink](https://github.com/lavalink-devs/Lavalink), a small Java sidecar process that runs alongside the app under the same PM2 setup (see the Music section below) — everything else stays in the single Node process.
 
 ```
 npm install
@@ -12,7 +12,7 @@ npm start
 
 - **AI Anti-Scam & Assistant** (Gemini) — Vision-based scanning of uploaded images to auto-detect crypto scams, fake Nitro giveaways, and phishing screenshots, with configurable auto-punish and role/channel whitelists; plus a conversational assistant with a knowledge base, per-user memory, staff escalation, and free `/imagine` image generation via Pollinations.
 - **Moderation** — `/warn`, `/timeout`, `/kick`, `/ban`, auto-incrementing `/case` management, automod (invites, bad words, spam bursts, ghost pings), and cron-expiring `/temprole`.
-- **Music** — a queue-based player (discord.js voice + yt-dlp, not Lavalink) with Spotify/YouTube search, a live Now Playing embed with playback buttons, and audio filters (Bassboost, Nightcore, 8D, Vaporwave, Tremolo).
+- **Music** — a queue-based player backed by Lavalink, with Spotify/YouTube search, a live Now Playing embed with playback buttons, and audio filters (Bassboost, Nightcore, 8D, Vaporwave, Tremolo).
 - **Tickets & Modmail** — multi-panel tickets with custom modal forms, staff claiming, idle reminders, HTML transcripts, and DM-based modmail threads.
 - **Join-to-Create Voice Hub** — auto-generated temporary voice channels with an owner control panel (lock, hide, rename, limit, kick).
 - **Dual Leveling** — text + voice XP with customizable canvas rank cards and a server leaderboard.
@@ -32,7 +32,7 @@ src/
 │   └── modules/        # one FeatureModule per system: moderation, ai, music, tickets, leveling, economy, voicehub, giveaways, reactionroles, utility, core
 ├── ai/                  # Gemini chat + vision scan, knowledge retrieval, memory, staff escalation, Pollinations image gen
 ├── moderation/          # case management, automod, ghost-ping tracking
-├── music/                # queue manager, ffmpeg-filtered player, filter presets
+├── music/                # Lavalink manager wiring, Now Playing embed/components, filter presets
 ├── economy/              # bank/daily/work/rob/shop service + gambling logic
 ├── tickets/               # ticket channel service + HTML transcript builder
 ├── giveaways/              # scheduling, winner selection, reroll
@@ -62,18 +62,25 @@ New feature idea? Add one module under `src/bot/modules/`, register it in `src/b
 3. `npx prisma migrate deploy` (or `npm run db:migrate:dev` in development)
 4. `npm run build && npm start` (or `npm run dev` for local development). Slash commands auto-sync to every guild the bot is in on startup — no separate deploy step needed.
 
-## Music: how streaming works, and getting past YouTube throttling
+## Music: Lavalink setup, and getting past YouTube's anti-bot checks
 
-Music streaming runs through [yt-dlp](https://github.com/yt-dlp/yt-dlp), downloaded automatically as a single binary to `.vendor/yt-dlp` the first time the bot starts (and refreshed every 14 days) — no separate install step, and it stays inside the one-process architecture. yt-dlp is used specifically because it's patched within days whenever YouTube changes its anti-bot measures, unlike most JS-only YouTube libraries.
+Music runs through [Lavalink](https://github.com/lavalink-devs/Lavalink) — a Java server that handles the Discord voice connection and does the actual audio decoding, with the bot only sending it commands (search, play, pause, filters) over a local WebSocket/REST connection. It runs as its own PM2 process (`lavalink`, defined in `ecosystem.config.js`) alongside the `makongos` app, both on the same machine. YouTube support comes from Lavalink's [`youtube-plugin`](https://github.com/lavalink-devs/youtube-source), declared in `lavalink/application.yml` and downloaded automatically by Lavalink itself on first start (no manual plugin install).
 
-Basic connectivity to YouTube (search, page loads) usually works fine even from a VPS, but YouTube can still throttle or block the actual *streaming* request from unauthenticated datacenter IPs — this shows up as `/play` failing with "Stream fetch timed out" even though the server can clearly reach youtube.com. If that happens, give it a real logged-in session:
+**One-time setup on the server:**
 
-1. Open YouTube in a normal browser (a throwaway/alt Google account is safer than your main one) and make sure you're signed in.
-2. Open DevTools → Network tab, reload the page, click any request to `youtube.com`, and copy the full value of the `Cookie` request header.
-3. Paste it into `.env` as `YOUTUBE_COOKIE=<that value>`.
-4. Redeploy (`./deploy.sh`) — the bot logs `yt-dlp ready with YOUTUBE_COOKIE` on startup once it's picked up.
+1. Install a Java 17+ runtime if it's not already present: `sudo apt update && sudo apt install -y openjdk-17-jre-headless`.
+2. Set `LAVALINK_PASSWORD` in `.env` to a long random string (it just needs to match between the bot and `lavalink/application.yml`, which reads it from the same `.env`).
+3. Run `./scripts/setup-lavalink.sh` — downloads `lavalink/Lavalink.jar` if it's not already there.
+4. Start it: `pm2 start ecosystem.config.js --only lavalink` (a normal `pm2 start ecosystem.config.js` / `./deploy.sh` also starts it going forward, since it's just another app in that same config file).
 
-That cookie will eventually expire (typically weeks to months) — if `/play` starts timing out again after working fine for a while, re-grab a fresh one the same way.
+At this point `/play` already works for most sources (SoundCloud, Bandcamp, direct links, etc). YouTube is the exception: Lavalink's `youtube-plugin` needs Google account credentials (real OAuth, not a scraped cookie) to get past YouTube's proof-of-origin checks on datacenter IPs — without it, YouTube searches/streams will fail or return login-required errors. To enable it:
+
+1. Set `plugins.youtube.oauth.enabled: true` — already wired up to read `YOUTUBE_OAUTH_ENABLED` from `.env`, so just set `YOUTUBE_OAUTH_ENABLED=true` there.
+2. Restart Lavalink (`pm2 restart lavalink --update-env`) and immediately check its logs: `pm2 logs lavalink`. On first start with OAuth enabled and no refresh token yet, it prints a `https://www.google.com/device` link and a short code.
+3. Open that link on any device (a throwaway Google account is safer than a personal one — use one that isn't otherwise tied to anything important), enter the code, and approve access.
+4. Lavalink logs the resulting refresh token once linking completes — copy it into `.env` as `YOUTUBE_REFRESH_TOKEN=<that value>`, then `pm2 restart lavalink --update-env` one more time so it's used on every future start instead of re-prompting.
+
+That refresh token doesn't expire the way scraped cookies do, so this is a one-time setup rather than something to redo periodically.
 
 ## Docker
 
@@ -81,14 +88,17 @@ That cookie will eventually expire (typically weeks to months) — if `/play` st
 docker compose up --build
 ```
 
-Runs PostgreSQL and the app together; migrations run automatically on container start.
+Runs PostgreSQL and the app together; migrations run automatically on container start. This compose file doesn't include Lavalink, so `/play` won't work until you also run a Lavalink server the app can reach and point `LAVALINK_HOST`/`LAVALINK_PORT`/`LAVALINK_PASSWORD` at it — see the Music section above.
 
 ## PM2
 
 ```
 npm run build
+./scripts/setup-lavalink.sh   # one-time: downloads Lavalink.jar — see the Music section
 pm2 start ecosystem.config.js
 ```
+
+This starts both PM2 apps: `makongos` (the bot + dashboard) and `lavalink` (the music server).
 
 ## Updating an existing bare-metal/VPS install
 
@@ -103,7 +113,7 @@ which does `git pull && npm install && rm -rf dist .next && npm run build`, then
 ## Notes
 
 - All secrets live in environment variables and are never sent to the browser.
-- Music runs entirely inside this one process via `@discordjs/voice` + `yt-dlp` + `ffmpeg-static` — there is no separate Lavalink node to host, configure, or keep online.
+- Music depends on the `lavalink` PM2 process being up (see the Music section above) — if it's down, `/play` will fail to connect and the bot logs an error on startup telling you to check it.
 - Server backup restore is intentionally **additive only** — it recreates roles/channels missing from a snapshot by name, and never deletes, renames, or overwrites current server structure.
 - Every feature toggle, moderation rule, AI behavior setting, ticket category, shop item, and knowledge base entry is configurable from the dashboard — no code changes required for day-to-day administration.
 - The Pollinations `/imagine` command runs prompts through a keyword-based NSFW safety filter before generating.
