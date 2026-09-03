@@ -31,7 +31,11 @@ lavalink:
     trackStuckThresholdMs: 10000
 
   plugins:
-    - dependency: "dev.lavalink.youtube:youtube-plugin:1.11.4"
+    # Pin to a recent release — YouTube periodically changes its player script format
+    # in ways that break older plugin versions ("Must find action functions from
+    # script" errors), and each break gets fixed in a following release. Bump this
+    # if /play starts throwing that error again after working fine for a while.
+    - dependency: "dev.lavalink.youtube:youtube-plugin:1.18.2"
       repository: "https://maven.lavalink.dev/releases"
 
 # The youtube-plugin itself — see https://github.com/lavalink-devs/youtube-source.
