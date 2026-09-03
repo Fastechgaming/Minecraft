@@ -145,6 +145,16 @@ function rankItemFor(rankId) {
   return (allItems.ranks || []).find((item) => item.id === `rank-${rankId}` || item.id === rankId) || null;
 }
 
+// The player's real Minecraft head when there's a real skin to show, the
+// generic Steve head otherwise. Bedrock has no Java skin to render, so it's
+// always Steve there; for Java, mc-heads.net does the premium-vs-cracked
+// lookup for us - a name that isn't a real Mojang account (offline/cracked,
+// or just made up) renders as Steve automatically, no separate check needed.
+function playerHeadUrl(acct) {
+  if (!acct || !acct.player || acct.edition === "bedrock") return "/images/site/steve-head.png";
+  return `https://mc-heads.net/avatar/${encodeURIComponent(acct.player)}/64`;
+}
+
 function renderProfile() {
   document.getElementById("store-player-name").textContent = account.player;
 
@@ -176,7 +186,7 @@ function renderProfile() {
       icon.textContent = "🏅";
     }
   } else {
-    icon.innerHTML = `<img src="/images/site/steve-head.png" alt="" />`;
+    icon.innerHTML = `<img src="${escapeHtml(playerHeadUrl(account))}" alt="" onerror="this.onerror=null; this.src='/images/site/steve-head.png';" />`;
   }
 
   if (typeof account.coins === "number") {
