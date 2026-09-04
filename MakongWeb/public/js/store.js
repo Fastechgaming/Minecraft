@@ -15,6 +15,8 @@ let activeCategory = "ranks";
 let pendingItem = null; // the item sitting in the confirmation dialog
 let pendingUpgradeFrom = null; // rank id being traded in, or null for a plain buy
 let pendingDuration = "monthly"; // "monthly" | "permanent" - rank purchases only, meaningless for upgrades
+let pendingQuantity = 1; // keys purchases only - how many of the item to buy at once
+const MAX_KEY_QTY = 20;
 
 const CATEGORY_KEYS = { ranks: "store.tab.ranks", keys: "store.tab.keys", other: "store.tab.other" };
 const REGION_KEY = "makong-region";
@@ -584,6 +586,7 @@ function closeBuyModal() {
   pendingItem = null;
   pendingUpgradeFrom = null;
   pendingDuration = "monthly";
+  pendingQuantity = 1;
 }
 document.getElementById("buy-modal-close").addEventListener("click", closeBuyModal);
 buyModal.addEventListener("click", (e) => {
@@ -602,18 +605,24 @@ function openConfirm(item, fromRankId) {
   const toEntry = ladderEntry(item.id.replace(/^rank-/, ""));
   pendingUpgradeFrom = fromEntry ? fromEntry.id : null;
   pendingDuration = "monthly";
+  pendingQuantity = 1;
 
   const toName = (toEntry && toEntry.displayName) || item.name;
   // A trade-in upgrade prices its own ladder step and ignores duration - only
   // a plain rank purchase (not owned, not being traded into) offers 1 Month
   // vs Permanent.
   const showDuration = item.category === "ranks" && !fromEntry;
-  const priceFor = (duration) =>
-    fromEntry && toEntry
-      ? Math.max(0, toEntry.priceUsd - fromEntry.priceUsd)
-      : duration === "permanent"
-      ? permanentPriceFor(item)
-      : item.price;
+  // Keys are bought in bulk (e.g. 5 Common Keys in one order) - ranks/other
+  // items stay single-purchase.
+  const showQuantity = item.category === "keys" && !fromEntry;
+  const priceFor = () => {
+    if (fromEntry && toEntry) return Math.max(0, toEntry.priceUsd - fromEntry.priceUsd);
+    const base = showDuration && pendingDuration === "permanent" ? permanentPriceFor(item) : item.price;
+    return showQuantity ? Math.round(base * pendingQuantity * 100) / 100 : base;
+  };
+  const refreshPrice = () => {
+    document.getElementById("confirm-price").textContent = formatPrice(priceFor());
+  };
 
   buyModalBody.innerHTML = `
     <div class="confirm-head">
@@ -641,7 +650,17 @@ function openConfirm(item, fromRankId) {
           </div>`
         : ""
     }
-    <div class="confirm-price" id="confirm-price">${escapeHtml(formatPrice(priceFor(pendingDuration)))}</div>
+    ${
+      showQuantity
+        ? `<div class="confirm-qty-label">${escapeHtml(t("store.quantity"))}</div>
+          <div class="qty-stepper" id="confirm-qty">
+            <button type="button" class="qty-btn" data-qty-step="-1" aria-label="${escapeHtml(t("store.qtyDecrease"))}">−</button>
+            <input type="number" class="qty-input" id="confirm-qty-input" inputmode="numeric" min="1" max="${MAX_KEY_QTY}" value="1" />
+            <button type="button" class="qty-btn" data-qty-step="1" aria-label="${escapeHtml(t("store.qtyIncrease"))}">+</button>
+          </div>`
+        : ""
+    }
+    <div class="confirm-price" id="confirm-price">${escapeHtml(formatPrice(priceFor()))}</div>
     <div class="confirm-actions">
       <button class="continue-btn" id="confirm-buy">${escapeHtml(t("store.confirm"))}</button>
       <button class="back-link" id="cancel-buy">${escapeHtml(t("store.cancel"))}</button>
@@ -653,9 +672,38 @@ function openConfirm(item, fromRankId) {
       btn.addEventListener("click", () => {
         pendingDuration = btn.dataset.duration;
         durationBtns.forEach((b) => b.classList.toggle("active", b === btn));
-        document.getElementById("confirm-price").textContent = formatPrice(priceFor(pendingDuration));
+        refreshPrice();
       })
     );
+  }
+  if (showQuantity) {
+    const qtyInput = document.getElementById("confirm-qty-input");
+    // Clamped and written back to the input - for the +/- buttons and once
+    // typing is done (blur/Enter), so a bad value always snaps back in range.
+    const commitQuantity = (n) => {
+      pendingQuantity = Math.min(MAX_KEY_QTY, Math.max(1, Math.round(n) || 1));
+      qtyInput.value = pendingQuantity;
+      refreshPrice();
+    };
+    // While typing, just preview against whatever's a valid number so far -
+    // rewriting the field mid-keystroke (e.g. on a cleared/partial value)
+    // would fight the user's typing.
+    const previewQuantity = (n) => {
+      const rounded = Math.round(n);
+      if (Number.isFinite(rounded) && rounded > 0) pendingQuantity = Math.min(MAX_KEY_QTY, rounded);
+      refreshPrice();
+    };
+    document.querySelectorAll("#confirm-qty [data-qty-step]").forEach((btn) =>
+      btn.addEventListener("click", () => commitQuantity(pendingQuantity + Number(btn.dataset.qtyStep)))
+    );
+    qtyInput.addEventListener("input", () => previewQuantity(Number(qtyInput.value)));
+    qtyInput.addEventListener("blur", () => commitQuantity(Number(qtyInput.value)));
+    qtyInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        commitQuantity(Number(qtyInput.value));
+        qtyInput.blur();
+      }
+    });
   }
   document.getElementById("confirm-buy").addEventListener("click", startCheckout);
   document.getElementById("cancel-buy").addEventListener("click", closeBuyModal);
@@ -675,6 +723,7 @@ async function startCheckout() {
         itemId: pendingItem.id,
         upgradeFromRankId: pendingUpgradeFrom || undefined,
         duration: pendingDuration,
+        quantity: pendingQuantity,
       }),
     });
     window.location.href = `/checkout?order=${encodeURIComponent(result.orderId)}`;

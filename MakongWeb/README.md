@@ -114,8 +114,9 @@ Payment is **manual review** — no bank API is involved, so nothing is slow or
 can time out. The customer pays your KHQR and uploads a receipt; you approve it
 from Telegram with one tap.
 
-1. Customer picks a **gamemode** tab, then a **Ranks / Keys / Other** tab, then clicks **Buy Now** (on the card, or inside the "!" info popup) → enters their Minecraft username → picks **Java** or **Bedrock**.
+1. Customer picks a **gamemode** tab, then a **Ranks / Keys / Other** tab, then clicks **Buy Now** (on the card, or inside the "!" info popup) → confirmation dialog → enters their Minecraft username → picks **Java** or **Bedrock**.
    - Bedrock names are normalised the way Geyser/Floodgate does it: a single leading `.` is added and spaces become `_`. So `Play er`, `.Play er` and `Play_er` all become `.Play_er` — never `..Play er`. The form shows the exact result live as **"In server name: …"**.
+   - **Keys** items let the customer pick a **quantity** (1-20) right in the confirmation dialog — the price scales with it, recomputed server-side from `item.price × quantity`, never trusting the browser's total.
 2. **Continue** → they land on **Complete your Purchase** (`/checkout`): a summary of what they're buying, your KHQR to scan, and a drop zone for their payment screenshot.
 3. **SUBMIT** → they get a **Submit successful** page telling them to wait for the owner to confirm, with a support link and a **Back to home** button.
 4. You receive a Telegram message with the receipt photo, the gamemode, the item, the price, and the in-server name, plus **✅ Accept** and **❌ Reject** buttons.
@@ -124,8 +125,10 @@ from Telegram with one tap.
 
 Each item's delivery command is configured per item — set it in the web admin
 form ("Delivery command") or via `/edititem <id> deliveryCommand <command>` in
-Telegram. Use `{player}` where the in-server name should go. Leave it blank if
-you'd rather handle that item entirely by hand, with no command shown.
+Telegram. Use `{player}` where the in-server name should go, and for a Keys
+item `{quantity}` for how many they bought (e.g.
+`crates give {player} common {quantity}`). Leave it blank if you'd rather
+handle that item entirely by hand, with no command shown.
 
 Payment screenshots are stored in `MakongWeb/data/proofs/` and are **not** served
 publicly — they only go to your Telegram.

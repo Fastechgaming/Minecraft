@@ -57,7 +57,7 @@
 
       <label>Delivery command (shown to copy-paste when you Accept an order in Telegram)
         <input type="text" name="deliveryCommand" value="<%= item ? (item.deliveryCommand || '') : '' %>" placeholder="lp user {player} parent add vip" />
-        <small style="font-weight:400; color:#7a7060;">Use <code>{player}</code> for the in-server name. Delivery is manual - Accept just shows you this command to run yourself. Leave blank to deliver this item by hand with no command shown.</small>
+        <small style="font-weight:400; color:#7a7060;">Use <code>{player}</code> for the in-server name, and for a Keys item <code>{quantity}</code> for how many they bought (e.g. <code>crates give {player} common {quantity}</code>). Delivery is manual - Accept just shows you this command to run yourself. Leave blank to deliver this item by hand with no command shown.</small>
       </label>
 
       <label>Upload image

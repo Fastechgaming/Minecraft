@@ -2217,6 +2217,57 @@ html[lang="km"] .board-mini-title { text-transform: none; letter-spacing: 0; }
 .confirm-rows div:last-child { border-bottom: none; }
 .confirm-rows strong { color: var(--ink); text-align: right; }
 .duration-toggle { margin-bottom: 1rem; }
+
+.confirm-qty-label {
+  text-align: center;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+  color: var(--ink-soft);
+  margin-bottom: 0.4rem;
+}
+.qty-stepper {
+  display: flex;
+  align-items: stretch;
+  border-radius: 999px;
+  overflow: hidden;
+  border: 3px solid var(--brown-dark);
+  margin-bottom: 1rem;
+}
+.qty-stepper .qty-btn {
+  flex: 0 0 auto;
+  width: 46px;
+  border: none;
+  background: var(--input-bg);
+  color: var(--brown-dark);
+  font-weight: 800;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.qty-stepper .qty-btn:hover { background: var(--stone-dark); }
+.qty-stepper .qty-btn:active { background: var(--moss-dark); color: #fff; }
+.qty-stepper .qty-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  border-left: 3px solid var(--brown-dark);
+  border-right: 3px solid var(--brown-dark);
+  background: var(--input-bg);
+  color: var(--ink);
+  text-align: center;
+  font-weight: 800;
+  font-family: "Minecraft", "Baloo 2", sans-serif;
+  font-size: 1rem;
+  -moz-appearance: textfield;
+}
+.qty-stepper .qty-input::-webkit-outer-spin-button,
+.qty-stepper .qty-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.qty-stepper .qty-input:focus { outline: none; background: var(--cream-dark); }
 .confirm-price {
   text-align: center;
   font-family: "Minecraft", "Baloo 2", sans-serif;

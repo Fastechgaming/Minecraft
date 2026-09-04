@@ -73,6 +73,9 @@ const I18n = (() => {
       "store.confirmPlatform": "Platform",
       "store.duration1Month": "1 Month",
       "store.durationPermanent": "Permanent",
+      "store.quantity": "Quantity",
+      "store.qtyDecrease": "Decrease quantity",
+      "store.qtyIncrease": "Increase quantity",
       "store.confirm": "Confirm",
       "store.cancel": "Cancel",
       "store.changeHint":
@@ -367,6 +370,9 @@ const I18n = (() => {
       "store.confirmPlatform": "Platform",
       "store.duration1Month": "១ ខែ",
       "store.durationPermanent": "អចិន្ត្រៃយ៍",
+      "store.quantity": "ចំនួន",
+      "store.qtyDecrease": "បន្ថយចំនួន",
+      "store.qtyIncrease": "បន្ថែមចំនួន",
       "store.confirm": "បញ្ជាក់",
       "store.cancel": "បោះបង់",
       "store.changeHint":

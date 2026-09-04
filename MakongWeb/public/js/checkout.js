@@ -49,6 +49,11 @@ async function loadCheckout() {
               ? `<div><span>${escapeHtml(t("checkout.duration"))}</span><strong>${escapeHtml(t(order.duration === "permanent" ? "store.durationPermanent" : "store.duration1Month"))}</strong></div>`
               : ""
           }
+          ${
+            order.quantity > 1
+              ? `<div><span>${escapeHtml(t("store.quantity"))}</span><strong>×${order.quantity}</strong></div>`
+              : ""
+          }
           <div><span>${escapeHtml(t("checkout.total"))}</span><strong class="price">${escapeHtml(formatPrice(order.amount))}</strong></div>
         </div>
       </div>

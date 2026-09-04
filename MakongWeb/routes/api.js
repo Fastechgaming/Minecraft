@@ -87,6 +87,7 @@ router.get("/order/:id", (req, res) => {
     playerName: order.playerName,
     edition: order.edition,
     duration: order.duration || null,
+    quantity: order.quantity || 1,
     status: order.status,
     createdAt: order.createdAt,
   });
@@ -109,7 +110,7 @@ router.post("/checkout", async (req, res) => {
       return res.status(401).json({ error: "Verify your Minecraft name before buying.", code: "NOT_SIGNED_IN" });
     }
 
-    const { itemId, upgradeFromRankId, duration } = req.body || {};
+    const { itemId, upgradeFromRankId, duration, quantity: rawQuantity } = req.body || {};
     if (!itemId) return res.status(400).json({ error: "itemId is required" });
 
     const item = store.findItem(itemId);
@@ -129,6 +130,13 @@ router.post("/checkout", async (req, res) => {
     let amount = item.price;
     let upgrade = null;
     const isRankItem = store.getItems().ranks.some((i) => i.id === item.id);
+
+    // Keys can be bought in bulk - never trust the client's quantity or the
+    // total it computed, just the count, clamped to a sane range and
+    // multiplied against the catalogue price. Meaningless for ranks/other.
+    const MAX_KEY_QTY = 20;
+    const quantity = item.category === "keys" ? Math.min(MAX_KEY_QTY, Math.max(1, Math.round(Number(rawQuantity)) || 1)) : 1;
+    amount = Math.round(amount * quantity * 100) / 100;
 
     // Ranks are sold for 1 month or permanently - never trust the client's
     // price, recompute from the catalogue. Permanent defaults to 3x the
@@ -170,6 +178,7 @@ router.post("/checkout", async (req, res) => {
       edition,
       upgrade, // null for a plain purchase; {fromRankId, fromGroup, toRankId, toGroup} for an upgrade
       duration: upgrade ? null : rankDuration, // "monthly" | "permanent" for a plain rank buy, null otherwise
+      quantity, // 1 for ranks/other; the bought count for keys
       status: "awaiting_payment",
       createdAt: Date.now(),
     };

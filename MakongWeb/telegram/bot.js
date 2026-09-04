@@ -61,7 +61,7 @@ function stepPrompt(step) {
     case "videoUrl":
       return "Kit video URL (YouTube/embeddable link), or send \"skip\"";
     case "deliveryCommand":
-      return 'Delivery command shown for you to copy-paste when you Accept an order.\nUse {player} for the in-server name, e.g.\n`lp user {player} parent add vip`\nOr send "skip" to deliver this item manually.';
+      return 'Delivery command shown for you to copy-paste when you Accept an order.\nUse {player} for the in-server name, e.g.\n`lp user {player} parent add vip`\nFor a Keys item, {quantity} is how many they bought, e.g.\n`crates give {player} common {quantity}`\nOr send "skip" to deliver this item manually.';
     case "image":
       return "Send a photo for this item, or send \"skip\" to use a placeholder image.";
     default:
@@ -318,6 +318,7 @@ function orderSummaryText(order) {
     `*Item:* ${order.itemName}`,
     order.upgrade ? `*Upgrade:* ${order.upgrade.fromRankId} → ${order.upgrade.toRankId}` : "",
     order.duration ? `*Duration:* ${order.duration === "permanent" ? "Permanent" : "1 Month"}` : "",
+    order.quantity > 1 ? `*Quantity:* ${order.quantity}` : "",
     `*Amount:* $${Number(order.amount).toFixed(2)} ${order.currency}`,
     `*In-server name:* \`${order.playerName}\``,
     `*Edition:* ${order.edition === "bedrock" ? "Bedrock" : "Java"}`,
@@ -357,9 +358,10 @@ async function sendOrderForReview(order, proofPath) {
 // builds the exact command(s) you'd paste into console/in-game, with
 // {player} etc. already filled in; it never touches the Minecraft server.
 function buildDeliveryCommand(order, item) {
+  const context = { player: order.playerName, itemName: order.itemName, orderId: order.id, quantity: order.quantity || 1 };
+
   if (order.upgrade) {
     const { fromGroup, toGroup } = order.upgrade;
-    const context = { player: order.playerName, itemName: order.itemName, orderId: order.id };
     const remove = buildCommand(`lp user {player} parent remove ${fromGroup}`, context);
     const add = buildCommand(`lp user {player} parent add ${toGroup}`, context);
     return `${remove}\n${add}`;
@@ -367,7 +369,6 @@ function buildDeliveryCommand(order, item) {
 
   const template = item && item.deliveryCommand;
   if (!template) return null;
-  const context = { player: order.playerName, itemName: order.itemName, orderId: order.id };
   return buildCommand(template, context);
 }
 
@@ -425,6 +426,7 @@ async function handleOrderDecision(query) {
       `*Item:* ${order.itemName}`,
       order.upgrade ? `*Upgrade:* ${order.upgrade.fromRankId} → ${order.upgrade.toRankId}` : "",
       order.duration ? `*Duration:* ${order.duration === "permanent" ? "Permanent" : "1 Month"}` : "",
+      order.quantity > 1 ? `*Quantity:* ${order.quantity}` : "",
       `*Amount:* $${Number(order.amount).toFixed(2)} ${order.currency}`,
       `*Player:* \`${order.playerName}\` (${order.edition === "bedrock" ? "Bedrock" : "Java"})`,
       "",

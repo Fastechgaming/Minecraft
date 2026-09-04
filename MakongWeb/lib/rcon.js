@@ -8,12 +8,13 @@
 // ...and RCON_HOST / RCON_PORT / RCON_PASSWORD set in MakongWeb/.env
 const { Rcon } = require("rcon-client");
 
-// Turns "lp user {player} parent add apsara" into a real command.
-function buildCommand(template, { player, itemName, orderId }) {
+// Turns "crates give {player} common {quantity}" into a real command.
+function buildCommand(template, { player, itemName, orderId, quantity }) {
   return String(template)
     .replace(/\{player\}/g, player)
     .replace(/\{item\}/g, itemName)
     .replace(/\{order\}/g, orderId)
+    .replace(/\{quantity\}/g, quantity != null ? String(quantity) : "1")
     .replace(/^\//, ""); // RCON commands are sent without the leading slash
 }
 
