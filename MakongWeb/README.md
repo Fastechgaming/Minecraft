@@ -50,7 +50,7 @@ Everything below lives in **`MakongWeb/.env`** (secrets) and **`MakongWeb/config
 | `TELEGRAM_BOT_TOKEN` | Create a bot via [@BotFather](https://t.me/BotFather) on Telegram. |
 | `TELEGRAM_ADMIN_CHAT_ID` | Your personal numeric Telegram ID — message [@userinfobot](https://t.me/userinfobot) to get it. Purchase alerts and the `/additem` etc. admin commands are locked to this ID only. |
 | `TELEGRAM_SUPPORT_USERNAME` | Your public support `@username` shown on the purchase-success screen. |
-| `RCON_HOST` / `RCON_PORT` / `RCON_PASSWORD` | Your Minecraft server's RCON details, used to run an item's delivery command when you press **Accept** in Telegram. Enable `enable-rcon=true`, `rcon.port`, `rcon.password` in `server.properties` first. Leave blank to approve orders manually. |
+| `RCON_HOST` / `RCON_PORT` / `RCON_PASSWORD` | Currently unused — delivery is manual via Telegram for now (see "Purchase flow"). Reserved for a future automatic-delivery option. |
 
 ## 3. Managing store items (3 ways — pick whichever is easiest for you)
 
@@ -118,15 +118,14 @@ from Telegram with one tap.
    - Bedrock names are normalised the way Geyser/Floodgate does it: a single leading `.` is added and spaces become `_`. So `Play er`, `.Play er` and `Play_er` all become `.Play_er` — never `..Play er`. The form shows the exact result live as **"In server name: …"**.
 2. **Continue** → they land on **Complete your Purchase** (`/checkout`): a summary of what they're buying, your KHQR to scan, and a drop zone for their payment screenshot.
 3. **SUBMIT** → they get a **Submit successful** page telling them to wait for the owner to confirm, with a support link and a **Back to home** button.
-4. You receive a Telegram message with the receipt photo, the item, the price, and the in-server name, plus **✅ Accept** and **❌ Reject** buttons.
+4. You receive a Telegram message with the receipt photo, the gamemode, the item, the price, and the in-server name, plus **✅ Accept** and **❌ Reject** buttons.
    - **Reject** → the order is marked rejected. Nothing else happens.
-   - **Accept** → the website runs that item's **delivery command** on your Minecraft server over RCON (e.g. `lp user .Play_er parent add ecosmp_vip`) and replies telling you what it ran and what the server said. If delivery fails (RCON not set up, plugin missing, etc.) it tells you why and leaves the order pending so you can fix it and press Accept again.
+   - **Accept** → delivery is **manual, Telegram-only for now** (no plugin, no RCON): the bot replies with the gamemode, item, amount, player name, and that item's **delivery command** with `{player}` already filled in (e.g. `lp user .Play_er parent add ecosmp_vip`), in a tap-to-copy code block. Paste it into your server console yourself.
 
 Each item's delivery command is configured per item — set it in the web admin
 form ("Delivery command") or via `/edititem <id> deliveryCommand <command>` in
-Telegram. Use `{player}` where the in-server name should go. Leave it blank to
-handle that item by hand. The command needs a plugin that provides it — e.g.
-LuckPerms for `lp user … parent add …`, an economy plugin for `eco give …`.
+Telegram. Use `{player}` where the in-server name should go. Leave it blank if
+you'd rather handle that item entirely by hand, with no command shown.
 
 Payment screenshots are stored in `MakongWeb/data/proofs/` and are **not** served
 publicly — they only go to your Telegram.
@@ -238,7 +237,7 @@ MakongWeb/
   deploy/                 systemd unit, Cloudflare Tunnel config, update script
   DEPLOY.md               How to put the site online
   lib/minecraft.js        Java+Bedrock status ping
-  lib/rcon.js             Runs an item's delivery command on Accept
+  lib/rcon.js             Builds an item's delivery command text (unused runCommand() kept for later)
   routes/api.js           Public JSON API (config, status, items, rankings, checkout, proof upload)
   routes/account.js       The player account cookie used by the store
   routes/admin.js         Password-protected admin panel (item CRUD, rankings CRUD, image upload)

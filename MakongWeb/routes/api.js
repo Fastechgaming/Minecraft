@@ -162,6 +162,7 @@ router.post("/checkout", async (req, res) => {
       itemName: item.name,
       itemImage: item.image,
       itemDesc: item.shortDesc || "",
+      gamemode: item.gamemode || null,
       amount,
       currency: item.currency || "USD",
       playerName: finalName,

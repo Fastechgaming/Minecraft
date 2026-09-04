@@ -55,9 +55,9 @@
         <input type="text" name="videoUrl" value="<%= item ? item.videoUrl : '' %>" placeholder="https://www.youtube.com/embed/xxxxx" />
       </label>
 
-      <label>Delivery command (run when you Accept an order in Telegram)
+      <label>Delivery command (shown to copy-paste when you Accept an order in Telegram)
         <input type="text" name="deliveryCommand" value="<%= item ? (item.deliveryCommand || '') : '' %>" placeholder="lp user {player} parent add vip" />
-        <small style="font-weight:400; color:#7a7060;">Use <code>{player}</code> for the in-server name. Leave blank to deliver this item by hand.</small>
+        <small style="font-weight:400; color:#7a7060;">Use <code>{player}</code> for the in-server name. Delivery is manual - Accept just shows you this command to run yourself. Leave blank to deliver this item by hand with no command shown.</small>
       </label>
 
       <label>Upload image
