@@ -214,6 +214,78 @@ function copyToClipboard(text) {
   return Promise.resolve();
 }
 
+/* ---------------- Smooth wheel scrolling ----------------
+   A plain mouse wheel jumps the page in hard steps on a lot of setups
+   (especially Windows) - this eases each wheel tick toward its target
+   instead, frame by frame, so scrolling feels closer to a trackpad.
+   Skipped for prefers-reduced-motion, and passed through untouched
+   whenever the pointer is over something with its own scroll (a modal
+   body, an admin table) so those still scroll natively. */
+(function () {
+  if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+  function isInsideScrollable(el) {
+    while (el && el !== document.body && el !== document.documentElement) {
+      const style = getComputedStyle(el);
+      if ((style.overflowY === "auto" || style.overflowY === "scroll") && el.scrollHeight > el.clientHeight) {
+        return true;
+      }
+      el = el.parentElement;
+    }
+    return false;
+  }
+
+  const EASE = 0.15;
+  let targetY = null;
+  let animating = false;
+
+  // { behavior: "instant" } is required here, not optional: `html` has its own
+  // scroll-behavior: smooth for anchor links, which CSS applies to *any*
+  // unqualified scrollTo() too - each of these per-frame calls would
+  // otherwise kick off its own overlapping ~300ms native smooth-scroll,
+  // fighting this loop's own easing instead of landing instantly each frame.
+  function step() {
+    const current = window.scrollY;
+    const diff = targetY - current;
+    if (Math.abs(diff) < 0.5) {
+      window.scrollTo({ top: targetY, left: 0, behavior: "instant" });
+      animating = false;
+      targetY = null;
+      return;
+    }
+    window.scrollTo({ top: current + diff * EASE, left: 0, behavior: "instant" });
+    requestAnimationFrame(step);
+  }
+
+  window.addEventListener(
+    "wheel",
+    (e) => {
+      if (e.ctrlKey) return; // pinch-zoom gesture - leave the browser's own handling alone
+      if (isInsideScrollable(e.target)) return;
+
+      // Normalise to pixels - deltaY is already pixels on most setups
+      // (deltaMode 0), but a line-mode mouse wheel (deltaMode 1, common on
+      // Windows/Firefox) reports a handful of "lines" instead, which would
+      // otherwise feel far too slow.
+      let delta = e.deltaY;
+      if (e.deltaMode === 1) delta *= 18;
+      else if (e.deltaMode === 2) delta *= window.innerHeight;
+
+      const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+      if (maxScroll <= 0) return; // nothing to scroll - let the browser handle it (e.g. a bounce)
+
+      e.preventDefault();
+      if (targetY === null) targetY = window.scrollY; // resync in case of a keyboard/scrollbar scroll since the last gesture
+      targetY = Math.min(maxScroll, Math.max(0, targetY + delta));
+      if (!animating) {
+        animating = true;
+        requestAnimationFrame(step);
+      }
+    },
+    { passive: false }
+  );
+})();
+
 document.addEventListener("DOMContentLoaded", async () => {
   // Sync the toggle glyph with whatever theme the inline head script applied.
   // The click handler is the inline onclick="toggleTheme()" in the markup —
