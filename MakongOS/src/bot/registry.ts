@@ -3,7 +3,6 @@ import { coreModule } from './modules/core';
 import { moderationModule } from './modules/moderation';
 import { levelingModule } from './modules/leveling';
 import { economyModule } from './modules/economy';
-import { ticketsModule } from './modules/tickets';
 import { voiceHubModule } from './modules/voicehub';
 import { giveawaysModule } from './modules/giveaways';
 import { reactionRolesModule } from './modules/reactionroles';
@@ -18,7 +17,6 @@ export const modules: FeatureModule[] = [
   moderationModule,
   levelingModule,
   economyModule,
-  ticketsModule,
   voiceHubModule,
   giveawaysModule,
   reactionRolesModule,

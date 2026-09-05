@@ -23,7 +23,6 @@ function buildNav(guildId: string): NavGroup[] {
     { title: 'AI', items: [{ href: `${base}/ai`, label: 'AI Assistant', icon: '🤖' }, { href: `${base}/ai/knowledge`, label: 'Knowledge Base', icon: '📚' }] },
     { title: 'Leveling', items: [{ href: `${base}/leveling`, label: 'XP & Rewards', icon: '📈' }] },
     { title: 'Economy', items: [{ href: `${base}/economy`, label: 'Currency & Shop', icon: '💰' }] },
-    { title: 'Tickets', items: [{ href: `${base}/tickets`, label: 'Panels & Modmail', icon: '🎫' }] },
     { title: 'Music', items: [{ href: `${base}/music`, label: 'Playback Settings', icon: '🎵' }] },
     { title: 'Voice Hub', items: [{ href: `${base}/voicehub`, label: 'Join to Create', icon: '🔊' }] },
     { title: 'Giveaways', items: [{ href: `${base}/giveaways`, label: 'Active & History', icon: '🎉' }] },

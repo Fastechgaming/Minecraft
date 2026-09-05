@@ -13,7 +13,6 @@ npm start
 - **AI Anti-Scam & Assistant** (Gemini) — Vision-based scanning of uploaded images to auto-detect crypto scams, fake Nitro giveaways, and phishing screenshots, with configurable auto-punish and role/channel whitelists; plus a conversational assistant with a knowledge base, per-user memory, staff escalation, and free `/imagine` image generation via Pollinations.
 - **Moderation** — `/warn`, `/timeout`, `/kick`, `/ban`, auto-incrementing `/case` management, automod (invites, bad words, spam bursts, ghost pings), and cron-expiring `/temprole`.
 - **Music** — a queue-based player backed by Lavalink, with Spotify/YouTube search, a live Now Playing embed with playback buttons, and audio filters (Bassboost, Nightcore, 8D, Vaporwave, Tremolo).
-- **Tickets & Modmail** — multi-panel tickets with custom modal forms, staff claiming, idle reminders, HTML transcripts, and DM-based modmail threads.
 - **Join-to-Create Voice Hub** — auto-generated temporary voice channels with an owner control panel (lock, hide, rename, limit, kick).
 - **Dual Leveling** — text + voice XP with customizable canvas rank cards and a server leaderboard.
 - **Economy** — bank, shop, daily/work/rob, and gambling minigames (Blackjack, Coinflip, Slots).
@@ -29,12 +28,11 @@ npm start
 src/
 ├── server.ts          # boots Next.js + the Discord client together
 ├── bot/                # client bootstrap, command/event framework, module registry
-│   └── modules/        # one FeatureModule per system: moderation, ai, music, tickets, leveling, economy, voicehub, giveaways, reactionroles, utility, core
+│   └── modules/        # one FeatureModule per system: moderation, ai, music, leveling, economy, voicehub, giveaways, reactionroles, utility, core
 ├── ai/                  # Gemini chat + vision scan, knowledge retrieval, memory, staff escalation, Pollinations image gen
 ├── moderation/          # case management, automod, ghost-ping tracking
 ├── music/                # Lavalink manager wiring, Now Playing embed/components, filter presets
 ├── economy/              # bank/daily/work/rob/shop service + gambling logic
-├── tickets/               # ticket channel service + HTML transcript builder
 ├── giveaways/              # scheduling, winner selection, reroll
 ├── leveling/                # XP curve, rank card renderer (@napi-rs/canvas)
 ├── social/                    # Twitch/YouTube live & upload polling
@@ -115,5 +113,5 @@ which does `git pull && npm install && rm -rf dist .next && npm run build`, then
 - All secrets live in environment variables and are never sent to the browser.
 - Music depends on the `lavalink` PM2 process being up (see the Music section above) — if it's down, `/play` will fail to connect and the bot logs an error on startup telling you to check it.
 - Server backup restore is intentionally **additive only** — it recreates roles/channels missing from a snapshot by name, and never deletes, renames, or overwrites current server structure.
-- Every feature toggle, moderation rule, AI behavior setting, ticket category, shop item, and knowledge base entry is configurable from the dashboard — no code changes required for day-to-day administration.
+- Every feature toggle, moderation rule, AI behavior setting, shop item, and knowledge base entry is configurable from the dashboard — no code changes required for day-to-day administration.
 - The Pollinations `/imagine` command runs prompts through a keyword-based NSFW safety filter before generating.

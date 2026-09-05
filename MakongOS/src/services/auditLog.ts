@@ -3,8 +3,6 @@ import { prisma } from '../database/prisma';
 
 export type AuditLogType =
   | 'moderation'
-  | 'ticket'
-  | 'modmail'
   | 'command'
   | 'ai'
   | 'error'

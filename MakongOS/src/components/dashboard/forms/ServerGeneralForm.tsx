@@ -15,8 +15,6 @@ const FEATURE_TOGGLES: { key: keyof GuildSettings; label: string; description: s
   { key: 'moderationEnabled', label: 'Moderation', description: 'Automod, AI anti-scam, case management, temp roles' },
   { key: 'aiEnabled', label: 'AI Assistant', description: 'Gemini chat, knowledge base, /imagine' },
   { key: 'musicEnabled', label: 'Music', description: 'Queue-based playback with filters' },
-  { key: 'ticketsEnabled', label: 'Tickets', description: 'Multi-panel support tickets' },
-  { key: 'modmailEnabled', label: 'Modmail', description: 'DM-based staff contact' },
   { key: 'levelingEnabled', label: 'Leveling', description: 'Text + voice XP and rank cards' },
   { key: 'economyEnabled', label: 'Economy', description: 'Currency, shop, gambling minigames' },
   { key: 'voiceHubEnabled', label: 'Voice Hub', description: 'Join-to-create temporary voice channels' },
@@ -71,7 +69,7 @@ export function ServerGeneralForm({ guildId, initialSettings, roles, textChannel
             ))}
           </Select>
         </Field>
-        <Field label="Staff Roles" hint="Can use moderation, ticket, and giveaway management commands">
+        <Field label="Staff Roles" hint="Can use moderation and giveaway management commands">
           <MultiRoleSelect roles={roles} value={settings.staffRoleIds} onChange={(v) => update('staffRoleIds', v)} />
         </Field>
         <Field label="Admin Roles" hint="Can change server settings and manage backups/vouchers">

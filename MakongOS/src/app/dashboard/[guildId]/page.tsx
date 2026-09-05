@@ -18,9 +18,7 @@ export default async function OverviewPage({ params }: { params: { guildId: stri
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const [ticketOpen, ticketTotal, aiUsage, commandCount, activeGiveaways, openEscalations, recentLogs, dbOk] = await Promise.all([
-    prisma.ticket.count({ where: { guildId, status: { not: 'closed' } } }),
-    prisma.ticket.count({ where: { guildId } }),
+  const [aiUsage, commandCount, activeGiveaways, openEscalations, recentLogs, dbOk] = await Promise.all([
     prisma.aIUsage.findUnique({ where: { guildId_date: { guildId, date: today } } }),
     prisma.auditLog.count({ where: { guildId, type: 'command' } }),
     prisma.giveaway.count({ where: { guildId, ended: false } }),
@@ -41,7 +39,6 @@ export default async function OverviewPage({ params }: { params: { guildId: stri
         <StatCard label="Uptime" value={formatUptime(client?.uptime ?? 0)} />
         <StatCard label="Members" value={discordGuild?.memberCount ?? '—'} />
         <StatCard label="Database" value={dbOk ? '🟢 Connected' : '🔴 Error'} />
-        <StatCard label="Tickets" value={`${ticketOpen} open`} hint={`${ticketTotal} total`} />
         <StatCard label="AI Chats Today" value={aiUsage?.chatMessages ?? 0} hint={`${openEscalations} open escalation(s)`} />
         <StatCard label="Active Giveaways" value={activeGiveaways} />
         <StatCard label="Commands Run" value={commandCount} />

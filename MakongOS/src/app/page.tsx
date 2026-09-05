@@ -15,7 +15,7 @@ export default async function HomePage() {
         </div>
         <h1 className="text-3xl font-bold text-white">MakongOS</h1>
         <p className="max-w-md text-discord-muted">
-          The full Discord staff system for your Minecraft community — moderation, tickets, AI assistance, music and more,
+          The full Discord staff system for your Minecraft community — moderation, AI assistance, music and more,
           all managed from one dashboard.
         </p>
       </div>

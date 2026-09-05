@@ -1,6 +1,6 @@
 import { prisma } from '../../../../database/prisma';
 
-const TYPES = ['moderation', 'ticket', 'modmail', 'command', 'ai', 'error', 'member_join', 'member_leave', 'giveaway', 'economy', 'voice_hub'];
+const TYPES = ['moderation', 'command', 'ai', 'error', 'member_join', 'member_leave', 'giveaway', 'economy', 'voice_hub'];
 
 export default async function LogsPage({ params, searchParams }: { params: { guildId: string }; searchParams: { type?: string } }) {
   const type = searchParams.type;
