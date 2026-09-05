@@ -4,21 +4,25 @@ import {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
-  StringSelectMenuBuilder,
   ModalBuilder,
   TextInputBuilder,
   TextInputStyle,
   ChannelType,
   AttachmentBuilder,
-  type TextChannel
+  type GuildMember,
+  type TextChannel,
+  type ButtonInteraction,
+  type StringSelectMenuInteraction,
+  type ModalSubmitInteraction
 } from 'discord.js';
 import type { FeatureModule } from '../../../types/command';
 import { prisma } from '../../../database/prisma';
 import { getGuildSettings } from '../../../database/settingsCache';
 import { isStaff } from '../../../services/permissions';
-import { createTicketChannel, countOpenTicketsForUser } from '../../../tickets/service';
+import { createTicketChannel, countOpenTicketsForUser, canUseTicketOption } from '../../../tickets/service';
 import { buildHtmlTranscript } from '../../../tickets/transcript';
 import { logAudit } from '../../../services/auditLog';
+import { parseQuestions, type TicketQuestion } from '../../../tickets/panelTypes';
 
 function ticketButtons(claimed: boolean): ActionRowBuilder<ButtonBuilder> {
   return new ActionRowBuilder<ButtonBuilder>().addComponents(
@@ -50,90 +54,81 @@ async function closeTicketChannel(channel: TextChannel, closedById: string) {
   await channel.delete().catch(() => undefined);
 }
 
+/** Up to 5 active questions from a category, in order — Discord modals cap at 5 text inputs. */
+function activeQuestions(category: { formFields: unknown }): TicketQuestion[] {
+  return parseQuestions(category.formFields)
+    .filter((q) => q.active)
+    .slice(0, 5);
+}
+
+async function openTicketOrShowModal(interaction: ButtonInteraction | StringSelectMenuInteraction, categoryId: string): Promise<void> {
+  const category = await prisma.ticketCategory.findUnique({ where: { id: categoryId } });
+  if (!category) {
+    await interaction.reply({ content: 'That ticket option no longer exists.', ephemeral: true });
+    return;
+  }
+  const settings = await getGuildSettings(interaction.guildId!);
+  const member = interaction.member as GuildMember;
+  if (!canUseTicketOption(member.roles.cache.map((r) => r.id), category, settings.ticketBlockedRoleIds)) {
+    await interaction.reply({ content: "You don't have access to this ticket option.", ephemeral: true });
+    return;
+  }
+  const openCount = await countOpenTicketsForUser(interaction.guildId!, interaction.user.id);
+  if (openCount >= settings.ticketMaxOpenPerUser) {
+    await interaction.reply({ content: `You already have ${openCount} open ticket(s). Close one before opening another.`, ephemeral: true });
+    return;
+  }
+
+  const questions = activeQuestions(category);
+  if (questions.length > 0) {
+    const modal = new ModalBuilder().setCustomId(`ticket_form_${category.id}`).setTitle(`New Ticket — ${category.name}`.slice(0, 45));
+    for (const q of questions) {
+      const input = new TextInputBuilder()
+        .setCustomId(`q_${q.id}`)
+        .setLabel(q.label.slice(0, 45))
+        .setStyle(q.type === 'paragraph' ? TextInputStyle.Paragraph : TextInputStyle.Short)
+        .setRequired(q.required);
+      if (q.helperText) input.setPlaceholder(q.helperText.slice(0, 100));
+      if (typeof q.minLength === 'number') input.setMinLength(Math.max(0, Math.min(4000, q.minLength)));
+      if (typeof q.maxLength === 'number') input.setMaxLength(Math.max(1, Math.min(4000, q.maxLength)));
+      modal.addComponents(new ActionRowBuilder<TextInputBuilder>().addComponents(input));
+    }
+    await interaction.showModal(modal);
+    return;
+  }
+
+  await interaction.deferReply({ ephemeral: true });
+  await finishOpeningTicket(interaction, category.id, {});
+}
+
+async function finishOpeningTicket(
+  interaction: ButtonInteraction | StringSelectMenuInteraction | ModalSubmitInteraction,
+  categoryId: string,
+  formResponses: Record<string, string>
+): Promise<void> {
+  const { ticket, channel, category, staffRoleIds } = await createTicketChannel(interaction.guild!, { categoryId, opener: interaction.user, formResponses });
+
+  const description = category?.customEmbedContent || `${interaction.user} — a member of staff will be with you shortly.`;
+  const embed = new EmbedBuilder()
+    .setTitle(`Ticket #${ticket.number}`)
+    .setDescription(description)
+    .addFields(Object.entries(formResponses).map(([name, value]) => ({ name, value: value || '—' })))
+    .setColor(0x22c55e);
+
+  const pingRoleIds = category ? (category.useTicketRolesAsPing ? staffRoleIds : category.customPingRoleIds) : [];
+  await channel.send({
+    content: [pingRoleIds.map((r) => `<@&${r}>`).join(' ') || undefined, category?.customTicketMessage || undefined].filter(Boolean).join('\n') || undefined,
+    embeds: [embed],
+    components: [ticketButtons(false)]
+  });
+  await logAudit(interaction.guildId!, 'ticket', `Ticket #${ticket.number} opened by ${interaction.user.tag}`, interaction.user.id);
+  await interaction.editReply(`✅ Ticket opened: ${channel}`);
+}
+
 export const ticketsModule: FeatureModule = {
   name: 'tickets',
-  description: 'Multi-panel tickets with custom forms, claiming, and HTML transcripts, plus DM modmail.',
+  description: 'Multi-panel tickets designed on the dashboard — custom embeds, buttons/dropdowns, questions, and roles — plus claiming, HTML transcripts, and DM modmail.',
   commands: [
-    {
-      data: new SlashCommandBuilder()
-        .setName('ticketcat')
-        .setDescription('Manage ticket categories')
-        .addSubcommand((s) =>
-          s
-            .setName('add')
-            .setDescription('Add a ticket category')
-            .addStringOption((o) => o.setName('name').setDescription('Category name').setRequired(true))
-            .addChannelOption((o) => o.setName('parent').setDescription('Discord category to create tickets under').setRequired(true).addChannelTypes(ChannelType.GuildCategory))
-            .addStringOption((o) => o.setName('emoji').setDescription('Emoji').setRequired(false))
-            .addRoleOption((o) => o.setName('staff_role').setDescription('Role that can see these tickets').setRequired(false))
-        )
-        .addSubcommand((s) => s.setName('remove').setDescription('Remove a ticket category').addStringOption((o) => o.setName('name').setDescription('Category name').setRequired(true)))
-        .addSubcommand((s) => s.setName('list').setDescription('List ticket categories')),
-      execute: async (interaction) => {
-        const settings = await getGuildSettings(interaction.guildId!);
-        const member = interaction.member;
-        if (!member || !('roles' in member) || !isStaff(member as never, settings)) {
-          await interaction.reply({ content: 'You need a staff role to manage ticket categories.', ephemeral: true });
-          return;
-        }
-        const sub = interaction.options.getSubcommand();
-
-        if (sub === 'add') {
-          const name = interaction.options.getString('name', true);
-          const parent = interaction.options.getChannel('parent', true);
-          const emoji = interaction.options.getString('emoji') ?? '🎫';
-          const staffRole = interaction.options.getRole('staff_role');
-          await prisma.ticketCategory.create({
-            data: { guildId: interaction.guildId!, name, emoji, categoryChannelId: parent.id, staffRoleIds: staffRole ? [staffRole.id] : [] }
-          });
-          await interaction.reply(`✅ Added ticket category **${name}**.`);
-        } else if (sub === 'remove') {
-          const name = interaction.options.getString('name', true);
-          const deleted = await prisma.ticketCategory.deleteMany({ where: { guildId: interaction.guildId!, name } });
-          await interaction.reply(deleted.count > 0 ? `🗑️ Removed category **${name}**.` : `No category named **${name}**.`);
-        } else {
-          const categories = await prisma.ticketCategory.findMany({ where: { guildId: interaction.guildId! } });
-          if (categories.length === 0) {
-            await interaction.reply('No ticket categories yet — add one with `/ticketcat add`.');
-            return;
-          }
-          await interaction.reply(categories.map((c) => `${c.emoji} **${c.name}**`).join('\n'));
-        }
-      }
-    },
-    {
-      data: new SlashCommandBuilder()
-        .setName('ticket-panel')
-        .setDescription('Post a ticket panel in this channel')
-        .addStringOption((o) => o.setName('title').setDescription('Panel title').setRequired(false))
-        .addStringOption((o) => o.setName('description').setDescription('Panel description').setRequired(false)),
-      execute: async (interaction) => {
-        const settings = await getGuildSettings(interaction.guildId!);
-        const member = interaction.member;
-        if (!member || !('roles' in member) || !isStaff(member as never, settings)) {
-          await interaction.reply({ content: 'You need a staff role to post a ticket panel.', ephemeral: true });
-          return;
-        }
-        const categories = await prisma.ticketCategory.findMany({ where: { guildId: interaction.guildId! } });
-        if (categories.length === 0) {
-          await interaction.reply({ content: 'Add at least one category first with `/ticketcat add`.', ephemeral: true });
-          return;
-        }
-        const title = interaction.options.getString('title') ?? 'Support';
-        const description = interaction.options.getString('description') ?? 'Select a category below to open a ticket.';
-
-        const embed = new EmbedBuilder().setTitle(title).setDescription(description).setColor(0x5865f2);
-        const select = new StringSelectMenuBuilder()
-          .setCustomId('ticket_open_select')
-          .setPlaceholder('Select a category...')
-          .addOptions(categories.map((c) => ({ label: c.name, value: c.id, emoji: c.emoji })));
-        const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(select);
-
-        const message = await (interaction.channel as TextChannel).send({ embeds: [embed], components: [row] });
-        await prisma.ticketPanel.create({ data: { guildId: interaction.guildId!, channelId: interaction.channelId, messageId: message.id, title, description } });
-        await interaction.reply({ content: '✅ Panel posted.', ephemeral: true });
-      }
-    },
     {
       data: new SlashCommandBuilder()
         .setName('ticket')
@@ -201,42 +196,11 @@ export const ticketsModule: FeatureModule = {
   components: [
     {
       prefix: 'ticket_open_select',
-      handleSelect: async (interaction) => {
-        const categoryId = interaction.values[0];
-        const category = await prisma.ticketCategory.findUnique({ where: { id: categoryId } });
-        if (!category) {
-          await interaction.reply({ content: 'That category no longer exists.', ephemeral: true });
-          return;
-        }
-        const settings = await getGuildSettings(interaction.guildId!);
-        const openCount = await countOpenTicketsForUser(interaction.guildId!, interaction.user.id);
-        if (openCount >= settings.ticketMaxOpenPerUser) {
-          await interaction.reply({ content: `You already have ${openCount} open ticket(s). Close one before opening another.`, ephemeral: true });
-          return;
-        }
-
-        const fields = (category.formFields as unknown as { label: string; style: 'short' | 'paragraph'; required: boolean }[]) ?? [];
-        if (fields.length > 0) {
-          const modal = new ModalBuilder().setCustomId(`ticket_form_${category.id}`).setTitle(`New Ticket — ${category.name}`.slice(0, 45));
-          for (const [i, field] of fields.slice(0, 5).entries()) {
-            const input = new TextInputBuilder()
-              .setCustomId(`field_${i}`)
-              .setLabel(field.label.slice(0, 45))
-              .setStyle(field.style === 'paragraph' ? TextInputStyle.Paragraph : TextInputStyle.Short)
-              .setRequired(field.required);
-            modal.addComponents(new ActionRowBuilder<TextInputBuilder>().addComponents(input));
-          }
-          await interaction.showModal(modal);
-          return;
-        }
-
-        await interaction.deferReply({ ephemeral: true });
-        const { ticket, channel } = await createTicketChannel(interaction.guild!, { categoryId: category.id, opener: interaction.user });
-        const embed = new EmbedBuilder().setTitle(`Ticket #${ticket.number}`).setDescription(`${interaction.user} — a member of staff will be with you shortly.`).setColor(0x5865f2);
-        await channel.send({ content: category.staffRoleIds.map((r) => `<@&${r}>`).join(' ') || undefined, embeds: [embed], components: [ticketButtons(false)] });
-        await logAudit(interaction.guildId!, 'ticket', `Ticket #${ticket.number} opened by ${interaction.user.tag}`, interaction.user.id);
-        await interaction.editReply(`✅ Ticket opened: ${channel}`);
-      }
+      handleSelect: async (interaction) => openTicketOrShowModal(interaction, interaction.values[0])
+    },
+    {
+      prefix: 'ticket_open_btn_',
+      handleButton: async (interaction) => openTicketOrShowModal(interaction, interaction.customId.replace('ticket_open_btn_', ''))
     },
     {
       prefix: 'ticket_form_',
@@ -244,25 +208,16 @@ export const ticketsModule: FeatureModule = {
         const categoryId = interaction.customId.replace('ticket_form_', '');
         const category = await prisma.ticketCategory.findUnique({ where: { id: categoryId } });
         if (!category) {
-          await interaction.reply({ content: 'That category no longer exists.', ephemeral: true });
+          await interaction.reply({ content: 'That ticket option no longer exists.', ephemeral: true });
           return;
         }
-        const fields = (category.formFields as unknown as { label: string }[]) ?? [];
+        const questions = activeQuestions(category);
         const responses: Record<string, string> = {};
-        fields.forEach((f, i) => {
-          responses[f.label] = interaction.fields.getTextInputValue(`field_${i}`);
-        });
-
+        for (const q of questions) {
+          responses[q.label] = interaction.fields.getTextInputValue(`q_${q.id}`);
+        }
         await interaction.deferReply({ ephemeral: true });
-        const { ticket, channel } = await createTicketChannel(interaction.guild!, { categoryId: category.id, opener: interaction.user, formResponses: responses });
-        const embed = new EmbedBuilder()
-          .setTitle(`Ticket #${ticket.number}`)
-          .setDescription(`${interaction.user} — a member of staff will be with you shortly.`)
-          .addFields(Object.entries(responses).map(([name, value]) => ({ name, value: value || '—' })))
-          .setColor(0x5865f2);
-        await channel.send({ content: category.staffRoleIds.map((r) => `<@&${r}>`).join(' ') || undefined, embeds: [embed], components: [ticketButtons(false)] });
-        await logAudit(interaction.guildId!, 'ticket', `Ticket #${ticket.number} opened by ${interaction.user.tag}`, interaction.user.id);
-        await interaction.editReply(`✅ Ticket opened: ${channel}`);
+        await finishOpeningTicket(interaction, category.id, responses);
       }
     },
     {

@@ -54,6 +54,8 @@ export const EDITABLE_SETTINGS_FIELDS = [
   'ticketLogChannelId',
   'ticketMaxOpenPerUser',
   'ticketReminderHours',
+  'ticketBlockedRoleIds',
+  'ticketOverflowCategoryIds',
   'modmailCategoryId',
   'modmailLogChannelId',
   'voiceHubSetupChannelId',

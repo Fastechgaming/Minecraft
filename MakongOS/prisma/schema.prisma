@@ -124,6 +124,8 @@ model GuildSettings {
   ticketLogChannelId    String?
   ticketMaxOpenPerUser  Int     @default(1)
   ticketReminderHours   Int     @default(24)
+  ticketBlockedRoleIds  String[] @default([]) // blocks every ticket option regardless of its own settings
+  ticketOverflowCategoryIds String[] @default([]) // used when an option's own category (and overflow list) is full
   modmailCategoryId     String?
   modmailLogChannelId   String?
 
@@ -326,9 +328,11 @@ model TicketPanel {
   guild       Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
   channelId   String
   messageId   String?
-  title       String   @default("Support")
-  description String   @default("Select a category below to open a ticket.")
-  style       String   @default("select") // select | buttons
+  content     String?  // optional plain text shown above the embed(s)
+  embeds      Json     @default("[]") // [{title, description, color, thumbnailUrl, footerText}]
+  components  Json     @default("[]") // [{type:'buttons', optionIds:[...]} | {type:'select', placeholder, optionIds:[...]}] — up to 5 rows
+  openerPermissionOverrides Json @default("{}") // panel-wide default; an option can override this itself
+  lastSeenAt  DateTime @default(now()) // bumped whenever the panel message is (re)posted
   createdAt   DateTime @default(now())
 
   categories  TicketCategory[]
@@ -343,10 +347,21 @@ model TicketCategory {
   panelId      String?
   panel        TicketPanel? @relation(fields: [panelId], references: [id], onDelete: SetNull)
   name         String
+  description  String   @default("")
   emoji        String   @default("🎫")
-  categoryChannelId String? // discord category to create ticket channels under
-  staffRoleIds String[] @default([])
-  formFields   Json     @default("[]") // [{label:string, style:'short'|'paragraph', required:boolean}]
+  categoryChannelId    String?  // primary discord category to create ticket channels under
+  overflowCategoryIds  String[] @default([]) // tried in order once the primary category is full (50 channels)
+  staffRoleIds String[] @default([]) // support roles for this option — server-wide staff roles always apply too
+  requiredRoleIds String[] @default([]) // empty = anyone can use this option
+  blockedRoleIds  String[] @default([]) // server-wide blocked roles (GuildSettings.ticketBlockedRoleIds) always apply too
+  formFields   Json     @default("[]") // [{id, label, helperText, type:'short'|'paragraph', required, active, minLength, maxLength}]
+  customEmbedContent  String? // null = the default generated "a staff member will be with you" embed
+  customTicketMessage String? // extra plain message sent alongside the embed when a ticket opens
+  nameFormat   String?  // e.g. "general-{TICKET_NUMBER}" — null = the panel/global default "ticket-{number}"
+  useTicketRolesAsPing Boolean  @default(true) // ping this option's staffRoleIds when a ticket opens
+  customPingRoleIds    String[] @default([]) // used instead, when useTicketRolesAsPing is false
+  openerPermissionMode      String @default("panelDefault") // panelDefault | custom
+  openerPermissionOverrides Json   @default("{}") // {addReactions, attachFiles, embedLinks, sendVoiceMessages, useExternalEmoji}
 
   tickets      Ticket[]
 
