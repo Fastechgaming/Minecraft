@@ -235,25 +235,41 @@ function copyToClipboard(text) {
     return false;
   }
 
+  // The actual scrolling element - not always <body> (quirks mode) or
+  // always <html>, so ask the browser rather than guessing.
+  const scroller = document.scrollingElement || document.documentElement;
+
   const EASE = 0.15;
   let targetY = null;
   let animating = false;
 
-  // { behavior: "instant" } is required here, not optional: `html` has its own
-  // scroll-behavior: smooth for anchor links, which CSS applies to *any*
-  // unqualified scrollTo() too - each of these per-frame calls would
-  // otherwise kick off its own overlapping ~300ms native smooth-scroll,
-  // fighting this loop's own easing instead of landing instantly each frame.
+  // `html`'s own scroll-behavior: smooth (set for anchor links) turns out to
+  // apply to *every* way of moving scrollTop - scrollTo(), scrollBy(), and
+  // even a plain `scroller.scrollTop = y` assignment, per the current CSSOM
+  // View spec (older engines treated the last one as always-instant, but
+  // that's no longer something to rely on). Passing scrollTo({behavior})
+  // doesn't reliably sidestep it either: "instant" is a legacy value only
+  // some engines still honor. The one thing that's actually reliable
+  // everywhere is turning the CSS declaration itself off for the moment
+  // this loop is driving the scroll, then handing it back once the
+  // animation settles so anchor links keep their own smooth behavior.
   function step() {
-    const current = window.scrollY;
+    const current = scroller.scrollTop;
     const diff = targetY - current;
-    if (Math.abs(diff) < 0.5) {
-      window.scrollTo({ top: targetY, left: 0, behavior: "instant" });
+    const move = diff * EASE;
+    // scrollTop rounds to whole pixels in most engines, so once the eased
+    // step itself is under 1px it would round away to nothing and the loop
+    // would sit re-scheduling itself forever, a few pixels short, with the
+    // CSS override above never handed back. Snap the rest of the way there
+    // instead - imperceptible this close to the target.
+    if (Math.abs(diff) < 0.5 || Math.abs(move) < 1) {
+      scroller.scrollTop = targetY;
+      document.documentElement.style.scrollBehavior = "";
       animating = false;
       targetY = null;
       return;
     }
-    window.scrollTo({ top: current + diff * EASE, left: 0, behavior: "instant" });
+    scroller.scrollTop = current + move;
     requestAnimationFrame(step);
   }
 
@@ -271,14 +287,15 @@ function copyToClipboard(text) {
       if (e.deltaMode === 1) delta *= 18;
       else if (e.deltaMode === 2) delta *= window.innerHeight;
 
-      const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+      const maxScroll = scroller.scrollHeight - scroller.clientHeight;
       if (maxScroll <= 0) return; // nothing to scroll - let the browser handle it (e.g. a bounce)
 
       e.preventDefault();
-      if (targetY === null) targetY = window.scrollY; // resync in case of a keyboard/scrollbar scroll since the last gesture
+      if (targetY === null) targetY = scroller.scrollTop; // resync in case of a keyboard/scrollbar scroll since the last gesture
       targetY = Math.min(maxScroll, Math.max(0, targetY + delta));
       if (!animating) {
         animating = true;
+        document.documentElement.style.scrollBehavior = "auto";
         requestAnimationFrame(step);
       }
     },
