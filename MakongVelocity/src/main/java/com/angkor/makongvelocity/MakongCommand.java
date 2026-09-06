@@ -16,11 +16,12 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * /mc - MakongVelocity's own commands:
- * - /mc clients checks every backend configured in velocity.toml is actually
- *   reachable right now (a real status ping, not just "is it in the config")
- *   and reports each one's live player count - a quick "is everything
- *   connected properly" health check. Purely local to this proxy, works
- *   without the website bridge configured at all.
+ * - /mc clients checks every backend actually running MakongCore (i.e.
+ *   currently connected to the website bridge) is reachable right now (a
+ *   real status ping, not just "the bridge saw a heartbeat recently") and
+ *   reports each one's live player count. Requires the website bridge to be
+ *   configured - that's the only source of truth this proxy has for which
+ *   of its velocity.toml servers actually run MakongCore.
  * - /mc ping <server-id> mirrors MakongCore's own /mateam ping, relayed
  *   through the website bridge.
  * - /mc autorestart <seconds> fans a restart warning out to every backend
@@ -58,21 +59,29 @@ final class MakongCommand implements SimpleCommand {
     }
 
     private void clients(Invocation invocation) {
-        List<RegisteredServer> servers = new ArrayList<>(plugin.proxyServer().getAllServers());
-        servers.sort(Comparator.comparing(s -> s.getServerInfo().getName(), String.CASE_INSENSITIVE_ORDER));
+        if (!requireBridge(invocation)) return;
 
-        // This is every server velocity.toml routes to - reachability here
-        // is a plain Minecraft status ping and has nothing to do with
-        // MakongCore. Cross-reference the website bridge's own live roster
-        // (only servers that actually registered with the shared secret) so
-        // it's obvious which of these are MakongCore backends versus other
-        // servers on the network (auth, lobby-hub, build, test, ...) that
-        // just happen to also be reachable.
+        // The website bridge's live roster is the only source of truth for
+        // "which of my velocity.toml servers actually run MakongCore" - a
+        // plain Velocity ping can't tell a MakongCore backend apart from any
+        // other server the proxy happens to route to (auth, lobby-hub,
+        // build, test, ...). Match by serverId against velocity.toml's own
+        // server names, since that's what a MakongCore backend's
+        // module/website.yml server_id is meant to line up with.
         java.util.Set<String> makongCoreIds = new java.util.HashSet<>();
-        if (plugin.bridgeEnabled()) {
-            for (WebsiteBridge.ServerInfo backend : plugin.knownBackends()) {
-                makongCoreIds.add(backend.serverId.toLowerCase(Locale.ROOT));
-            }
+        for (WebsiteBridge.ServerInfo backend : plugin.knownBackends()) {
+            makongCoreIds.add(backend.serverId.toLowerCase(Locale.ROOT));
+        }
+
+        List<RegisteredServer> servers = plugin.proxyServer().getAllServers().stream()
+                .filter(s -> makongCoreIds.contains(s.getServerInfo().getName().toLowerCase(Locale.ROOT)))
+                .sorted(Comparator.comparing(s -> s.getServerInfo().getName(), String.CASE_INSENSITIVE_ORDER))
+                .collect(java.util.stream.Collectors.toList());
+
+        if (servers.isEmpty()) {
+            invocation.source().sendMessage(Component.text(
+                    "No MakongCore backends are currently connected to the website bridge.", NamedTextColor.RED));
+            return;
         }
 
         List<CompletableFuture<Boolean>> checks = new ArrayList<>();
@@ -84,7 +93,6 @@ final class MakongCommand implements SimpleCommand {
 
         CompletableFuture.allOf(checks.toArray(new CompletableFuture<?>[0])).whenComplete((v, error) -> {
             int reachable = 1; // the proxy itself, always - this command only runs because it's up
-            int makongCoreCount = 0;
             StringBuilder sb = new StringBuilder();
             sb.append('\n').append(box("CLIENTS")).append('\n');
             List<String> lines = new ArrayList<>();
@@ -93,19 +101,12 @@ final class MakongCommand implements SimpleCommand {
                 RegisteredServer server = servers.get(i);
                 boolean ok = Boolean.TRUE.equals(checks.get(i).getNow(false));
                 if (ok) reachable++;
-                boolean hasMakongCore = makongCoreIds.contains(server.getServerInfo().getName().toLowerCase(Locale.ROOT));
-                if (hasMakongCore) makongCoreCount++;
                 lines.add((ok ? "✔ " : "✖ ") + server.getServerInfo().getName()
                         + " · " + server.getServerInfo().getAddress()
-                        + " · " + server.getPlayersConnected().size() + " players"
-                        + (hasMakongCore ? " · MakongCore" : ""));
+                        + " · " + server.getPlayersConnected().size() + " players");
             }
             sb.append("Summary\n");
-            sb.append("Connected: ").append(reachable).append('\n');
-            sb.append(plugin.bridgeEnabled()
-                    ? "MakongCore: " + makongCoreCount + "/" + servers.size() + " (only these are tagged - the rest are other servers on your network with no MakongCore/website bridge)\n"
-                    : "MakongCore: unknown - this proxy's own website bridge isn't configured, so it can't tell which backends run it\n");
-            sb.append('\n');
+            sb.append("Connected: ").append(reachable).append('\n').append('\n');
             sb.append("Sections\n");
             for (String line : lines) sb.append(line).append('\n');
             invocation.source().sendMessage(Component.text(sb.toString()));

@@ -3,7 +3,7 @@ plugins {
 }
 
 group = 'com.angkor'
-version = '1.2.0'
+version = '1.2.1'
 
 description = 'Velocity companion for MakongCore - forwards nLogin account types to backends and relays network-wide restart broadcasts through the Makong Network website bridge.'
 
