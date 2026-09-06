@@ -1,4 +1,5 @@
-// Client for the AngkorStore Minecraft plugin (see ../../AngkorStore/README.md).
+// Client for the MakongStore Minecraft plugin's player-verify API (see
+// ../../MakongStore/README.md).
 //
 // The plugin is what lets this website ask the server questions: is this a real
 // player, how many coins do they have, what rank(s) are they. Until it is
@@ -6,20 +7,27 @@
 // its own local ledger — so nothing breaks while the plugin isn't installed.
 //
 // Set these in .env to switch it on:
-//   ANGKORSTORE_URL=http://your-server:8123
-//   ANGKORSTORE_SECRET=...
+//   MAKONGSTORE_URL=http://your-server:8123
+//   MAKONGSTORE_SECRET=...
 //
 // Auth is one shared secret in a header, not a signed request — deliberately
-// simpler than the old key+HMAC scheme so a mismatch is a one-line `curl`
+// simpler than a key+HMAC scheme so a mismatch is a one-line `curl`
 // check instead of a signature-debugging session. If this server isn't on
 // localhost or a private network, put the plugin's port behind a
 // tunnel/VPN so that secret isn't sent in the clear (see the plugin's README).
+//
+// This is a separate, older API from lib/pluginBridge.js's multi-server
+// command/ping bridge - that one is the plugin connecting outward to this
+// website (no URL needed, works across many servers); this one is the website
+// calling a single plugin's own HTTP server for live player/rank data. The two
+// share MAKONGSTORE_SECRET but are otherwise independent - one, both, or
+// neither can be running.
 const TIMEOUT_MS = 4000;
 
 function config() {
   return {
-    url: (process.env.ANGKORSTORE_URL || "").replace(/\/+$/, ""),
-    secret: process.env.ANGKORSTORE_SECRET || "",
+    url: (process.env.MAKONGSTORE_URL || "").replace(/\/+$/, ""),
+    secret: process.env.MAKONGSTORE_SECRET || "",
   };
 }
 
@@ -30,10 +38,10 @@ function enabled() {
 
 async function request(method, path, payload) {
   const { url, secret } = config();
-  if (!url || !secret) return { ok: false, linked: false, error: "AngkorStore is not configured." };
+  if (!url || !secret) return { ok: false, linked: false, error: "MakongStore is not configured." };
 
   const body = payload === undefined ? undefined : JSON.stringify(payload);
-  const headers = { "X-AngkorStore-Secret": secret };
+  const headers = { "X-MakongStore-Secret": secret };
   if (body) headers["Content-Type"] = "application/json";
 
   try {
@@ -45,13 +53,13 @@ async function request(method, path, payload) {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      console.warn(`[angkorstore] ${method} ${path} -> ${res.status} ${data.error || ""}`);
+      console.warn(`[makongstore] ${method} ${path} -> ${res.status} ${data.error || ""}`);
       return { ok: false, linked: true, status: res.status, ...data };
     }
     return { ...data, ok: true, linked: true };
   } catch (err) {
     // The server being down must never take the website down with it.
-    console.warn(`[angkorstore] ${method} ${path} failed: ${err.message}`);
+    console.warn(`[makongstore] ${method} ${path} failed: ${err.message}`);
     return { ok: false, linked: false, error: "Could not reach the Minecraft server." };
   }
 }

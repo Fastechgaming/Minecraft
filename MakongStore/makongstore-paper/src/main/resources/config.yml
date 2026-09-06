@@ -1,0 +1,15 @@
+# MakongStore - connects this server to the Makong Network website.
+website:
+  # Public URL of the website (same as SITE_URL in the website's own .env).
+  url: "https://makongmc.com"
+  # Must match MAKONGSTORE_SECRET in the website's .env exactly.
+  secret: "change-me"
+
+# A short id for this server - the website's /admin/servers page and the
+# `/makong ping <server-id>` command both use this. Should usually match one
+# of the website's gamemode ids (arcade, ecosmp, boxpvp, plotcity,
+# hyperclash) so purchases for that gamemode are delivered here automatically.
+server-id: "arcade"
+
+# How often (in seconds) to check the website for new commands/pings.
+poll-interval-seconds: 5

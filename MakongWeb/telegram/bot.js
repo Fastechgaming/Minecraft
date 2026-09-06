@@ -10,7 +10,8 @@ const https = require("https");
 const TelegramBot = require("node-telegram-bot-api");
 const { nanoid } = require("nanoid");
 const store = require("../lib/store");
-const { buildCommand } = require("../lib/rcon");
+const pluginBridge = require("../lib/pluginBridge");
+const { buildCommand } = require("../lib/commandTemplate");
 
 const TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const ADMIN_CHAT_ID = process.env.TELEGRAM_ADMIN_CHAT_ID
@@ -354,9 +355,11 @@ async function sendOrderForReview(order, proofPath) {
   }
 }
 
-// No plugin, no RCON - delivery is a fully manual step for now. This just
-// builds the exact command(s) you'd paste into console/in-game, with
-// {player} etc. already filled in; it never touches the Minecraft server.
+// Builds the exact command(s) you'd paste into console/in-game, with
+// {player} etc. already filled in. Never touches the Minecraft server itself
+// - announceAccepted() below separately hands this to pluginBridge if the
+// target server happens to be connected, but the text is always produced
+// here regardless, since it's also what's shown for manual delivery.
 function buildDeliveryCommand(order, item) {
   const context = { player: order.playerName, itemName: order.itemName, orderId: order.id, quantity: order.quantity || 1 };
 
@@ -386,6 +389,22 @@ async function announceAccepted(order, { label = "✅ *Accepted*" } = {}) {
     manualCommand: command,
   });
 
+  // If this order's gamemode server is connected via a MakongStore plugin
+  // right now, queue the command(s) for it to run automatically instead of
+  // only ever showing them for copy-paste. A multi-line command (an upgrade's
+  // remove+add) is split so each line reaches the plugin as its own console
+  // command - it drains and runs them in the order they were queued.
+  let deliveryLine = command
+    ? `Run this manually:\n\`\`\`\n${command}\n\`\`\``
+    : "_No delivery command configured for this item — deliver it manually._";
+  if (command && order.gamemode && pluginBridge.isOnline(order.gamemode)) {
+    command
+      .split("\n")
+      .filter(Boolean)
+      .forEach((line) => pluginBridge.queueCommand(order.gamemode, line, { orderId: order.id }));
+    deliveryLine = `✅ Sent automatically to *${order.gamemode}*:\n\`\`\`\n${command}\n\`\`\``;
+  }
+
   if (!bot || !ADMIN_CHAT_ID) {
     return { ok: false, reason: "Telegram bot is not configured (token / admin chat id missing)." };
   }
@@ -404,9 +423,7 @@ async function announceAccepted(order, { label = "✅ *Accepted*" } = {}) {
         `*Amount:* $${Number(order.amount).toFixed(2)} ${order.currency}`,
         `*Player:* \`${order.playerName}\` (${order.edition === "bedrock" ? "Bedrock" : "Java"})`,
         "",
-        command
-          ? `Run this manually:\n\`\`\`\n${command}\n\`\`\``
-          : "_No delivery command configured for this item — deliver it manually._",
+        deliveryLine,
       ]
         .filter(Boolean)
         .join("\n"),

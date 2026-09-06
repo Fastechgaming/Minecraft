@@ -4,6 +4,7 @@ const path = require("path");
 const { nanoid } = require("nanoid");
 const store = require("../lib/store");
 const rankings = require("../lib/rankings");
+const pluginBridge = require("../lib/pluginBridge");
 
 const router = express.Router();
 
@@ -79,7 +80,7 @@ router.post("/items", requireAuth, upload.single("imageFile"), (req, res, next) 
     // A rank item is matched to the Minecraft plugin's LuckPerms ladder (and
     // to the catalogue-derived fallback ladder when the plugin isn't
     // connected) by exact id: `rank-<gamemode>-<ladder id>` - see
-    // AngkorStore's config.yml `ranks.ladder`. Ranks are per-gamemode
+    // MakongStore's config.yml `ranks.ladder`. Ranks are per-gamemode
     // (EcoSMP's VIP and BoxPvP's VIP are unrelated), so the gamemode is part
     // of the id, not just a random nanoid suffix - it has to be
     // `rank-<gamemode>-<slug>` with a trailing "rank" word stripped (name
@@ -230,6 +231,21 @@ router.post("/rankings/:id", requireAuth, express.urlencoded({ extended: true })
 router.post("/rankings/:id/delete", requireAuth, (req, res) => {
   rankings.deleteAny(req.params.id);
   res.redirect("/admin/rankings");
+});
+
+/* ---------------- Servers (MakongStore plugin bridge) ---------------- */
+
+router.get("/servers", requireAuth, (req, res) => {
+  res.render("servers", {
+    bridgeEnabled: pluginBridge.enabled(),
+    servers: pluginBridge.listServers(),
+  });
+});
+
+router.post("/servers/:id/command", requireAuth, express.urlencoded({ extended: true }), (req, res) => {
+  const command = String((req.body || {}).command || "").trim();
+  if (command) pluginBridge.queueCommand(req.params.id, command, { source: "admin" });
+  res.redirect("/admin/servers");
 });
 
 module.exports = router;

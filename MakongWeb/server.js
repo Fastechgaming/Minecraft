@@ -5,6 +5,7 @@ const cookieSession = require("cookie-session");
 
 const apiRoutes = require("./routes/api");
 const adminRoutes = require("./routes/admin");
+const pluginRoutes = require("./routes/plugin");
 const { router: accountRoutes } = require("./routes/account");
 const telegram = require("./telegram/bot");
 
@@ -51,6 +52,10 @@ const playerSession = cookieSession({
 // the Minecraft server, so it stays instant even when the game server is down.
 app.get("/healthz", (req, res) => res.json({ ok: true, uptime: Math.round(process.uptime()) }));
 
+// No cookies needed here - plugins are machine clients authenticated by
+// shared secret, so this is mounted ahead of the session middleware below.
+app.use("/api/plugin", pluginRoutes);
+
 app.use("/api", playerSession);
 app.use("/api/account", accountRoutes);
 app.use("/api", apiRoutes);
@@ -77,10 +82,15 @@ app.use((err, req, res, next) => {
 app.listen(PORT, HOST, () => {
   console.log(`Makong Network website running on ${HOST}:${PORT}`);
   if (BEHIND_HTTPS) console.log(`[https] trusting proxy headers, session cookies marked Secure (SITE_URL=${process.env.SITE_URL})`);
-  if (require("./lib/angkorstore").enabled()) {
-    console.log("[angkorstore] plugin bridge configured — verifying names against the Minecraft server");
+  if (require("./lib/makongstore").enabled()) {
+    console.log("[makongstore] plugin bridge configured — verifying names against the Minecraft server");
   } else {
-    console.log("[angkorstore] no plugin configured — names are accepted without server verification");
+    console.log("[makongstore] no plugin configured — names are accepted without server verification");
+  }
+  if (require("./lib/pluginBridge").enabled()) {
+    console.log("[pluginBridge] MAKONGSTORE_SECRET set — /api/plugin is open for MakongStore plugins to connect");
+  } else {
+    console.log("[pluginBridge] MAKONGSTORE_SECRET not set — /api/plugin is disabled");
   }
   telegram.initBot();
 });

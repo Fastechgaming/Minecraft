@@ -63,7 +63,7 @@ In cPanel → Setup Node.js App → your app → click **Run NPM Install**
 
 Still in the Node.js App screen, there's an **Environment Variables**
 section. Add whatever this app's `.env` normally holds — Telegram bot
-token, RCON host/port/password, admin password, etc. (Check `.env.example`
+token, admin password, `MAKONGSTORE_SECRET`, etc. (Check `.env.example`
 in the repo for the full list.) Do NOT set `PORT` — cPanel/Passenger
 assigns that automatically and the app already respects
 `process.env.PORT`.
@@ -76,17 +76,20 @@ proxies your domain to it) — no PM2, no systemd, no tunnel needed.
 
 ## 7. The one real risk: outbound ports
 
-This app needs to make **outbound** connections to your Minecraft
-server's:
-- query/ping port (usually 25565) — for the live player-count status, and
-- RCON port (whatever you set it to) — for delivering store purchases.
+This app needs to make an **outbound** connection to your Minecraft server's
+query/ping port (usually 25565) for the live player-count status. Most
+shared hosts allow general outbound TCP, but some lock it down to just
+HTTP(S)/SMTP for abuse-prevention reasons. If the site loads but the server
+status stays "offline", that's almost certainly this — ask GravelHosting
+support to confirm outbound TCP to arbitrary ports is allowed, or
+specifically whitelist your Minecraft server's IP/port.
 
-Most shared hosts allow general outbound TCP, but some lock it down to
-just HTTP(S)/SMTP for abuse-prevention reasons. If the site loads but the
-server status stays "offline" and purchases never deliver, that's almost
-certainly this — ask GravelHosting support to confirm outbound TCP to
-arbitrary ports is allowed, or specifically whitelist your Minecraft
-server's IP/ports.
+Store delivery doesn't need this at all: with the MakongStore plugins
+(`../MakongStore/`), delivery goes the other way — each plugin makes its own
+outbound HTTPS connection from the Minecraft server to this website, so
+nothing needs to reach into a shared host that can't accept inbound
+connections. Without the plugins, delivery is just the manual Telegram
+Accept flow, same as it's always been.
 
 ## Updating later
 

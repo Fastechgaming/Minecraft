@@ -853,7 +853,7 @@ document.addEventListener("i18n:change", () => {
 });
 
 /* ---------------- Boot ---------------- */
-// The store works with or without the AngkorStore plugin bridge (see
+// The store works with or without the MakongStore plugin bridge (see
 // routes/account.js `verify()`) — a missing plugin just means names are
 // accepted as typed and ranks/coins stay hidden (`account.linked === false`).
 // The "Unavailable" panel below is reserved for an actual outage: the items

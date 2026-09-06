@@ -50,7 +50,8 @@ Everything below lives in **`MakongWeb/.env`** (secrets) and **`MakongWeb/config
 | `TELEGRAM_BOT_TOKEN` | Create a bot via [@BotFather](https://t.me/BotFather) on Telegram. |
 | `TELEGRAM_ADMIN_CHAT_ID` | Your personal numeric Telegram ID — message [@userinfobot](https://t.me/userinfobot) to get it. Purchase alerts and the `/additem` etc. admin commands are locked to this ID only. |
 | `TELEGRAM_SUPPORT_USERNAME` | Your public support `@username` shown on the purchase-success screen. |
-| `RCON_HOST` / `RCON_PORT` / `RCON_PASSWORD` | Currently unused — delivery is manual via Telegram for now (see "Purchase flow"). Reserved for a future automatic-delivery option. |
+| `MAKONGSTORE_SECRET` | Optional — any long random string, matched in every MakongStore plugin's `config.yml`. Turns on the Servers admin page, live command delivery on Accept, and cross-server ping — see "Connecting the Minecraft plugins". |
+| `MAKONGSTORE_URL` | Optional, separate from the above — only if you're also running the older single-plugin player-verify HTTP API. |
 | `TEBEX_WEBSTORE_TOKEN` | Optional — Tebex Creator Panel → Webstore → Integrations → Headless API. Adds a "Pay via Tebex" (card/wallet) button on checkout, see "Purchase flow". Leave empty to skip it. |
 
 ## 3. Managing store items (3 ways — pick whichever is easiest for you)
@@ -83,7 +84,7 @@ each sortable by **Star**, **Points**, **Kills**, **Deaths** or **KDR**
 (kills ÷ deaths, computed automatically — it just shows Kills when Deaths is
 still 0, instead of dividing by zero).
 
-There's no live stats feed from the Minecraft server for this (AngkorStore
+There's no live stats feed from the Minecraft server for this (MakongStore
 doesn't track kills/deaths/star/points), so it's an **admin-curated**
 leaderboard, same idea as store items: go to `http://your-domain/admin/rankings`,
 log in, and add/edit/delete teams and players with a form — name, an optional
@@ -122,7 +123,7 @@ from Telegram with one tap.
 3. **SUBMIT** → they get a **Submit successful** page telling them to wait for the owner to confirm, with a support link and a **Back to home** button.
 4. You receive a Telegram message with the receipt photo, the gamemode, the item, the price, and the in-server name, plus **✅ Accept** and **❌ Reject** buttons.
    - **Reject** → the order is marked rejected. Nothing else happens.
-   - **Accept** → delivery is **manual, Telegram-only for now** (no plugin, no RCON): the bot replies with the gamemode, item, amount, player name, and that item's **delivery command** with `{player}` already filled in (e.g. `lp user .Play_er parent add ecosmp_vip`), in a tap-to-copy code block. Paste it into your server console yourself.
+   - **Accept** → the bot replies with the gamemode, item, amount, player name, and that item's **delivery command** with `{player}` already filled in (e.g. `lp user .Play_er parent add ecosmp_vip`), in a tap-to-copy code block. If that item's gamemode server is currently connected via a MakongStore plugin (section 7), the command is also **run automatically** and the message says so; otherwise paste it into your server console yourself, same as always.
 
 Each item's delivery command is configured per item — set it in the web admin
 form ("Delivery command") or via `/edititem <id> deliveryCommand <command>` in
@@ -167,16 +168,47 @@ cookie (`makong_player`, handled by `routes/account.js`), so:
 * changing the name has a **60-second cooldown**, purely so nobody can hammer
   the verify endpoint.
 
-When the AngkorStore plugin is connected, verifying also **checks the name
-really exists** on the Minecraft server and brings back the player's UUID, live
-coin balance and rank(s). See "Connecting the Minecraft plugin" below.
+When the MakongStore plugin's player-verify API is connected, verifying also
+**checks the name really exists** on the Minecraft server and brings back the
+player's UUID, live coin balance and rank(s). See "Connecting the Minecraft
+plugins" below.
 
-## 7. Connecting the Minecraft plugin (AngkorStore)
+## 7. Connecting the Minecraft plugins (MakongStore)
 
-`../AngkorStore/` in this repo is the actual plugin that bridges this
-website to the server — build it with `gradle build` there and see its own
-README for installation. The website already speaks to it (`lib/angkorstore.js`)
-and works fine without it:
+`../MakongStore/` in this repo is a multi-module Maven project with the actual
+plugins that bridge this website to your Minecraft servers — a **Paper plugin**
+(one instance per backend server: Arcade, EcoSMP, BoxPvP, PlotCity,
+HyperClash…) and a **Velocity plugin** (one instance on your proxy), both
+built the same way (`mvn package` in `../MakongStore/`) and documented in its
+own README. The website works fine with none, some, or all of them running.
+
+There are two independent things a MakongStore plugin can do:
+
+**A) The multi-server command bridge** (`lib/pluginBridge.js` + `routes/plugin.js`,
+`/admin/servers`) — each plugin instance *connects outward* to this website
+(no inbound port needed on the Minecraft side, so it works even across
+different machines/hosts) and:
+- shows up on the **Servers** page in `/admin` while it's connected, with its
+  own server id (e.g. `arcade`, `ecosmp`, `proxy`);
+- can be sent an arbitrary console command straight from that page — the
+  literal "send a command from the store" feature;
+- automatically runs a purchased item's delivery command the moment you press
+  **Accept** in Telegram, *if* that item's gamemode server is currently
+  connected — falling back to the usual manual copy-paste command when it
+  isn't;
+- can ping any other connected server (`/makong ping <server-id>` in-game or
+  on the proxy console) — this is the "servers respond to each other" piece,
+  relayed through the website so it works whether or not the servers share a
+  Velocity proxy.
+
+Turn this on by setting **`MAKONGSTORE_SECRET`** in `.env` (any long random
+string) and the same value in every plugin's `config.yml` — that one shared
+secret is all that's needed; there's no per-server URL to configure on the
+website side since the plugins dial out to it.
+
+**B) The older player-verify API** (`lib/makongstore.js`) — a single plugin
+HTTP server the website calls into for live coins/rank/name-verify data and
+mini-game payouts. This is a separate, optional piece not required for (A):
 
 | | Plugin connected | Plugin absent |
 |---|---|---|
@@ -184,13 +216,14 @@ and works fine without it:
 | Coins shown | The player's real in-game balance | What the website has paid them |
 | Rank in the store | Live, so upgrades are priced against it | Hidden; every rank shows "Buy Now" |
 | Mini-game payouts | Credited in game, keyed on the round id | Recorded in `data/gamestats.json` only |
-| Store delivery | `POST /purchase/deliver` (queues for offline players) | RCON, as before |
+| Store delivery | `POST /purchase/deliver` (queues for offline players) | The command bridge above, or manual Telegram, as before |
 
-Set `ANGKORSTORE_URL` and `ANGKORSTORE_SECRET` in `.env` to turn it on — one
-shared secret, sent as a header on every request, must match `api.secret` in
-the plugin's `config.yml` exactly. The server prints which mode it started
-in. If this server isn't on localhost or a private network, put the
-plugin's port behind a tunnel/VPN, since the secret travels in the clear.
+Set `MAKONGSTORE_URL` (that plugin server's address) alongside
+`MAKONGSTORE_SECRET` in `.env` to turn this on too — same shared secret, sent
+as a header on every request, must match the plugin's `config.yml` exactly.
+The website server prints which mode(s) it started in. If it isn't on
+localhost or a private network, put the plugin's port behind a tunnel/VPN,
+since the secret travels in the clear.
 
 ## 8. Server status & the Home page IP button
 
@@ -240,10 +273,13 @@ and a Cloudflare Tunnel that puts the site on your domain with HTTPS without
 opening a port. Short version of the two things people get wrong:
 
 * GitHub Pages and Cloudflare Workers/Pages **cannot host this** — it is a
-  Node server that needs raw TCP (RCON, Minecraft pings), a filesystem and a
+  Node server that needs raw TCP/UDP (Minecraft status pings), a filesystem and a
   long-running process. Cloudflare *Tunnel* is the Cloudflare product that fits.
-* Run it on the same machine as Minecraft if you can. RCON and the AngkorStore
-  plugin then sit on `127.0.0.1` and never touch the internet.
+* Run it on the same machine as Minecraft if you can, and the player-verify
+  MakongStore plugin (section 7B) then sits on `127.0.0.1` and never touches
+  the internet. The multi-server command bridge (7A) doesn't need this at all
+  — plugins connect outward to the website's public URL, so backend servers
+  can live on entirely different machines/hosts.
 
 Whatever you host on, two rules: never commit `.env` (it's already
 git-ignored), and back up `data/` — it is the entire "database". `DEPLOY.md`
@@ -261,15 +297,17 @@ MakongWeb/
   data/proofs/            Uploaded payment screenshots (git-ignored, never served publicly)
   lib/store.js            Tiny JSON-file data layer
   lib/rankings.js         Tiny JSON-file data layer for the ranking page
-  lib/angkorstore.js      Client for the AngkorStore Minecraft plugin
+  lib/makongstore.js      Client for the MakongStore plugin's player-verify API (section 7B)
+  lib/pluginBridge.js     Multi-server command/ping bridge the plugins connect to (section 7A)
   lib/tebex.js            Client for Tebex's Headless API (optional card/wallet checkout)
   deploy/                 systemd unit, Cloudflare Tunnel config, update script
   DEPLOY.md               How to put the site online
   lib/minecraft.js        Java+Bedrock status ping
-  lib/rcon.js             Builds an item's delivery command text (unused runCommand() kept for later)
+  lib/commandTemplate.js  Turns "lp user {player} parent add vip" into a real command
   routes/api.js           Public JSON API (config, status, items, rankings, checkout, proof upload)
+  routes/plugin.js        MakongStore plugin bridge API (connect/poll/ack/ping) - see lib/pluginBridge.js
   routes/account.js       The player account cookie used by the store
-  routes/admin.js         Password-protected admin panel (item CRUD, rankings CRUD, image upload)
+  routes/admin.js         Password-protected admin panel (item CRUD, rankings CRUD, image upload, servers)
   telegram/bot.js         Telegram bot: order review (Accept/Reject) + /additem etc.
   views/                  EJS templates for the admin panel
   public/                 index / store / checkout / success / ranking / map pages, css, js, images

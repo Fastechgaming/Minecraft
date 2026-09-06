@@ -111,3 +111,10 @@ button[type="submit"], .btn { background: var(--jungle); color: #fff; }
 .admin-table tbody tr:last-child td { border-bottom: none; }
 .admin-table-actions { display: flex; gap: 0.5rem; }
 .admin-table-actions form { margin: 0; }
+
+.status-dot { display: inline-block; width: 0.6em; height: 0.6em; border-radius: 50%; margin-right: 0.4em; background: #c94c4c; }
+.status-dot.online { background: #4caf7d; }
+
+.command-form { display: flex; gap: 0.5rem; white-space: nowrap; }
+.command-form input { margin: 0; min-width: 260px; }
+.command-form button { margin: 0; }
