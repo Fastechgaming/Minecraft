@@ -1,8 +1,6 @@
-// "Complete your Purchase" page: order summary, KHQR to scan, receipt upload -
-// or, if ABA PayWay is configured, an instant card payment alternative.
+// "Complete your Purchase" page: order summary, KHQR to scan, receipt upload.
 const params = new URLSearchParams(location.search);
 const orderId = params.get("order");
-const abaReturn = params.get("aba") === "1"; // came back from PayWay's hosted checkout
 const content = document.getElementById("checkout-content");
 
 let selectedFile = null;
@@ -29,13 +27,7 @@ async function loadCheckout() {
     return;
   }
 
-  // Bounced back from PayWay's hosted checkout - confirm with our own server
-  // before treating it as paid, regardless of what the redirect itself says.
-  if (abaReturn && order.status === "awaiting_payment") {
-    return verifyCardPayment();
-  }
-
-  // Already submitted/paid? Send them to the confirmation instead of letting them pay twice.
+  // Already submitted? Send them to the confirmation instead of letting them pay twice.
   if (order.status !== "awaiting_payment") {
     window.location.replace(`/success?order=${encodeURIComponent(order.id)}`);
     return;
@@ -67,16 +59,6 @@ async function loadCheckout() {
       </div>
     </div>
 
-    ${
-      cfg.abaPaywayEnabled
-        ? `<div class="checkout-step card-pay-step">
-            <h3>${escapeHtml(t("checkout.cardOption"))}</h3>
-            <p class="checkout-hint">${escapeHtml(t("checkout.cardHint"))}</p>
-            <a class="continue-btn" href="/api/checkout/${encodeURIComponent(order.id)}/pay-card">${escapeHtml(t("checkout.payByCard"))}</a>
-          </div>
-          <p class="checkout-hint centered">${escapeHtml(t("checkout.orKhqr"))}</p>`
-        : ""
-    }
     <div class="checkout-step">
       <h3>${escapeHtml(t("checkout.step1"))}</h3>
       <p class="checkout-hint">${scanHintHtml(order.amount)}</p>
@@ -112,40 +94,6 @@ async function loadCheckout() {
 
   wireFileDrop();
   document.getElementById("submit-btn").addEventListener("click", submitProof);
-}
-
-// Landed back here with ?aba=1 after PayWay's hosted checkout. The redirect
-// itself proves nothing (anyone could load this URL by hand) - the server
-// re-checks the real payment status with PayWay before this ever shows success.
-async function verifyCardPayment() {
-  content.innerHTML = `<p class="empty-note">${escapeHtml(t("checkout.verifyingCard"))}</p>`;
-  try {
-    const result = await fetchJSON(`/api/checkout/${encodeURIComponent(orderId)}/verify-card`, { method: "POST" });
-    if (result.status === "accepted") {
-      window.location.replace(`/success?order=${encodeURIComponent(orderId)}`);
-      return;
-    }
-    if (result.status === "not_paid") {
-      content.innerHTML = `
-        <p class="empty-note">${escapeHtml(t("checkout.cardNotCompleted"))}</p>
-        <div class="confirm-actions">
-          <a class="continue-btn" href="/api/checkout/${encodeURIComponent(orderId)}/pay-card">${escapeHtml(t("checkout.retryCard"))}</a>
-          <a class="back-link" href="/checkout?order=${encodeURIComponent(orderId)}">${escapeHtml(t("checkout.useKhqrInstead"))}</a>
-        </div>
-      `;
-      return;
-    }
-    // Some other already-resolved status (rejected, etc.) - let the success
-    // page's own status handling take it from here.
-    window.location.replace(`/success?order=${encodeURIComponent(orderId)}`);
-  } catch (err) {
-    content.innerHTML = `
-      <p class="empty-note">${escapeHtml(t("checkout.cardVerifyFailed", { error: err.message }))}</p>
-      <div class="confirm-actions">
-        <a class="continue-btn" href="/checkout?order=${encodeURIComponent(orderId)}">${escapeHtml(t("checkout.backToPayment"))}</a>
-      </div>
-    `;
-  }
 }
 
 function wireFileDrop() {

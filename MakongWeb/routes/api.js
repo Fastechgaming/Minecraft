@@ -8,7 +8,6 @@ const { getServerStatus } = require("../lib/minecraft");
 const { normalizeServerName, isValidRawName } = require("../public/js/playername");
 const telegram = require("../telegram/bot");
 const angkorstore = require("../lib/angkorstore");
-const abapayway = require("../lib/abapayway");
 const { current: currentAccount, STORE_SCOPE, getRankLadder } = require("./account");
 
 const router = express.Router();
@@ -55,9 +54,6 @@ router.get("/config", (req, res) => {
     // which switches name verification, coins and rank from the local
     // ledger to the live Minecraft server.
     angkorstoreEnabled: angkorstore.enabled(),
-    // True once ABA_PAYWAY_MERCHANT_ID/API_KEY are set - shows a "Pay by
-    // Card" option on /checkout alongside the existing KHQR flow.
-    abaPaywayEnabled: abapayway.enabled(),
   });
 });
 
@@ -223,80 +219,6 @@ router.post("/order/:id/proof", (req, res, next) => {
       next(err);
     }
   });
-});
-
-function htmlAttr(str) {
-  return String(str).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
-
-function siteUrl() {
-  return (process.env.SITE_URL || "http://localhost:3000").replace(/\/+$/, "");
-}
-
-// Card payment alternative to the KHQR flow, via ABA PayWay. Renders a tiny
-// auto-submitting form whose action is PayWay's own checkout endpoint - the
-// customer's browser makes that POST directly, not this server, so the API
-// key (only ever used here to compute the hash) never reaches the browser.
-router.get("/checkout/:id/pay-card", (req, res) => {
-  if (!abapayway.enabled()) return res.status(404).send("Card payment isn't set up for this store yet.");
-  const order = store.findOrder(req.params.id);
-  if (!order) return res.status(404).send("Order not found.");
-  if (order.status !== "awaiting_payment") {
-    return res.redirect(`/success?order=${encodeURIComponent(order.id)}`);
-  }
-
-  const site = siteUrl();
-  const returnUrl = `${site}/checkout?order=${encodeURIComponent(order.id)}&aba=1`;
-  const cancelUrl = `${site}/checkout?order=${encodeURIComponent(order.id)}`;
-  const fields = abapayway.buildPurchaseFields(order, { returnUrl, cancelUrl, continueSuccessUrl: returnUrl });
-
-  const inputs = Object.entries(fields)
-    .map(([name, value]) => `<input type="hidden" name="${htmlAttr(name)}" value="${htmlAttr(value)}" />`)
-    .join("\n");
-
-  res.send(`<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="UTF-8" /><title>Redirecting to secure checkout…</title></head>
-<body style="font-family:sans-serif; text-align:center; padding-top:3rem;">
-  <p>Redirecting to secure card checkout…</p>
-  <form id="pw-redirect" method="POST" enctype="multipart/form-data" action="${abapayway.baseUrl()}/api/payment-gateway/v1/payments/purchase">
-    ${inputs}
-  </form>
-  <script>document.getElementById("pw-redirect").submit();</script>
-</body>
-</html>`);
-});
-
-// Called by /checkout after PayWay redirects the customer back (?aba=1).
-// Never trusts that redirect alone - always re-confirms with PayWay
-// server-to-server before treating the order as paid.
-router.post("/checkout/:id/verify-card", async (req, res) => {
-  try {
-    if (!abapayway.enabled()) return res.status(404).json({ error: "Card payment isn't set up for this store yet." });
-    const order = store.findOrder(req.params.id);
-    if (!order) return res.status(404).json({ error: "Order not found" });
-
-    if (order.status !== "awaiting_payment") {
-      return res.json({ ok: true, status: order.status });
-    }
-
-    const result = await abapayway.checkTransaction(order.id);
-    if (!result.ok) return res.status(502).json({ error: result.reason || "Could not verify the payment with PayWay." });
-    if (!result.approved) {
-      return res.json({ ok: true, status: "not_paid", paymentStatusCode: result.paymentStatusCode });
-    }
-
-    store.updateOrder(order.id, { paidVia: "aba_payway", paywayStatus: result.raw });
-    const announced = await telegram.announceAccepted(store.findOrder(order.id), {
-      label: "💳 *Paid by Card (ABA PayWay)*",
-    });
-    if (!announced.ok) console.error("[aba-payway] Telegram notify failed:", announced.reason);
-
-    res.json({ ok: true, status: "accepted" });
-  } catch (err) {
-    console.error("[aba-payway] verify-card error:", err);
-    res.status(500).json({ error: "Could not verify the payment." });
-  }
 });
 
 module.exports = router;
