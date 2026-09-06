@@ -87,9 +87,7 @@ page shows.
 A player's Star count also decides their rank **tier** (M9 down to M1),
 shown next to their name. Teams just show their Star total, with no tier —
 the tier ladder is a player-only concept. The thresholds match the
-MakongCore plugin's own `module/matier.yml` (`matier.tiers`) exactly - edit
-`tierFor()` in `public/js/ranking.js` and the matching copy in
-`views/rankings.ejs` if that file's thresholds ever change:
+MakongCore plugin's own `module/matier.yml` (`matier.tiers`) exactly:
 
 | Tier | Stars |
 |---|---|
@@ -103,10 +101,25 @@ MakongCore plugin's own `module/matier.yml` (`matier.tiers`) exactly - edit
 | M2 | 1,200 |
 | M1 | 1,500+ (top 10 players only, in the plugin) |
 
-This page's Star numbers are currently **admin-curated**, not a live feed
-from the Minecraft server - the MakongCore plugin does track real Star
-totals internally (that's its whole MaTier system), but nothing wires that
-data into this page yet. Same idea as store items: go to
+**Live data.** Once `MAKONGCORE_SECRET` is set and a MakongCore server has
+`module/website.yml`'s `website.enabled: true`, the plugin reports its real
+Team and MaTier Star standings on every poll tick (see
+`MakongCore/README.md`'s "Website Bridge" section). `GET /api/rankings`
+then serves that live data instead of the admin-curated JSON — the
+`/ranking` page shows a small "🟢 Live from the server" line when this is
+happening, or "Sample rankings" when it's falling back. A player's `tier`
+in live mode comes straight from the plugin's own `MaTierService
+.tierForRanked()`, so the top-10-only M1 cap is respected exactly; this
+page's local `tierFor()` lookup is only used for admin-curated fallback
+entries, which have no `tier` field of their own. Live data is per
+connected server, merged and de-duplicated by name across every server
+that's reported within the last 5 minutes (`RANKINGS_STALE_MS` in
+`lib/pluginBridge.js`) — a server that's gone quiet longer than that drops
+out, and once none are left, the page falls back to admin-curated data
+automatically.
+
+When the bridge isn't configured, or no server has reported yet, this
+page's Star numbers are **admin-curated**. Same idea as store items: go to
 `http://your-domain/admin/rankings`, log in, and
 add/edit/delete teams and players with a form — name, an optional emoji icon
 (falls back to the name's first letter), and their Star count. Or edit

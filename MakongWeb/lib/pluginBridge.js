@@ -12,9 +12,11 @@
 // reconnects and re-registers on its next poll, so nothing is lost beyond a
 // few seconds of "offline" on the Servers admin page.
 const ONLINE_WINDOW_MS = 20_000; // ~4 poll intervals at the plugin's default 5s
+const RANKINGS_STALE_MS = 5 * 60 * 1000; // fall back to admin-curated data if nothing's reported in this long
 const { nanoid } = require("nanoid");
 
 const servers = new Map(); // serverId -> { kind, lastSeen, commands: [], pings: [], pongs: [] }
+const rankingsByServer = new Map(); // serverId -> { teams: [{name,star}], players: [{name,star,tier}], reportedAt }
 
 function enabled() {
   return Boolean(process.env.MAKONGCORE_SECRET);
@@ -105,6 +107,59 @@ function drainPongs(serverId) {
   return drained;
 }
 
+// Plugin pushes its Team/MaTier Star standings here on every poll tick (see
+// WebsiteBridgeService.reportRankings() on the plugin side). Trusts the
+// plugin's own tier field for players - it already knows the top-10-only
+// cap on M1, which this website has no way to re-derive on its own.
+function reportRankings(serverId, teams, players) {
+  rankingsByServer.set(serverId, {
+    teams: Array.isArray(teams) ? teams : [],
+    players: Array.isArray(players) ? players : [],
+    reportedAt: Date.now(),
+  });
+}
+
+// Merges every server's fresh (non-stale) report into one {teams,players}
+// list, de-duplicated by lowercased name (keeping whichever report has the
+// higher star count - matters for a network-mode setup where every backend
+// server reports the same shared totals, and for an independent-per-server
+// setup where the same player name could coincidentally exist on two
+// unrelated servers). Returns null when nothing fresh has been reported, so
+// callers can fall back to the admin-curated JSON.
+function getLiveRankings() {
+  const now = Date.now();
+  const teamsByName = new Map();
+  const playersByName = new Map();
+  let sawFreshReport = false;
+
+  for (const report of rankingsByServer.values()) {
+    if (now - report.reportedAt > RANKINGS_STALE_MS) continue;
+    sawFreshReport = true;
+    for (const team of report.teams) {
+      const key = String(team.name || "").toLowerCase();
+      if (!key) continue;
+      const existing = teamsByName.get(key);
+      if (!existing || Number(team.star) > Number(existing.star)) {
+        teamsByName.set(key, team);
+      }
+    }
+    for (const player of report.players) {
+      const key = String(player.name || "").toLowerCase();
+      if (!key) continue;
+      const existing = playersByName.get(key);
+      if (!existing || Number(player.star) > Number(existing.star)) {
+        playersByName.set(key, player);
+      }
+    }
+  }
+
+  if (!sawFreshReport) return null;
+  return {
+    teams: Array.from(teamsByName.values()),
+    players: Array.from(playersByName.values()),
+  };
+}
+
 module.exports = {
   enabled,
   register,
@@ -118,4 +173,6 @@ module.exports = {
   drainPings,
   queuePong,
   drainPongs,
+  reportRankings,
+  getLiveRankings,
 };

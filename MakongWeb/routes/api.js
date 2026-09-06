@@ -8,6 +8,7 @@ const { getServerStatus } = require("../lib/minecraft");
 const { normalizeServerName, isValidRawName } = require("../public/js/playername");
 const telegram = require("../telegram/bot");
 const makongcore = require("../lib/makongcore");
+const pluginBridge = require("../lib/pluginBridge");
 const tebex = require("../lib/tebex");
 const { current: currentAccount, STORE_SCOPE, getRankLadder } = require("./account");
 
@@ -71,8 +72,14 @@ router.get("/items", (req, res) => {
   res.json({ ...store.getItems(), gamemodes: store.GAMEMODES });
 });
 
+// Prefers live Team/MaTier Star standings reported by the plugin (see
+// lib/pluginBridge.js) - falls back to the admin-curated JSON whenever no
+// server has reported fresh data (plugin bridge not configured, or every
+// connected server has gone stale/offline).
 router.get("/rankings", (req, res) => {
-  res.json(rankings.getRankings());
+  const live = pluginBridge.getLiveRankings();
+  if (live) return res.json({ ...live, live: true });
+  res.json({ ...rankings.getRankings(), live: false });
 });
 
 // Public view of an order - used by /checkout and /success.

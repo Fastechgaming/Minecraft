@@ -34,8 +34,9 @@ Once configured (`module/website.yml`: `enabled: true`, a real `url`, and a `sec
 - This server shows up on the website's `/admin/servers` page and can be sent any console command from there on demand, or automatically when a Telegram store order is Accepted for this server's gamemode.
 - `/mateam ping <server-id>` reaches any other connected server (another MakongCore instance, or a Velocity proxy running the companion bridge plugin, if one exists on your network), relayed through the website.
 - `server_id` defaults to `config.yml`'s `network.server_id` if left blank in `module/website.yml`, so a network already using MySQL "network mode" doesn't need a second id to keep track of.
+- This server's live Team and MaTier Star standings (top 50 of each) are reported to the website on every poll tick, so the public `/ranking` page can show real data instead of the admin-curated fallback. Each player's tier comes straight from `MaTierService.tierForRanked()`, so the M1 top-10-only cap is respected exactly. This is read-only reporting - the website never writes Team/MaTier data back to this server.
 
-This has no dependency on and does not affect MaTier, Teams, or account linking - it's purely a command/ping channel to and from the website.
+This does not affect MaTier, Teams, or account linking beyond that reporting - it's otherwise just a command/ping channel to and from the website.
 
 ## configuration
 - `config.yml` controls storage, team limits, validation, PvP, scoring, chat, allies, cleanup, cross-server behavior and weekly rewards.
@@ -87,3 +88,6 @@ MaTier:
 
 ## 1.2.11 changes
 - Added `module/website.yml` and the optional Website Bridge (see above) - connects this server to the Makong Network website's `/admin/servers` page, enables sending it console commands on demand or on Telegram order Accept, and adds `/mateam ping <server-id>` for cross-server pings relayed through the website.
+
+## 1.2.12 changes
+- The Website Bridge now also reports this server's Team and MaTier Star standings on every poll tick, so the website's public `/ranking` page can show live data (see above).

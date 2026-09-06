@@ -153,6 +153,8 @@ const I18n = (() => {
       "ranking.stat.star": "Star",
       "ranking.empty": "No rankings yet — check back soon!",
       "ranking.loading": "Loading rankings…",
+      "ranking.source.live": "🟢 Live from the server",
+      "ranking.source.sample": "Sample rankings",
 
       /* ---- games: gate + hub ---- */
       "games.subtitle": "GAMES",
@@ -454,6 +456,8 @@ const I18n = (() => {
       "ranking.stat.star": "ផ្កាយ",
       "ranking.empty": "មិនទាន់មានចំណាត់ថ្នាក់ទេ — សូមមកមើលម្តងទៀតឆាប់ៗ!",
       "ranking.loading": "កំពុងផ្ទុកចំណាត់ថ្នាក់…",
+      "ranking.source.live": "🟢 ផ្ទាល់ពីម៉ាស៊ីនមេ",
+      "ranking.source.sample": "ចំណាត់ថ្នាក់សាកល្បង",
 
       /* ---- games: gate + hub ---- */
       "games.subtitle": "ហ្គេម",
@@ -753,6 +757,8 @@ const I18n = (() => {
       "ranking.stat.star": "星级",
       "ranking.empty": "还没有排行数据——请稍后再来看看！",
       "ranking.loading": "正在加载排行榜…",
+      "ranking.source.live": "🟢 服务器实时数据",
+      "ranking.source.sample": "示例排行榜",
 
       /* ---- games: gate + hub ---- */
       "games.subtitle": "游戏",
@@ -1053,6 +1059,8 @@ const I18n = (() => {
       "ranking.stat.star": "Sao",
       "ranking.empty": "Chưa có bảng xếp hạng — hãy quay lại sau nhé!",
       "ranking.loading": "Đang tải bảng xếp hạng…",
+      "ranking.source.live": "🟢 Trực tiếp từ máy chủ",
+      "ranking.source.sample": "Bảng xếp hạng mẫu",
 
       /* ---- games: gate + hub ---- */
       "games.subtitle": "TRÒ CHƠI",

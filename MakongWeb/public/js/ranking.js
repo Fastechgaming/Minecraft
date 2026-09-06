@@ -2,17 +2,18 @@
 // this is an admin-curated leaderboard (see /admin/rankings) - Top Player
 // (left on desktop, top on mobile) and Top Team (right/bottom), both ranked
 // by Star only.
-let rankingData = { teams: [], players: [] };
+let rankingData = { teams: [], players: [], live: false };
 
 const playersBoard = document.getElementById("ranking-board-players");
 const teamsBoard = document.getElementById("ranking-board-teams");
+const sourceEl = document.getElementById("ranking-source");
 
-// Player tier, purely a Star-count lookup - no separate field to maintain.
-// M1 is the top tier, M9 the base. These thresholds must match the
-// MakongCore plugin's module/matier.yml exactly (matier.tiers) - that's the
-// authoritative source once the plugin is reporting live Star data; until
-// then this page's Star numbers are admin-curated and this is just where
-// they map to a tier for display.
+// Player tier. Once the plugin is reporting live Star data, each player
+// entry already carries its own `tier` computed by the plugin (MaTierService
+// .tierForRanked()) - that's authoritative, since it alone knows the M1
+// top-10-only cap. This local table is only a fallback for admin-curated
+// entries (see /admin/rankings), which have no such field, and must match
+// the plugin's module/matier.yml (matier.tiers) thresholds.
 const TIERS = [
   { tier: "M1", min: 1500 },
   { tier: "M2", min: 1200 },
@@ -58,7 +59,7 @@ function renderBoard(el, list, showTier) {
               <span class="board-name"><span class="board-avatar">${
                 entry.icon ? escapeHtml(entry.icon) : escapeHtml((entry.name || "?").charAt(0).toUpperCase())
               }</span>${escapeHtml(entry.name)}${
-            showTier ? `<span class="board-tier">${tierFor(star)}</span>` : ""
+            showTier ? `<span class="board-tier">${escapeHtml(entry.tier || tierFor(star))}</span>` : ""
           }</span>
               <span class="board-points">⭐ ${star.toLocaleString()}</span>
             </li>`;
@@ -71,6 +72,8 @@ function renderBoard(el, list, showTier) {
 function render() {
   renderBoard(playersBoard, rankingData.players || [], true);
   renderBoard(teamsBoard, rankingData.teams || [], false);
+  sourceEl.hidden = false;
+  sourceEl.textContent = t(rankingData.live ? "ranking.source.live" : "ranking.source.sample");
 }
 
 async function loadRankings() {
@@ -80,7 +83,7 @@ async function loadRankings() {
   try {
     rankingData = await fetchJSON("/api/rankings");
   } catch {
-    rankingData = { teams: [], players: [] };
+    rankingData = { teams: [], players: [], live: false };
   }
   render();
 }

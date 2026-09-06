@@ -95,6 +95,20 @@ public final class WebsiteBridge {
     post("/api/plugin/pong", body);
   }
 
+  /**
+   * Reports this server's current Team/MaTier Star standings for the public
+   * Ranking page. Each team/player map is expected to already carry the
+   * exact keys the website understands (name, star, and for players tier) -
+   * see WebsiteBridgeService.reportRankings() for how those are built.
+   */
+  public void reportRankings(List<Map<String, Object>> teams, List<Map<String, Object>> players) {
+    Map<String, Object> body = new LinkedHashMap<>();
+    body.put("serverId", serverId);
+    body.put("teams", teams);
+    body.put("players", players);
+    post("/api/plugin/rankings", body);
+  }
+
   /* ------------------------------- plumbing ------------------------------- */
 
   private Map<String, Object> post(String path, Map<String, Object> body) {

@@ -71,4 +71,29 @@ router.post("/pong", (req, res) => {
   res.json({ ok: true });
 });
 
+// A plugin's periodic Team/MaTier Star standings report, shown live on the
+// public Ranking page (see lib/pluginBridge.js's getLiveRankings()).
+const RANKINGS_MAX_ENTRIES = 200;
+
+function sanitizeEntries(list) {
+  if (!Array.isArray(list)) return [];
+  return list.slice(0, RANKINGS_MAX_ENTRIES).reduce((out, entry) => {
+    if (!entry || typeof entry !== "object") return out;
+    const name = String(entry.name || "").slice(0, 64).trim();
+    if (!name) return out;
+    const clean = { name, star: Number(entry.star) || 0 };
+    if (entry.icon) clean.icon = String(entry.icon).slice(0, 8);
+    if (entry.tier) clean.tier = String(entry.tier).slice(0, 8);
+    out.push(clean);
+    return out;
+  }, []);
+}
+
+router.post("/rankings", (req, res) => {
+  const { serverId, teams, players } = req.body || {};
+  if (!serverId) return res.status(400).json({ error: "serverId is required" });
+  pluginBridge.reportRankings(String(serverId), sanitizeEntries(teams), sanitizeEntries(players));
+  res.json({ ok: true });
+});
+
 module.exports = router;

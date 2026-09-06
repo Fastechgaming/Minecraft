@@ -1,12 +1,19 @@
 package com.angkor.makongcore.service;
 
 import com.angkor.makongcore.MakongCore;
+import com.angkor.makongcore.data.Database;
+import com.angkor.makongcore.model.Team;
 import com.angkor.makongcore.web.WebsiteBridge;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.scheduler.BukkitTask;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -93,6 +100,8 @@ public final class WebsiteBridgeService {
             plugin.getLogger().info("Connected to the Makong Network website as '" + serverId + "'.");
         }
 
+        reportRankings();
+
         WebsiteBridge.PollResult result = bridge.poll();
         if (result == null) return; // network hiccup - just retry next tick
 
@@ -129,6 +138,40 @@ public final class WebsiteBridgeService {
                 Bukkit.getScheduler().runTask(plugin, () -> waiting.forEach(s -> s.sendMessage(msg)));
             }
         }
+    }
+
+    // Sent every poll tick so the public Ranking page can show this server's
+    // real Team/MaTier Star standings live - see MakongWeb/lib/pluginBridge.js
+    // and the "Website Bridge" section of this project's README. Capped at
+    // the top 50 of each (well past what the page ever displays) so the
+    // payload stays small; the player list's rank index is taken from the
+    // full sorted() list before truncating, since tierForRanked()'s M1
+    // top-10-only cap depends on the true rank, not the truncated one.
+    private static final int RANKINGS_MAX_ENTRIES = 50;
+
+    private void reportRankings() {
+        List<Team> teams = new ArrayList<>(plugin.teams().all());
+        teams.sort(Comparator.comparingLong(Team::stars).reversed());
+        List<Map<String, Object>> teamsPayload = new ArrayList<>();
+        for (Team team : teams.subList(0, Math.min(RANKINGS_MAX_ENTRIES, teams.size()))) {
+            Map<String, Object> t = new LinkedHashMap<>();
+            t.put("name", team.name());
+            t.put("star", team.stars());
+            teamsPayload.add(t);
+        }
+
+        List<Database.PlayerStar> players = plugin.matier().sorted();
+        List<Map<String, Object>> playersPayload = new ArrayList<>();
+        for (int i = 0; i < players.size() && i < RANKINGS_MAX_ENTRIES; i++) {
+            Database.PlayerStar p = players.get(i);
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("name", p.name());
+            m.put("star", p.stars());
+            m.put("tier", plugin.matier().tierForRanked(i, p.stars()));
+            playersPayload.add(m);
+        }
+
+        bridge.reportRankings(teamsPayload, playersPayload);
     }
 
     /** Used by /makongcore ping &lt;server-id&gt;. */
