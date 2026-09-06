@@ -106,3 +106,6 @@ MaTier:
 
 ## 1.2.14 changes
 - Fixed `storage.type: mysql` failing to start at all with `Database startup failed: ... Unsupported character encoding 'utf8mb4'`. The JDBC URL's `characterEncoding` option takes a *Java* charset name (`UTF-8`), not a MySQL one (`utf8mb4`) - the actual MySQL-side charset is now requested correctly via `connectionCollation=utf8mb4_unicode_ci` instead.
+
+## 1.2.15 changes
+- Fixed cracked players being frozen and asked to verify even with both `discord.enabled` and `telegram.enabled` set to `false`. `linking.required_for_cracked` (default `true`) is a separate switch from those two and was never actually checking whether a bot existed for the player to verify through - with both disabled this was a silent, permanent lockout with no way to complete verification. It's now ignored unless at least one of Discord/Telegram is enabled.

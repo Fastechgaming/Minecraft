@@ -93,7 +93,15 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
         return d;
     }
 
-    public void onJoin(Player p){db.getAccountLink(p.getUniqueId()).thenAccept(link->{if(link!=null)return;String external=externalAccountType.remove(p.getUniqueId());if(external!=null){if(external.equals("bedrock"))return;boolean required=cfg.b("linking.required_for_cracked",true)&&external.equals("cracked");if(required)Bukkit.getScheduler().runTask(plugin,()->freezeAndCode(p,external));return;}boolean bedrock=floodgate!=null&&floodgate.isBedrock(p.getUniqueId());if(bedrock)return;CompletableFuture.supplyAsync(()->detectPremium(p.getName())).thenAccept(premium->{boolean isPremium=Boolean.TRUE.equals(premium);boolean unknown=premium==null;String type=(isPremium||unknown&&!cfg.b("linking.premium_detection.unknown_as_cracked",true))?"java":"cracked";boolean required=cfg.b("linking.required_for_cracked",true)&&type.equals("cracked");if(required)Bukkit.getScheduler().runTask(plugin,()->freezeAndCode(p,type));});});}
+    // discord.enabled/telegram.enabled control whether those bots start at
+    // all (see start()); linking.required_for_cracked is a separate switch
+    // that defaults to true regardless. Without this check, disabling both
+    // bots but leaving required_for_cracked untouched (its default) freezes
+    // every cracked player with no bot running to ever let them verify -
+    // a silent, permanent lockout. Requiring verification only makes sense
+    // when there's actually a way to complete it.
+    private boolean linkingAvailable(){return cfg.b("discord.enabled",false)||cfg.b("telegram.enabled",false);}
+    public void onJoin(Player p){db.getAccountLink(p.getUniqueId()).thenAccept(link->{if(link!=null)return;String external=externalAccountType.remove(p.getUniqueId());if(external!=null){if(external.equals("bedrock"))return;boolean required=linkingAvailable()&&cfg.b("linking.required_for_cracked",true)&&external.equals("cracked");if(required)Bukkit.getScheduler().runTask(plugin,()->freezeAndCode(p,external));return;}boolean bedrock=floodgate!=null&&floodgate.isBedrock(p.getUniqueId());if(bedrock)return;CompletableFuture.supplyAsync(()->detectPremium(p.getName())).thenAccept(premium->{boolean isPremium=Boolean.TRUE.equals(premium);boolean unknown=premium==null;String type=(isPremium||unknown&&!cfg.b("linking.premium_detection.unknown_as_cracked",true))?"java":"cracked";boolean required=linkingAvailable()&&cfg.b("linking.required_for_cracked",true)&&type.equals("cracked");if(required)Bukkit.getScheduler().runTask(plugin,()->freezeAndCode(p,type));});});}
 
     // From MakongVelocity's "makong:accounttype" plugin message - see the
     // externalAccountType field javadoc above. The channel's payload also

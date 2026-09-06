@@ -30,7 +30,12 @@ telegram:
   username: "makongmcbot"
 
 linking:
-  # INFO: Cracked players must verify with Discord OR Telegram.
+  # INFO: Cracked players must verify with Discord OR Telegram. Only takes
+  # INFO: effect when at least one of discord.enabled / telegram.enabled
+  # INFO: above is true - with both off, this is ignored (nothing freezes
+  # INFO: cracked players, since there'd be no bot for them to verify
+  # INFO: through). Set this to false yourself to make linking fully
+  # INFO: optional even while a bot is enabled.
   required_for_cracked: true
   code_length: 6
   code_expire_minutes: 10
