@@ -155,6 +155,12 @@ const I18n = (() => {
       "ranking.loading": "Loading rankings…",
       "ranking.source.live": "🟢 Live from the server",
       "ranking.source.sample": "Sample rankings",
+      "ranking.search.players": "Search player…",
+      "ranking.search.teams": "Search team…",
+      "ranking.noresults": "No matches found.",
+      "ranking.pager.prev": "Previous page",
+      "ranking.pager.next": "Next page",
+      "ranking.pager.page": "Page {page} of {total}",
 
       /* ---- games: gate + hub ---- */
       "games.subtitle": "GAMES",
@@ -458,6 +464,12 @@ const I18n = (() => {
       "ranking.loading": "កំពុងផ្ទុកចំណាត់ថ្នាក់…",
       "ranking.source.live": "🟢 ផ្ទាល់ពីម៉ាស៊ីនមេ",
       "ranking.source.sample": "ចំណាត់ថ្នាក់សាកល្បង",
+      "ranking.search.players": "ស្វែងរកកីឡាករ…",
+      "ranking.search.teams": "ស្វែងរកក្រុម…",
+      "ranking.noresults": "រកមិនឃើញទេ។",
+      "ranking.pager.prev": "ទំព័រមុន",
+      "ranking.pager.next": "ទំព័របន្ទាប់",
+      "ranking.pager.page": "ទំព័រ {page} នៃ {total}",
 
       /* ---- games: gate + hub ---- */
       "games.subtitle": "ហ្គេម",
@@ -759,6 +771,12 @@ const I18n = (() => {
       "ranking.loading": "正在加载排行榜…",
       "ranking.source.live": "🟢 服务器实时数据",
       "ranking.source.sample": "示例排行榜",
+      "ranking.search.players": "搜索玩家…",
+      "ranking.search.teams": "搜索战队…",
+      "ranking.noresults": "未找到匹配结果。",
+      "ranking.pager.prev": "上一页",
+      "ranking.pager.next": "下一页",
+      "ranking.pager.page": "第 {page} / {total} 页",
 
       /* ---- games: gate + hub ---- */
       "games.subtitle": "游戏",
@@ -1061,6 +1079,12 @@ const I18n = (() => {
       "ranking.loading": "Đang tải bảng xếp hạng…",
       "ranking.source.live": "🟢 Trực tiếp từ máy chủ",
       "ranking.source.sample": "Bảng xếp hạng mẫu",
+      "ranking.search.players": "Tìm người chơi…",
+      "ranking.search.teams": "Tìm đội…",
+      "ranking.noresults": "Không tìm thấy kết quả nào.",
+      "ranking.pager.prev": "Trang trước",
+      "ranking.pager.next": "Trang sau",
+      "ranking.pager.page": "Trang {page} / {total}",
 
       /* ---- games: gate + hub ---- */
       "games.subtitle": "TRÒ CHƠI",

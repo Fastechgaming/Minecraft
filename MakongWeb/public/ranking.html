@@ -69,11 +69,15 @@ try { if (localStorage.getItem("makong-theme") === "light") document.documentEle
         <div class="ranking-boards">
           <div class="checkout-panel board-panel">
             <div class="board-head"><h3 data-i18n="ranking.tab.players">Top Player</h3></div>
+            <input type="search" id="ranking-search-players" class="board-search" data-i18n-placeholder="ranking.search.players" placeholder="Search player…" />
             <div id="ranking-board-players"></div>
+            <div id="ranking-pager-players" class="board-pager"></div>
           </div>
           <div class="checkout-panel board-panel">
             <div class="board-head"><h3 data-i18n="ranking.tab.teams">Top Team</h3></div>
+            <input type="search" id="ranking-search-teams" class="board-search" data-i18n-placeholder="ranking.search.teams" placeholder="Search team…" />
             <div id="ranking-board-teams"></div>
+            <div id="ranking-pager-teams" class="board-pager"></div>
           </div>
         </div>
       </div>

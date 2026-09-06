@@ -1,11 +1,34 @@
-// Ranking page. There's no live stats feed from the Minecraft server, so
-// this is an admin-curated leaderboard (see /admin/rankings) - Top Player
-// (left on desktop, top on mobile) and Top Team (right/bottom), both ranked
-// by Star only.
+// Ranking page - Top Player (left on desktop, top on mobile) and Top Team
+// (right/bottom), both ranked by Star. Each board is paginated 10 at a time
+// with a search box that filters by name across the *whole* leaderboard
+// (not just the current page) - rank numbers always reflect each entry's
+// true position in the full sorted list, search included, so searching for
+// someone doesn't renumber them.
 let rankingData = { teams: [], players: [], live: false };
 
-const playersBoard = document.getElementById("ranking-board-players");
-const teamsBoard = document.getElementById("ranking-board-teams");
+const PAGE_SIZE = 10;
+// Per-board UI state, kept outside rankingData/render() so typing in the
+// search box or flipping a page doesn't need a full data refetch.
+const boardState = {
+  players: { page: 1, query: "" },
+  teams: { page: 1, query: "" },
+};
+
+const boards = {
+  players: {
+    listEl: document.getElementById("ranking-board-players"),
+    pagerEl: document.getElementById("ranking-pager-players"),
+    searchEl: document.getElementById("ranking-search-players"),
+    showTier: true,
+  },
+  teams: {
+    listEl: document.getElementById("ranking-board-teams"),
+    pagerEl: document.getElementById("ranking-pager-teams"),
+    searchEl: document.getElementById("ranking-search-teams"),
+    showTier: false,
+  },
+};
+
 const sourceEl = document.getElementById("ranking-source");
 
 // Player tier. Once the plugin is reporting live Star data, each player
@@ -37,55 +60,97 @@ function medalClass(rank) {
   return "";
 }
 
-// `showTier` is true for players (their M-rank comes from Star) and false
-// for teams (a team just shows its Star total, no individual tier).
-function renderBoard(el, list, showTier) {
+function renderRow(entry, showTier) {
+  const star = Number(entry.star) || 0;
+  return `
+    <li class="board-row${medalClass(entry.rank)}">
+      <span class="board-rank">${entry.rank}</span>
+      <span class="board-name"><span class="board-avatar">${
+        entry.icon ? escapeHtml(entry.icon) : escapeHtml((entry.name || "?").charAt(0).toUpperCase())
+      }</span>${escapeHtml(entry.name)}${
+    showTier ? `<span class="board-tier">${escapeHtml(entry.tier || tierFor(star))}</span>` : ""
+  }</span>
+      <span class="board-points">⭐ ${star.toLocaleString()}</span>
+    </li>`;
+}
+
+// `kind` is "players" or "teams" - looks up boards[kind] and boardState[kind].
+function renderBoard(kind, list) {
+  const { listEl, pagerEl, showTier } = boards[kind];
+  const state = boardState[kind];
+
   if (!list.length) {
-    el.innerHTML = `<p class="board-empty">${escapeHtml(t("ranking.empty"))}</p>`;
+    listEl.innerHTML = `<p class="board-empty">${escapeHtml(t("ranking.empty"))}</p>`;
+    pagerEl.innerHTML = "";
     return;
   }
 
-  const sorted = [...list].sort((a, b) => (Number(b.star) || 0) - (Number(a.star) || 0));
+  // Rank is assigned from the full sorted list *before* filtering, so a
+  // search result still shows the player/team's true leaderboard position.
+  const ranked = [...list]
+    .sort((a, b) => (Number(b.star) || 0) - (Number(a.star) || 0))
+    .map((entry, i) => ({ ...entry, rank: i + 1 }));
 
-  el.innerHTML = `
-    <ol class="board-list">
-      ${sorted
-        .map((entry, i) => {
-          const rank = i + 1;
-          const star = Number(entry.star) || 0;
-          return `
-            <li class="board-row${medalClass(rank)}">
-              <span class="board-rank">${rank}</span>
-              <span class="board-name"><span class="board-avatar">${
-                entry.icon ? escapeHtml(entry.icon) : escapeHtml((entry.name || "?").charAt(0).toUpperCase())
-              }</span>${escapeHtml(entry.name)}${
-            showTier ? `<span class="board-tier">${escapeHtml(entry.tier || tierFor(star))}</span>` : ""
-          }</span>
-              <span class="board-points">⭐ ${star.toLocaleString()}</span>
-            </li>`;
-        })
-        .join("")}
-    </ol>
+  const query = state.query.trim().toLowerCase();
+  const filtered = query ? ranked.filter((e) => (e.name || "").toLowerCase().includes(query)) : ranked;
+
+  if (!filtered.length) {
+    listEl.innerHTML = `<p class="board-empty">${escapeHtml(t("ranking.noresults"))}</p>`;
+    pagerEl.innerHTML = "";
+    return;
+  }
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  if (state.page > totalPages) state.page = totalPages;
+  if (state.page < 1) state.page = 1;
+
+  const start = (state.page - 1) * PAGE_SIZE;
+  const pageItems = filtered.slice(start, start + PAGE_SIZE);
+
+  listEl.innerHTML = `<ol class="board-list">${pageItems.map((e) => renderRow(e, showTier)).join("")}</ol>`;
+
+  if (totalPages <= 1) {
+    pagerEl.innerHTML = "";
+    return;
+  }
+  pagerEl.innerHTML = `
+    <button type="button" class="pager-btn" data-board="${kind}" data-dir="-1" ${state.page <= 1 ? "disabled" : ""} aria-label="${escapeHtml(t("ranking.pager.prev"))}">&#8249;</button>
+    <span class="pager-label">${escapeHtml(t("ranking.pager.page", { page: state.page, total: totalPages }))}</span>
+    <button type="button" class="pager-btn" data-board="${kind}" data-dir="1" ${state.page >= totalPages ? "disabled" : ""} aria-label="${escapeHtml(t("ranking.pager.next"))}">&#8250;</button>
   `;
 }
 
 function render() {
-  renderBoard(playersBoard, rankingData.players || [], true);
-  renderBoard(teamsBoard, rankingData.teams || [], false);
+  renderBoard("players", rankingData.players || []);
+  renderBoard("teams", rankingData.teams || []);
   sourceEl.hidden = false;
   sourceEl.textContent = t(rankingData.live ? "ranking.source.live" : "ranking.source.sample");
 }
 
 async function loadRankings() {
   const loading = `<p class="board-empty">${escapeHtml(t("ranking.loading"))}</p>`;
-  playersBoard.innerHTML = loading;
-  teamsBoard.innerHTML = loading;
+  boards.players.listEl.innerHTML = loading;
+  boards.teams.listEl.innerHTML = loading;
   try {
     rankingData = await fetchJSON("/api/rankings");
   } catch {
     rankingData = { teams: [], players: [], live: false };
   }
   render();
+}
+
+for (const kind of Object.keys(boards)) {
+  boards[kind].searchEl.addEventListener("input", (e) => {
+    boardState[kind].query = e.target.value;
+    boardState[kind].page = 1;
+    renderBoard(kind, rankingData[kind] || []);
+  });
+  boards[kind].pagerEl.addEventListener("click", (e) => {
+    const btn = e.target.closest(".pager-btn");
+    if (!btn || btn.disabled) return;
+    boardState[kind].page += Number(btn.dataset.dir);
+    renderBoard(kind, rankingData[kind] || []);
+  });
 }
 
 document.addEventListener("i18n:change", render);

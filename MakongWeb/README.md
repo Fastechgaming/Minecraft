@@ -82,7 +82,10 @@ not just `rank-<slug>`.
 The `/ranking` page shows two leaderboards side by side on desktop (**Top
 Player** on the left, **Top Team** on the right) and stacked on mobile
 (Player on top, Team below), both ranked by **Star** — the only stat this
-page shows.
+page shows. Each board is paginated 10 at a time with prev/next arrows, and
+has its own search box that filters by name across the *whole* leaderboard
+(not just the visible page) — a searched-for player or team still shows
+their true rank (e.g. #47), it isn't renumbered to fit the search results.
 
 A player's Star count also decides their rank **tier** (M9 down to M1),
 shown next to their name. Teams just show their Star total, with no tier —
