@@ -372,6 +372,52 @@ function buildDeliveryCommand(order, item) {
   return buildCommand(template, context);
 }
 
+// Marks an order accepted and sends the gamemode/item/amount/copy-paste
+// command message - shared by the manual Accept button below and an
+// automatically-verified payment (e.g. a Tebex payment already confirmed
+// server-side, so there's nothing left to "Accept").
+async function announceAccepted(order, { label = "✅ *Accepted*" } = {}) {
+  const item = store.findItem(order.itemId);
+  const command = buildDeliveryCommand(order, item);
+
+  store.updateOrder(order.id, {
+    status: "accepted",
+    decidedAt: Date.now(),
+    manualCommand: command,
+  });
+
+  if (!bot || !ADMIN_CHAT_ID) {
+    return { ok: false, reason: "Telegram bot is not configured (token / admin chat id missing)." };
+  }
+
+  try {
+    await bot.sendMessage(
+      ADMIN_CHAT_ID,
+      [
+        `${label} order \`${order.id}\``,
+        "",
+        `*Gamemode:* ${gamemodeName(order.gamemode)}`,
+        `*Item:* ${order.itemName}`,
+        order.upgrade ? `*Upgrade:* ${order.upgrade.fromRankId} → ${order.upgrade.toRankId}` : "",
+        order.duration ? `*Duration:* ${order.duration === "permanent" ? "Permanent" : "1 Month"}` : "",
+        order.quantity > 1 ? `*Quantity:* ${order.quantity}` : "",
+        `*Amount:* $${Number(order.amount).toFixed(2)} ${order.currency}`,
+        `*Player:* \`${order.playerName}\` (${order.edition === "bedrock" ? "Bedrock" : "Java"})`,
+        "",
+        command
+          ? `Run this manually:\n\`\`\`\n${command}\n\`\`\``
+          : "_No delivery command configured for this item — deliver it manually._",
+      ]
+        .filter(Boolean)
+        .join("\n"),
+      { parse_mode: "Markdown" }
+    );
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, reason: err.message };
+  }
+}
+
 async function handleOrderDecision(query) {
   const data = String(query.data || "");
   if (!data.startsWith("ord:")) return;
@@ -406,38 +452,9 @@ async function handleOrderDecision(query) {
 
   if (action !== "accept") return;
 
-  const item = store.findItem(order.itemId);
-  const command = buildDeliveryCommand(order, item);
-
-  store.updateOrder(orderId, {
-    status: "accepted",
-    decidedAt: Date.now(),
-    manualCommand: command,
-  });
   await clearButtons();
   await bot.answerCallbackQuery(query.id, { text: "Accepted." });
-
-  return bot.sendMessage(
-    chatId,
-    [
-      `✅ *Accepted* order \`${orderId}\``,
-      "",
-      `*Gamemode:* ${gamemodeName(order.gamemode)}`,
-      `*Item:* ${order.itemName}`,
-      order.upgrade ? `*Upgrade:* ${order.upgrade.fromRankId} → ${order.upgrade.toRankId}` : "",
-      order.duration ? `*Duration:* ${order.duration === "permanent" ? "Permanent" : "1 Month"}` : "",
-      order.quantity > 1 ? `*Quantity:* ${order.quantity}` : "",
-      `*Amount:* $${Number(order.amount).toFixed(2)} ${order.currency}`,
-      `*Player:* \`${order.playerName}\` (${order.edition === "bedrock" ? "Bedrock" : "Java"})`,
-      "",
-      command
-        ? `Run this manually:\n\`\`\`\n${command}\n\`\`\``
-        : "_No delivery command configured for this item — deliver it manually._",
-    ]
-      .filter(Boolean)
-      .join("\n"),
-    { parse_mode: "Markdown" }
-  );
+  return announceAccepted(order);
 }
 
-module.exports = { initBot, sendOrderForReview };
+module.exports = { initBot, sendOrderForReview, announceAccepted };

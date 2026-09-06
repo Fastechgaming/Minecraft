@@ -70,7 +70,7 @@ function slugify(str) {
 
 router.post("/items", requireAuth, upload.single("imageFile"), (req, res, next) => {
   try {
-    const { category, gamemode, name, price, permanentPrice, shortDesc, infoText, videoUrl, imageUrl, deliveryCommand } = req.body;
+    const { category, gamemode, name, price, permanentPrice, shortDesc, infoText, videoUrl, imageUrl, deliveryCommand, tebexPackageId } = req.body;
     if (!store.CATEGORIES.includes(category)) throw new Error("Invalid category");
     if (!store.GAMEMODES.some((g) => g.id === gamemode)) throw new Error("Invalid gamemode");
 
@@ -104,6 +104,7 @@ router.post("/items", requireAuth, upload.single("imageFile"), (req, res, next) 
       infoText: infoText || "",
       videoUrl: videoUrl || "",
       deliveryCommand: deliveryCommand || "",
+      tebexPackageId: tebexPackageId || "",
       image: req.file ? `/images/items/${req.file.filename}` : imageUrl || "/images/items/placeholder-other.svg",
       category,
       gamemode,
@@ -132,7 +133,7 @@ router.post("/items/:id", requireAuth, upload.single("imageFile"), (req, res, ne
     const existing = store.findItem(req.params.id);
     if (!existing) return res.status(404).send("Item not found");
 
-    const { category, gamemode, name, price, permanentPrice, shortDesc, infoText, videoUrl, imageUrl, deliveryCommand } = req.body;
+    const { category, gamemode, name, price, permanentPrice, shortDesc, infoText, videoUrl, imageUrl, deliveryCommand, tebexPackageId } = req.body;
     if (!store.CATEGORIES.includes(category)) throw new Error("Invalid category");
     if (!store.GAMEMODES.some((g) => g.id === gamemode)) throw new Error("Invalid gamemode");
 
@@ -145,6 +146,7 @@ router.post("/items/:id", requireAuth, upload.single("imageFile"), (req, res, ne
       infoText: infoText || "",
       videoUrl: videoUrl || "",
       deliveryCommand: deliveryCommand || "",
+      tebexPackageId: tebexPackageId || "",
       image: req.file ? `/images/items/${req.file.filename}` : imageUrl || existing.image,
       category,
       gamemode,

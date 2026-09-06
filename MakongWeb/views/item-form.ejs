@@ -60,6 +60,11 @@
         <small style="font-weight:400; color:#7a7060;">Use <code>{player}</code> for the in-server name, and for a Keys item <code>{quantity}</code> for how many they bought (e.g. <code>crates give {player} common {quantity}</code>). Delivery is manual - Accept just shows you this command to run yourself. Leave blank to deliver this item by hand with no command shown.</small>
       </label>
 
+      <label>Tebex package ID (optional)
+        <input type="text" name="tebexPackageId" value="<%= item ? (item.tebexPackageId || '') : '' %>" placeholder="e.g. 6276316" />
+        <small style="font-weight:400; color:#7a7060;">The matching package's ID in your Tebex webstore (Packages &gt; edit a package &gt; the ID in its URL). Only needed if you want a "Pay via Tebex" button for this item - leave blank to skip it and keep KHQR only.</small>
+      </label>
+
       <label>Upload image
         <input type="file" name="imageFile" accept="image/*" />
       </label>

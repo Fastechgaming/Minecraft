@@ -27,10 +27,20 @@ async function loadCheckout() {
     return;
   }
 
+  // Returning from Tebex's own checkout page - confirm server-to-server
+  // before showing anything else, rather than trusting the redirect alone.
+  if (params.get("tebex") === "1" && order.status === "awaiting_payment") {
+    return renderTebexVerifying();
+  }
+
   // Already submitted? Send them to the confirmation instead of letting them pay twice.
   if (order.status !== "awaiting_payment") {
     window.location.replace(`/success?order=${encodeURIComponent(order.id)}`);
     return;
+  }
+
+  if (params.get("tebexError") === "1") {
+    showToast(t("checkout.tebexFailed"));
   }
 
   const supportHandle = cfg.supportTelegram || "";
@@ -58,6 +68,16 @@ async function loadCheckout() {
         </div>
       </div>
     </div>
+
+    ${
+      cfg.tebexHeadlessEnabled && order.tebexAvailable
+        ? `<div class="checkout-step">
+            <h3>${escapeHtml(t("checkout.orTebex"))}</h3>
+            <p class="checkout-hint">${escapeHtml(t("checkout.tebexHint"))}</p>
+            <a class="continue-btn" id="tebex-pay-btn" href="/api/checkout/${encodeURIComponent(orderId)}/pay-tebex">${escapeHtml(t("checkout.payTebex"))}</a>
+          </div>`
+        : ""
+    }
 
     <div class="checkout-step">
       <h3>${escapeHtml(t("checkout.step1"))}</h3>
@@ -94,6 +114,41 @@ async function loadCheckout() {
 
   wireFileDrop();
   document.getElementById("submit-btn").addEventListener("click", submitProof);
+}
+
+async function renderTebexVerifying() {
+  content.innerHTML = `
+    <div class="checkout-step">
+      <p class="checkout-hint centered">${escapeHtml(t("checkout.tebexVerifying"))}</p>
+    </div>
+  `;
+
+  try {
+    const res = await fetch(`/api/checkout/${encodeURIComponent(orderId)}/verify-tebex`, { method: "POST" });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `Verification failed (${res.status})`);
+
+    if (data.status === "accepted") {
+      window.location.replace(`/success?order=${encodeURIComponent(orderId)}`);
+      return;
+    }
+
+    content.innerHTML = `
+      <div class="checkout-step">
+        <p class="checkout-hint centered">${escapeHtml(t("checkout.tebexNotPaid"))}</p>
+        <button class="continue-btn" id="tebex-recheck-btn">${escapeHtml(t("checkout.tebexCheckAgain"))}</button>
+      </div>
+    `;
+    document.getElementById("tebex-recheck-btn").addEventListener("click", renderTebexVerifying);
+  } catch (err) {
+    content.innerHTML = `
+      <div class="checkout-step">
+        <p class="empty-note">${escapeHtml(t("checkout.tebexError", { error: err.message }))}</p>
+        <button class="continue-btn" id="tebex-recheck-btn">${escapeHtml(t("checkout.tebexCheckAgain"))}</button>
+      </div>
+    `;
+    document.getElementById("tebex-recheck-btn").addEventListener("click", renderTebexVerifying);
+  }
 }
 
 function wireFileDrop() {

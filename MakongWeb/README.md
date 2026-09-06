@@ -51,6 +51,7 @@ Everything below lives in **`MakongWeb/.env`** (secrets) and **`MakongWeb/config
 | `TELEGRAM_ADMIN_CHAT_ID` | Your personal numeric Telegram ID — message [@userinfobot](https://t.me/userinfobot) to get it. Purchase alerts and the `/additem` etc. admin commands are locked to this ID only. |
 | `TELEGRAM_SUPPORT_USERNAME` | Your public support `@username` shown on the purchase-success screen. |
 | `RCON_HOST` / `RCON_PORT` / `RCON_PASSWORD` | Currently unused — delivery is manual via Telegram for now (see "Purchase flow"). Reserved for a future automatic-delivery option. |
+| `TEBEX_WEBSTORE_TOKEN` | Optional — Tebex Creator Panel → Webstore → Integrations → Headless API. Adds a "Pay via Tebex" (card/wallet) button on checkout, see "Purchase flow". Leave empty to skip it. |
 
 ## 3. Managing store items (3 ways — pick whichever is easiest for you)
 
@@ -132,6 +133,30 @@ handle that item entirely by hand, with no command shown.
 
 Payment screenshots are stored in `MakongWeb/data/proofs/` and are **not** served
 publicly — they only go to your Telegram.
+
+### Optional: pay via Tebex (card / Tebex Wallet), without leaving this site
+
+By default the whole flow above is KHQR + manual review. If you also want
+customers to pay by **card or Tebex Wallet** without ever leaving this
+website (unlike the 🌍 Global region above, which sends shoppers to browse
+and buy on Tebex's own storefront), set `TEBEX_WEBSTORE_TOKEN` in `.env`
+(from the Tebex Creator Panel: **Webstore → Integrations → Headless API**).
+
+This uses Tebex's **Headless API**: your own store UI stays exactly as it is,
+and the customer is only sent to Tebex for its hosted checkout page, then
+brought straight back. It's opt-in per item — a rank/key/other item only
+gets a **Pay via Tebex** button on `/checkout` once you set its **Tebex
+package ID** in the admin item form (found on the package's page in your
+Tebex webstore: **Packages → edit a package → the ID in its URL**). Items
+without one keep showing KHQR only.
+
+The redirect back from Tebex is never trusted by itself — the site always
+re-confirms the payment with a server-to-server call to Tebex before
+marking the order **Accepted** and posting the delivery command to your
+Telegram, exactly like a manually-approved KHQR order.
+
+Leave `TEBEX_WEBSTORE_TOKEN` empty and nothing changes — no button appears
+anywhere, KHQR stays the only payment method.
 
 ## 6. The player account
 
@@ -237,6 +262,7 @@ MakongWeb/
   lib/store.js            Tiny JSON-file data layer
   lib/rankings.js         Tiny JSON-file data layer for the ranking page
   lib/angkorstore.js      Client for the AngkorStore Minecraft plugin
+  lib/tebex.js            Client for Tebex's Headless API (optional card/wallet checkout)
   deploy/                 systemd unit, Cloudflare Tunnel config, update script
   DEPLOY.md               How to put the site online
   lib/minecraft.js        Java+Bedrock status ping

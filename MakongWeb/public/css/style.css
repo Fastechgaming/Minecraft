@@ -1156,6 +1156,7 @@ a.feature-card.linked .feature-title { color: var(--link-accent); }
   box-shadow: var(--press-shadow);
   transition: transform 0.18s cubic-bezier(.34,1.56,.64,1), box-shadow 0.15s;
 }
+a.continue-btn { display: block; box-sizing: border-box; text-align: center; text-decoration: none; }
 .continue-btn:hover, .primary-btn:hover { transform: scale(1.03); }
 .continue-btn:active, .primary-btn:active { transform: translateY(4px); box-shadow: var(--press-shadow-active); }
 .continue-btn:disabled { opacity: 0.5; cursor: not-allowed; }

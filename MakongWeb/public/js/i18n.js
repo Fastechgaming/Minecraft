@@ -126,6 +126,14 @@ const I18n = (() => {
       "checkout.backToStore": "Back to the store",
       "checkout.loadFailed": "Couldn't load that order ({error}).",
       "checkout.khqrMissing": "KHQR image not uploaded yet — add it at public/images/site/khqr.png",
+      "checkout.orTebex": "Or pay instantly",
+      "checkout.tebexHint": "Pay by card or Tebex Wallet through Tebex's secure checkout — confirmed automatically, no screenshot needed.",
+      "checkout.payTebex": "Pay via Tebex",
+      "checkout.tebexVerifying": "Confirming your Tebex payment…",
+      "checkout.tebexNotPaid": "We haven't received your payment yet. If you completed checkout, give it a moment and try again.",
+      "checkout.tebexCheckAgain": "Check again",
+      "checkout.tebexFailed": "Couldn't start Tebex checkout — please try again or pay by KHQR below.",
+      "checkout.tebexError": "Something went wrong confirming your Tebex payment ({error}).",
 
       /* ---- success ---- */
       "success.title": "Submit successful!",
@@ -423,6 +431,14 @@ const I18n = (() => {
       "checkout.backToStore": "ត្រឡប់ទៅហាង",
       "checkout.loadFailed": "មិនអាចផ្ទុកការបញ្ជាទិញនោះបានទេ ({error})។",
       "checkout.khqrMissing": "រូប KHQR មិនទាន់បានដាក់ទេ — សូមដាក់នៅ public/images/site/khqr.png",
+      "checkout.orTebex": "ឬបង់ភ្លាមៗ",
+      "checkout.tebexHint": "បង់ដោយកាតឬ Tebex Wallet តាមរយៈ Checkout សុវត្ថិភាពរបស់ Tebex — បញ្ជាក់ដោយស្វ័យប្រវត្តិ មិនចាំបាច់ថតអេក្រង់ទេ។",
+      "checkout.payTebex": "បង់ប្រាក់តាម Tebex",
+      "checkout.tebexVerifying": "កំពុងបញ្ជាក់ការបង់ប្រាក់ Tebex របស់អ្នក…",
+      "checkout.tebexNotPaid": "យើងមិនទាន់ទទួលបានការបង់ប្រាក់របស់អ្នកនៅឡើយទេ។ ប្រសិនបើអ្នកបានបញ្ចប់ Checkout ហើយ សូមរង់ចាំបន្តិច ហើយសាកល្បងម្តងទៀត។",
+      "checkout.tebexCheckAgain": "ពិនិត្យម្តងទៀត",
+      "checkout.tebexFailed": "មិនអាចចាប់ផ្តើម Tebex Checkout បានទេ — សូមសាកល្បងម្តងទៀត ឬបង់ដោយ KHQR ខាងក្រោម។",
+      "checkout.tebexError": "មានបញ្ហាក្នុងការបញ្ជាក់ការបង់ប្រាក់ Tebex របស់អ្នក ({error})។",
 
       /* ---- success ---- */
       "success.title": "ដាក់ស្នើបានជោគជ័យ!",

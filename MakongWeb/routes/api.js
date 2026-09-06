@@ -8,6 +8,7 @@ const { getServerStatus } = require("../lib/minecraft");
 const { normalizeServerName, isValidRawName } = require("../public/js/playername");
 const telegram = require("../telegram/bot");
 const angkorstore = require("../lib/angkorstore");
+const tebex = require("../lib/tebex");
 const { current: currentAccount, STORE_SCOPE, getRankLadder } = require("./account");
 
 const router = express.Router();
@@ -54,6 +55,9 @@ router.get("/config", (req, res) => {
     // which switches name verification, coins and rank from the local
     // ledger to the live Minecraft server.
     angkorstoreEnabled: angkorstore.enabled(),
+    // True once TEBEX_WEBSTORE_TOKEN is set - shows a "Pay via Tebex" option
+    // on /checkout for items with a tebexPackageId, alongside KHQR.
+    tebexHeadlessEnabled: tebex.enabled(),
   });
 });
 
@@ -76,6 +80,7 @@ router.get("/rankings", (req, res) => {
 router.get("/order/:id", (req, res) => {
   const order = store.findOrder(req.params.id);
   if (!order) return res.status(404).json({ error: "Order not found" });
+  const item = store.findItem(order.itemId);
   res.json({
     id: order.id,
     itemId: order.itemId,
@@ -90,6 +95,9 @@ router.get("/order/:id", (req, res) => {
     quantity: order.quantity || 1,
     status: order.status,
     createdAt: order.createdAt,
+    // Only true when this item has a tebexPackageId configured - lets
+    // /checkout decide whether to show the "Pay via Tebex" button at all.
+    tebexAvailable: Boolean(item && item.tebexPackageId),
   });
 });
 
@@ -219,6 +227,77 @@ router.post("/order/:id/proof", (req, res, next) => {
       next(err);
     }
   });
+});
+
+// Kicks off "Pay via Tebex": create a basket for this order's item, add the
+// matching Tebex package, and send the customer straight to Tebex's own
+// checkout to pay by wallet/card. Never trusts anything back from that page
+// by itself - see verify-tebex below, which re-confirms server-to-server.
+router.get("/checkout/:id/pay-tebex", async (req, res) => {
+  const fail = (reason) => {
+    console.error("[tebex] pay-tebex failed:", reason);
+    res.redirect(`/checkout?order=${encodeURIComponent(req.params.id)}&tebexError=1`);
+  };
+
+  if (!tebex.enabled()) return fail("Tebex is not configured");
+
+  const order = store.findOrder(req.params.id);
+  if (!order) return fail("Order not found");
+  if (order.status !== "awaiting_payment") return fail(`Order already ${order.status}`);
+
+  const item = store.findItem(order.itemId);
+  if (!item || !item.tebexPackageId) return fail("Item has no linked Tebex package");
+
+  const origin = `${req.protocol}://${req.get("host")}`;
+  const completeUrl = `${origin}/checkout?order=${order.id}&tebex=1`;
+  const cancelUrl = `${origin}/checkout?order=${order.id}`;
+
+  const basketResult = await tebex.createBasket({
+    completeUrl,
+    cancelUrl,
+    custom: { orderId: order.id },
+  });
+  if (!basketResult.ok) return fail(basketResult.reason);
+
+  const basketIdent = basketResult.basket.ident;
+  const packageResult = await tebex.addPackage(basketIdent, item.tebexPackageId, order.quantity || 1);
+  if (!packageResult.ok) return fail(packageResult.reason);
+
+  const checkoutUrl = packageResult.basket.links && packageResult.basket.links.checkout;
+  if (!checkoutUrl) return fail("Tebex did not return a checkout link");
+
+  store.updateOrder(order.id, { tebexBasketIdent: basketIdent });
+  res.redirect(checkoutUrl);
+});
+
+// Step after the customer returns from Tebex's checkout (?tebex=1 on
+// /checkout) - re-checks the basket server-to-server before trusting that the
+// payment actually went through, then delivers exactly like a manually
+// Accepted order would.
+router.post("/checkout/:id/verify-tebex", async (req, res) => {
+  if (!tebex.enabled()) return res.status(400).json({ error: "Tebex is not configured" });
+
+  const order = store.findOrder(req.params.id);
+  if (!order) return res.status(404).json({ error: "Order not found" });
+
+  if (order.status === "accepted") return res.json({ ok: true, status: "accepted" });
+  if (order.status === "rejected") return res.json({ ok: true, status: "rejected" });
+
+  if (!order.tebexBasketIdent) {
+    return res.status(400).json({ error: "This order was never sent to Tebex." });
+  }
+
+  const basketResult = await tebex.getBasket(order.tebexBasketIdent);
+  if (!basketResult.ok) return res.status(502).json({ error: basketResult.reason });
+
+  if (!basketResult.basket.complete) {
+    return res.json({ ok: true, status: "not_paid" });
+  }
+
+  const result = await telegram.announceAccepted(order, { label: "💳 *Paid via Tebex*" });
+  if (!result.ok) console.error("[tebex] Telegram notification failed:", result.reason);
+
+  res.json({ ok: true, status: "accepted" });
 });
 
 module.exports = router;
