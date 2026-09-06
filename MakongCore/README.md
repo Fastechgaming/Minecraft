@@ -65,6 +65,7 @@ Nothing here changes if MakongVelocity is never installed - both are additive an
 - `messages.yml` controls player-facing messages.
 - `gui.yml` controls GUI titles, sizes, slots, materials, names, lore, filler panes and navigation.
 - Run `/mateam reload` after changing configuration.
+- Updating MakongCore never leaves your existing `config.yml`/`messages.yml`/`gui.yml`/`module/*.yml` behind: on every startup (and `/mateam reload`) it compares each file against the version's shipped defaults and splices in any key you don't have yet - exactly where it sits in the shipped default, comments included - without touching anything you've already customized. Nothing to do manually after updating; check your server log for `added missing config key(s)` if you want to see what showed up.
 
 Modules:
 - module/team.yml - team gameplay configuration
@@ -135,3 +136,6 @@ MaTier:
 
 ## 1.2.18 changes
 - Added optional [PlaceholderAPI](https://www.spigotmc.org/resources/placeholderapi.6245/) support - `%team_tag%`, `%team_star%`, `%matier%`, `%matier_star%` (see "PlaceholderAPI" above). Only registered if PlaceholderAPI is installed; nothing changes otherwise.
+
+## 1.2.19 changes
+- `config.yml`, `messages.yml`, `gui.yml` and every `module/*.yml` now auto-add any key you're missing (a newer version's default that your existing file predates) on startup and `/mateam reload`, instead of only ever writing the whole file once on first install. New `ConfigUpdater` splices missing keys back into their original position relative to your existing keys - anchored right before whichever of their original neighbors you still have - comments and all, and never touches a key, value, or comment you already have. It works on the file's raw text rather than through Bukkit's own YAML loader specifically so it doesn't strip your comments the way re-saving a `YamlConfiguration` normally would.

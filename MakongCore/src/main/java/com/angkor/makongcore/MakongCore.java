@@ -4,6 +4,7 @@ import com.angkor.makongcore.command.AdminCommand;
 import com.angkor.makongcore.command.TeamCommand;
 import com.angkor.makongcore.config.Settings;
 import com.angkor.makongcore.config.ModuleConfig;
+import com.angkor.makongcore.config.ConfigUpdater;
 import com.angkor.makongcore.service.MaTierService;
 import com.angkor.makongcore.service.MaTierAuraService;
 import com.angkor.makongcore.service.AccountLinkService;
@@ -45,19 +46,43 @@ public final class MakongCore extends JavaPlugin {
     private TeamPlaceholders teamPlaceholders;
     private MaTierPlaceholders matierPlaceholders;
 
-    private void saveBundledFileIfMissing(String name) {
+    // Ships the bundled default the first time (fresh install), or - for an
+    // existing file - splices in any key the bundled default has that the
+    // on-disk file doesn't (a newer MakongCore version added it since this
+    // server last updated). Comments, formatting and every existing value
+    // are left untouched either way - see ConfigUpdater for how.
+    private void syncBundledFile(String name) {
         java.io.File file = new java.io.File(getDataFolder(), name);
-        if (!file.exists()) saveResource(name, false);
+        if (!file.exists()) { saveResource(name, false); return; }
+        try (java.io.InputStream in = getResource(name)) {
+            if (in != null) ConfigUpdater.update(file, in, getLogger());
+        } catch (java.io.IOException e) {
+            getLogger().warning("Could not check " + name + " for missing config keys: " + e.getMessage());
+        }
+    }
+
+    // Same idea as syncBundledFile(), but for config.yml specifically -
+    // that one goes through Bukkit's own getConfig()/reloadConfig() rather
+    // than a ModuleConfig, so a successful update needs a reloadConfig()
+    // afterward to actually pick up what was just written to disk.
+    private void syncConfig() {
+        java.io.File file = new java.io.File(getDataFolder(), "config.yml");
+        try (java.io.InputStream in = getResource("config.yml")) {
+            if (in != null && ConfigUpdater.update(file, in, getLogger())) reloadConfig();
+        } catch (java.io.IOException e) {
+            getLogger().warning("Could not check config.yml for missing config keys: " + e.getMessage());
+        }
     }
 
     @Override public void onEnable() {
         saveDefaultConfig();
-        saveBundledFileIfMissing("messages.yml");
-        saveBundledFileIfMissing("gui.yml");
-        saveBundledFileIfMissing("module/team.yml");
-        saveBundledFileIfMissing("module/matier.yml");
-        saveBundledFileIfMissing("module/autorestart.yml");
-        saveBundledFileIfMissing("module/verification.yml");
+        syncConfig();
+        syncBundledFile("messages.yml");
+        syncBundledFile("gui.yml");
+        syncBundledFile("module/team.yml");
+        syncBundledFile("module/matier.yml");
+        syncBundledFile("module/autorestart.yml");
+        syncBundledFile("module/verification.yml");
         teamConfig=new ModuleConfig(getDataFolder(),"team.yml");
         matierConfig=new ModuleConfig(getDataFolder(),"matier.yml");
         autoRestartConfig=new ModuleConfig(getDataFolder(),"autorestart.yml");
@@ -144,8 +169,8 @@ public final class MakongCore extends JavaPlugin {
         if(accountLinks!=null) accountLinks.stop();
         if(websiteBridge!=null) websiteBridge.stop();
         if(database!=null)database.close();
-        reloadConfig();saveBundledFileIfMissing("messages.yml");saveBundledFileIfMissing("gui.yml");saveBundledFileIfMissing("module/team.yml");saveBundledFileIfMissing("module/matier.yml");
-        saveBundledFileIfMissing("module/autorestart.yml");saveBundledFileIfMissing("module/verification.yml");
+        reloadConfig();syncConfig();syncBundledFile("messages.yml");syncBundledFile("gui.yml");syncBundledFile("module/team.yml");syncBundledFile("module/matier.yml");
+        syncBundledFile("module/autorestart.yml");syncBundledFile("module/verification.yml");
         teamConfig.reload();matierConfig.reload();autoRestartConfig.reload();verificationConfig.reload();
         Bukkit.getScheduler().runTaskAsynchronously(this,()->{
             try {
