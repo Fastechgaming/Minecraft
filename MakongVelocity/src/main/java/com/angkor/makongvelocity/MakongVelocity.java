@@ -43,7 +43,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *    itself uses) purely to relay /mc autorestart <seconds> to every
  *    connected backend at once.
  */
-@Plugin(id = "makongvelocity", name = "MakongVelocity", version = "1.0.0", authors = {"Angkor"})
+@Plugin(id = "makongvelocity", name = "MakongVelocity", version = "1.1.0", authors = {"Angkor"})
 public final class MakongVelocity {
 
     static final MinecraftChannelIdentifier ACCOUNT_TYPE_CHANNEL = MinecraftChannelIdentifier.create("makong", "accounttype");
@@ -184,6 +184,11 @@ public final class MakongVelocity {
     void ping(String target, CommandSource sender) {
         pendingPings.computeIfAbsent(target, k -> ConcurrentHashMap.newKeySet()).add(sender);
         server.getScheduler().buildTask(this, () -> bridge.ping(target)).schedule();
+    }
+
+    /** Used by /mc clients - purely local proxy state, no website bridge involved. */
+    ProxyServer proxyServer() {
+        return server;
     }
 
     WebsiteBridge bridge() {
