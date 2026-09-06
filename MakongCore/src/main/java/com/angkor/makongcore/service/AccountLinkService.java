@@ -1,0 +1,125 @@
+package com.angkor.makongcore.service;
+
+import com.angkor.makongcore.MakongCore;
+import com.angkor.makongcore.data.Database;
+import com.angkor.makongcore.hook.FloodgateHook;
+import net.dv8tion.jda.api.*;
+import net.dv8tion.jda.api.entities.*;
+import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.events.interaction.command.CommandAutoCompleteInteractionEvent;
+import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
+import net.dv8tion.jda.api.events.session.ReadyEvent;
+import net.dv8tion.jda.api.hooks.ListenerAdapter;
+import net.dv8tion.jda.api.interactions.commands.OptionType;
+import net.dv8tion.jda.api.interactions.commands.Command;
+import net.dv8tion.jda.api.interactions.commands.Commands;
+import net.dv8tion.jda.api.interactions.modals.Modal;
+import net.dv8tion.jda.api.components.textinput.TextInput;
+import net.dv8tion.jda.api.components.textinput.TextInputStyle;
+import net.dv8tion.jda.api.components.label.Label;
+import net.dv8tion.jda.api.components.buttons.Button;
+import net.dv8tion.jda.api.components.actionrow.ActionRow;
+import org.bukkit.*;
+import org.bukkit.entity.Player;
+import org.bukkit.event.*;
+import org.bukkit.event.block.*;
+import org.bukkit.event.entity.*;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.player.*;
+import org.bukkit.event.vehicle.VehicleMoveEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerDropItemEvent;
+import org.bukkit.event.player.PlayerAttemptPickupItemEvent;
+
+import java.net.URI;
+import java.net.http.*;
+import java.time.*;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.regex.Pattern;
+
+public final class AccountLinkService extends ListenerAdapter implements Listener {
+    private final MakongCore plugin; private final Database db; private final FloodgateHook floodgate;
+    private final FileConfigurationBridge cfg;
+    private final Map<String,Pending> pending=new ConcurrentHashMap<>();
+    private final Map<UUID,String> playerCodes=new ConcurrentHashMap<>(); private final Set<UUID> frozen=ConcurrentHashMap.newKeySet();
+    private final HttpClient http=HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
+    private JDA jda; private ScheduledExecutorService telegram; private org.bukkit.scheduler.BukkitTask reminderTask;
+    private static final Pattern CODE=Pattern.compile("^\\d{6}$");
+
+    public AccountLinkService(MakongCore p,Database d,FloodgateHook f,org.bukkit.configuration.file.FileConfiguration c){plugin=p;db=d;floodgate=f;cfg=new FileConfigurationBridge(c);}
+
+    public void start(){reminderTask=plugin.getServer().getScheduler().runTaskTimer(plugin,this::tickPending,100L,100L);if(!cfg.b("discord.enabled",false)&&!cfg.b("telegram.enabled",false))return; if(cfg.b("discord.enabled",false))startDiscord(); if(cfg.b("telegram.enabled",false))startTelegram();}
+    public void stop(){if(reminderTask!=null){reminderTask.cancel();reminderTask=null;}if(jda!=null){jda.shutdownNow();jda=null;}if(telegram!=null){telegram.shutdownNow();telegram=null;}}
+    private void tickPending(){long now=System.currentTimeMillis();for(Pending x:new ArrayList<>(pending.values())){if(x.expiresAt<now){pending.remove(x.code);if(frozen.contains(x.uuid)){Player p=Bukkit.getPlayer(x.uuid);if(p!=null)freezeAndCode(p,x.accountType);}}}for(UUID u:new ArrayList<>(frozen)){Player p=Bukkit.getPlayer(u);if(p!=null&&playerCodes.get(u)!=null)p.sendMessage("§cYou are a cracked account. §7Link Discord or Telegram to continue. §eCode: "+playerCodes.get(u));}}
+    private void startDiscord(){String token=cfg.s("discord.bot_token","");if(token.isBlank()||token.startsWith("PUT_")){plugin.getLogger().warning("Discord enabled but bot_token is not configured.");return;}try{jda=JDABuilder.createDefault(token).addEventListeners(this).build();plugin.getLogger().info("Discord hook starting...");}catch(Exception e){plugin.getLogger().severe("Discord hook failed: "+e.getMessage());}}
+    @Override public void onReady(ReadyEvent e){registerCommands();sendVerificationPanel();plugin.getLogger().info("Discord hook connected as "+e.getJDA().getSelfUser().getName()+".");}
+    private void registerCommands(){if(jda==null)return; jda.updateCommands().addCommands(Commands.slash("ban","Ban a Minecraft player").addOption(OptionType.STRING,"name","Minecraft name",true).addOption(OptionType.STRING,"duration","Duration (choose a preset or type your own)",true,true).addOption(OptionType.STRING,"reason","Reason",true),Commands.slash("unban","Unban a Minecraft player").addOption(OptionType.STRING,"name","Minecraft name",true).addOption(OptionType.STRING,"reason","Reason",true)).queue();}
+    @Override public void onCommandAutoCompleteInteraction(CommandAutoCompleteInteractionEvent e){
+        if(!e.getName().equals("ban")||!e.getFocusedOption().getName().equals("duration"))return;
+        String input=e.getFocusedOption().getValue().toLowerCase(Locale.ROOT);
+        List<Command.Choice> choices=List.of(
+            new Command.Choice("Forever","permanent"),
+            new Command.Choice("3d","3d"),
+            new Command.Choice("5d","5d"),
+            new Command.Choice("7d","7d"),
+            new Command.Choice("1month","1mo")
+        );
+        e.replyChoices(choices.stream().filter(c->c.getName().toLowerCase(Locale.ROOT).contains(input)||c.getAsString().contains(input)).limit(25).toList()).queue();
+    }
+
+    private void sendVerificationPanel(){String channelId=cfg.s("discord.verification.channel_id","");if(channelId.isBlank()||jda==null)return;TextChannel ch=jda.getTextChannelById(channelId);if(ch==null)return;var embed=new net.dv8tion.jda.api.EmbedBuilder().setTitle("Makong Minecraft Verification").setDescription("Link your Minecraft account to Discord.\\n\\nClick **Verify Code** and enter the 6-digit code shown in Minecraft.").build();String configured=cfg.s("discord.verification.panel_message_id","");if(!configured.isBlank()){editPanel(ch,configured,embed);return;}db.meta("discord_verification_panel_message_id").thenAccept(id->{if(id!=null&&!id.isBlank())editPanel(ch,id,embed);else ch.sendMessageEmbeds(embed).setComponents(ActionRow.of(Button.primary("makong:verify","Verify Code"))).queue(msg->db.setMeta("discord_verification_panel_message_id",msg.getId()));});}
+    private void editPanel(TextChannel ch,String id,net.dv8tion.jda.api.entities.MessageEmbed embed){ch.retrieveMessageById(id).queue(msg->msg.editMessageEmbeds(embed).setComponents(ActionRow.of(Button.primary("makong:verify","Verify Code"))).queue(),err->ch.sendMessageEmbeds(embed).setComponents(ActionRow.of(Button.primary("makong:verify","Verify Code"))).queue(msg->db.setMeta("discord_verification_panel_message_id",msg.getId())));}
+    @Override public void onButtonInteraction(ButtonInteractionEvent e){if(!e.getComponentId().equals("makong:verify"))return;TextInput code=TextInput.create("code",TextInputStyle.SHORT).setPlaceholder("123456").setMinLength(6).setMaxLength(6).build();e.replyModal(Modal.create("makong:verify","Minecraft Verification").addComponents(Label.of("Verification Code",code)).build()).queue();}
+    @Override public void onModalInteraction(ModalInteractionEvent e){if(!e.getModalId().equals("makong:verify"))return;String code=e.getValue("code")==null?"":e.getValue("code").getAsString().trim();if(!CODE.matcher(code).matches()){e.reply("❌ Invalid code.").setEphemeral(true).queue();return;} verifyDiscord(e,code);}
+    private void verifyDiscord(ModalInteractionEvent e,String code){Pending x=pending.get(code);if(x==null||x.expiresAt<System.currentTimeMillis()){e.reply("❌ Code expired or not found. Join the server again for a new code.").setEphemeral(true).queue();return;}if(!discordAllowed(e.getUser(),e.getMember(),e.getGuild(),false)){e.reply("❌ Your Discord account does not meet the server/account-age requirements.").setEphemeral(true).queue();return;}db.findByDiscord(e.getUser().getId()).thenAccept(existing->{if(existing!=null&&!existing.uuid().equals(x.uuid)){e.reply("❌ This Discord account is already linked to another Minecraft account.").setEphemeral(true).queue();return;}completeDiscord(e,x,existing);});}
+    private void completeDiscord(ModalInteractionEvent e,Pending x,Database.AccountLink existing){String telegram=existing==null?null:existing.telegramChatId();db.linkAccount(x.uuid,x.name(),e.getUser().getId(),telegram,x.accountType).thenRun(()->{pending.remove(x.code);playerCodes.remove(x.uuid);frozen.remove(x.uuid);Bukkit.getScheduler().runTask(plugin,()->release(x.uuid));Guild g=e.getGuild();String roleKey=x.accountType.equals("cracked")?"roles.crack":x.accountType.equals("bedrock")?"roles.bedrock":"roles.java";String roleId=cfg.s("discord."+roleKey,"");if(g!=null&&!roleId.isBlank()){Role role=g.getRoleById(roleId);if(role!=null)g.addRoleToMember(e.getUser(),role).queue();}e.reply("✅ Successfully connected to **"+x.name()+"**.").setEphemeral(true).queue();});}
+    private boolean discordAllowed(User u,Member m,Guild g,boolean staff){long minAge=cfg.l("discord.guild.minimum_account_age_days",180),minMember=cfg.l("discord.guild.minimum_membership_days",7);if(g==null||m==null)return false;String guildId=cfg.s("discord.guild.id","");boolean guildRequired=cfg.b("discord.guild.required",true);if(guildRequired&&!guildId.isBlank()&&!g.getId().equals(guildId))return false;if(Duration.between(u.getTimeCreated().toInstant(),Instant.now()).toDays()<minAge)return false;if(m.getTimeJoined()==null||Duration.between(m.getTimeJoined().toInstant(),Instant.now()).toDays()<minMember)return false;String req=cfg.s(staff?"discord.commands.staff_role_id":"discord.guild.required_role_id","");return req.isBlank()||m.getRoles().stream().anyMatch(r->r.getId().equals(req));}
+    @Override public void onSlashCommandInteraction(SlashCommandInteractionEvent e){if(!e.isFromGuild()){e.reply("Guild only.").setEphemeral(true).queue();return;}if(e.getName().equals("ban")||e.getName().equals("unban")){if(!cfg.b("discord.commands."+e.getName()+".enabled",true)){e.reply("❌ This Discord command is disabled.").setEphemeral(true).queue();return;}if(!discordAllowed(e.getUser(),e.getMember(),e.getGuild(),true)){e.reply("❌ You do not meet the Discord guild/role requirements.").setEphemeral(true).queue();return;}String target=e.getOption("name").getAsString(),duration=normalizeDuration(e.getOption("duration")==null?"":e.getOption("duration").getAsString()),reason=e.getOption("reason")==null?"":e.getOption("reason").getAsString();String mcName=target;db.findByDiscord(e.getUser().getId()).thenAccept(staff->{if(staff==null){e.reply("❌ Your Discord account is not linked to Minecraft.").setEphemeral(true).queue();return;}String cmd=e.getName().equals("ban")?"ban":"unban";String args=cmd+" "+target+" --sender="+staff.name()+" --sender-uuid="+staff.uuid();if(cmd.equals("ban"))args+=" "+duration+" "+reason; else args+=" "+reason;Bukkit.getScheduler().runTask(plugin,()->Bukkit.dispatchCommand(Bukkit.getConsoleSender(),args));e.reply("✅ Executed `/"+args+"` as **"+staff.name()+"**.").setEphemeral(true).queue();});}}
+    private String normalizeDuration(String duration){
+        String d=duration==null?"":duration.trim().toLowerCase(Locale.ROOT);
+        if(d.equals("forever")||d.equals("permanent")||d.equals("perm"))return "permanent";
+        if(d.matches("\\d+month(s)?"))return d.replaceAll("month(s)?$","mo");
+        if(d.matches("\\d+months?"))return d.replaceAll("months?$","mo");
+        return d;
+    }
+
+    public void onJoin(Player p){db.getAccountLink(p.getUniqueId()).thenAccept(link->{if(link!=null)return;boolean bedrock=floodgate!=null&&floodgate.isBedrock(p.getUniqueId());if(bedrock)return;CompletableFuture.supplyAsync(()->detectPremium(p.getName())).thenAccept(premium->{boolean isPremium=Boolean.TRUE.equals(premium);boolean unknown=premium==null;String type=(isPremium||unknown&&!cfg.b("linking.premium_detection.unknown_as_cracked",true))?"java":"cracked";boolean required=cfg.b("linking.required_for_cracked",true)&&type.equals("cracked");if(required)Bukkit.getScheduler().runTask(plugin,()->freezeAndCode(p,type));});});}
+    private Boolean detectPremium(String name){if(Bukkit.getOnlineMode())return true;if(!cfg.b("linking.premium_detection.enabled",true))return false;try{HttpRequest r=HttpRequest.newBuilder(URI.create("https://api.mojang.com/users/profiles/minecraft/"+java.net.URLEncoder.encode(name,java.nio.charset.StandardCharsets.UTF_8))).timeout(Duration.ofSeconds(4)).GET().build();HttpResponse<String> x=http.send(r,HttpResponse.BodyHandlers.ofString());if(x.statusCode()==200)return true;if(x.statusCode()==204||x.statusCode()==404)return false;return null;}catch(Exception e){return null;}}
+    public void optionalLink(Player p){if(!cfg.b("discord.enabled",false)){p.sendMessage("§cDiscord linking is currently disabled.");return;}db.getAccountLink(p.getUniqueId()).thenAccept(l->{if(l!=null&&l.discordId()!=null&&!l.discordId().isBlank()){p.sendMessage("§aYour Discord account is already linked.");return;}String type=(floodgate!=null&&floodgate.isBedrock(p.getUniqueId()))?"bedrock":"java";Bukkit.getScheduler().runTask(plugin,()->displayOptionalCode(p,type));});}
+    private void displayOptionalCode(Player p,String type){if(!p.isOnline())return;pending.values().removeIf(v->v.uuid.equals(p.getUniqueId()));String code=String.format("%06d",ThreadLocalRandom.current().nextInt(1000000));long expiry=System.currentTimeMillis()+cfg.l("linking.code_expire_minutes",10)*60000L;Pending x=new Pending(p.getUniqueId(),p.getName(),code,expiry,type,true);pending.put(code,x);playerCodes.put(p.getUniqueId(),code);p.sendTitle(code,"Send this code to Discord to link",10,80,10);p.sendActionBar("§bDiscord: "+cfg.s("discord.invite","discord.gg/makong"));p.sendMessage("§aOptional Discord linking code: §e"+code+" §7(expires in 10 minutes)");plugin.getServer().getScheduler().runTaskLater(plugin,()->{if(code.equals(playerCodes.get(p.getUniqueId())))playerCodes.remove(p.getUniqueId());},200L);}
+    private void freezeAndCode(Player p,String type){freezeAndCode(p,type,true);}
+    private void freezeAndCode(Player p,String type,boolean blocking){if(!p.isOnline())return;pending.values().removeIf(v->v.uuid.equals(p.getUniqueId()));String code=String.format("%06d",ThreadLocalRandom.current().nextInt(1000000));long expiry=System.currentTimeMillis()+cfg.l("linking.code_expire_minutes",10)*60000L;Pending x=new Pending(p.getUniqueId(),p.getName(),code,expiry,type,false);pending.put(code,x);playerCodes.put(p.getUniqueId(),code);p.sendTitle(code,"Send this code to Discord/Telegram to play",10,80,10);p.sendActionBar("§bDiscord: "+cfg.s("discord.invite","discord.gg/makong")+" §7| §bTelegram: @"+cfg.s("telegram.username","makongmcbot"));p.sendMessage("§cYou must link your account to continue. §7Code: §e"+code);if(blocking){frozen.add(p.getUniqueId());p.setWalkSpeed(0f);}}
+    private void release(UUID u){frozen.remove(u);Player p=Bukkit.getPlayer(u);if(p!=null){p.setWalkSpeed(0.2f);p.setFlying(false);p.sendTitle("§aVerified","§7You may now play.",5,30,10);}}
+    public boolean isFrozen(UUID u){return frozen.contains(u);}
+    public String code(UUID u){return playerCodes.get(u);}
+    private void deny(Event e){if(e instanceof Cancellable c)c.setCancelled(true);}
+    @EventHandler public void join(PlayerJoinEvent e){onJoin(e.getPlayer());}
+    @EventHandler public void move(PlayerMoveEvent e){if(!isFrozen(e.getPlayer().getUniqueId()))return;if(e.getTo()!=null&&e.getFrom().getWorld()==e.getTo().getWorld()&&(e.getFrom().getX()!=e.getTo().getX()||e.getFrom().getZ()!=e.getTo().getZ())){e.setTo(e.getFrom());}}
+    @EventHandler public void interact(PlayerInteractEvent e){if(isFrozen(e.getPlayer().getUniqueId()))e.setCancelled(true);}
+    @EventHandler public void drop(PlayerDropItemEvent e){if(isFrozen(e.getPlayer().getUniqueId()))e.setCancelled(true);}
+    @EventHandler public void pickup(PlayerAttemptPickupItemEvent e){if(isFrozen(e.getPlayer().getUniqueId()))e.setCancelled(true);}
+    @EventHandler public void breakBlock(BlockBreakEvent e){if(isFrozen(e.getPlayer().getUniqueId()))e.setCancelled(true);}
+    @EventHandler public void place(BlockPlaceEvent e){if(isFrozen(e.getPlayer().getUniqueId()))e.setCancelled(true);}
+    @EventHandler public void inv(InventoryClickEvent e){if(e.getWhoClicked() instanceof Player p&&isFrozen(p.getUniqueId()))e.setCancelled(true);}
+    @EventHandler public void invOpen(org.bukkit.event.inventory.InventoryOpenEvent e){if(e.getPlayer() instanceof Player p&&isFrozen(p.getUniqueId()))e.setCancelled(true);}
+    @EventHandler public void damage(org.bukkit.event.entity.EntityDamageByEntityEvent e){if(e.getDamager() instanceof Player p&&isFrozen(p.getUniqueId()))e.setCancelled(true);}
+    @EventHandler public void teleport(PlayerTeleportEvent e){if(isFrozen(e.getPlayer().getUniqueId()))e.setCancelled(true);}
+    @EventHandler public void command(PlayerCommandPreprocessEvent e){if(isFrozen(e.getPlayer().getUniqueId())&&!e.getMessage().toLowerCase(Locale.ROOT).startsWith("/link"))e.setCancelled(true);}
+    @EventHandler public void chat(AsyncPlayerChatEvent e){if(isFrozen(e.getPlayer().getUniqueId()))e.setCancelled(true);}
+    private void startTelegram(){String token=cfg.s("telegram.bot_token","");if(token.isBlank()||token.startsWith("PUT_")){plugin.getLogger().warning("Telegram enabled but bot_token is not configured.");return;}telegram=Executors.newSingleThreadScheduledExecutor();telegram.scheduleWithFixedDelay(()->pollTelegram(token,0),0,1,TimeUnit.SECONDS);}
+    private void pollTelegram(String token,int offset){try{
+        String url="https://api.telegram.org/bot"+token+"/getUpdates?timeout=20&offset="+offset;
+        HttpRequest r=HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(30)).GET().build();
+        String body=http.send(r,HttpResponse.BodyHandlers.ofString()).body();
+        java.util.regex.Matcher updates=Pattern.compile("\"update_id\"\\s*:\\s*(\\d+).*?\"chat\"\\s*:\\s*\\{\\s*\"id\"\\s*:\\s*(-?\\d+).*?\\}.*?\"text\"\\s*:\\s*\"([^\"]*)\"",Pattern.DOTALL).matcher(body);
+        int next=offset;
+        while(updates.find()){next=Math.max(next,Integer.parseInt(updates.group(1))+1);String chat=updates.group(2),text=updates.group(3).replace("\\\"","\"").trim();if(text.equals("/start")){telegramSend(token,chat,"Please send the 6 digit Minecraft verification code to verify.");continue;}if(CODE.matcher(text).matches())verifyTelegram(token,chat,text);}
+        if(next>offset)pollTelegram(token,next);
+    }catch(Exception ignored){}}
+    private void verifyTelegram(String token,String chat,String code){Pending x=pending.get(code);if(x==null||x.discordOnly||x.expiresAt<System.currentTimeMillis()){telegramSend(token,chat,"❌ Code expired or not found. Join the server again.");return;}db.findByTelegram(chat).thenAccept(existing->{if(existing!=null&&!existing.uuid().equals(x.uuid)){telegramSend(token,chat,"❌ This Telegram account is already linked.");return;}db.linkAccount(x.uuid,x.name(),existing==null?null:existing.discordId(),chat,x.accountType).thenRun(()->{pending.remove(code);playerCodes.remove(x.uuid);frozen.remove(x.uuid);Bukkit.getScheduler().runTask(plugin,()->release(x.uuid));telegramSend(token,chat,"✅ Successfully connected to account "+x.name());});});}
+    private void telegramSend(String token,String chat,String text){try{String q=java.net.URLEncoder.encode(text,java.nio.charset.StandardCharsets.UTF_8);HttpRequest r=HttpRequest.newBuilder(URI.create("https://api.telegram.org/bot"+token+"/sendMessage?chat_id="+chat+"&text="+q)).GET().build();http.sendAsync(r,HttpResponse.BodyHandlers.discarding());}catch(Exception ignored){}}
+    private record Pending(UUID uuid,String name,String code,long expiresAt,String accountType,boolean discordOnly){}
+    private static final class FileConfigurationBridge{private final org.bukkit.configuration.file.FileConfiguration c;FileConfigurationBridge(org.bukkit.configuration.file.FileConfiguration c){this.c=c;}String s(String p,String d){return c.getString(p,d);}boolean b(String p,boolean d){return c.getBoolean(p,d);}long l(String p,long d){return c.getLong(p,d);}}
+}

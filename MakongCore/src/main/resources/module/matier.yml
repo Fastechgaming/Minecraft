@@ -1,0 +1,125 @@
+# MaTier - Player Star System
+# INFO: Network-wide PvP ranking. Store this data in the shared database on a network.
+# INFO: Higher-tier kills reward more Stars; weaker-player kills reward less.
+
+matier:
+  # INFO: Enable the player ranking module and /matier command.
+  enabled: true
+  # INFO: Annual season reset. Previous standings are saved to history first.
+  new_year_reset:
+    enabled: true
+    month: 1
+    day: 1
+    hour: 0
+    minute: 0
+  # INFO: Tier thresholds. M9 is the starting tier.
+  tiers:
+    M9: 0
+    M8: 150
+    M7: 300
+    M6: 450
+    M5: 600
+    M4: 750
+    M3: 975
+    M2: 1200
+    M1: 1500
+  # INFO: M1 is limited to the highest-Star players.
+  m1:
+    enabled: true
+    minimum_stars: 1500
+    max_players: 10
+  # INFO: Kill reward formula = base_stars + effective tier difference.
+  kill:
+    base_stars: 5
+    minimum_reward: 0
+    maximum_reward: 999999
+  # INFO: Death loss formula = base_loss adjusted by killer/victim tier difference.
+  death:
+    base_loss: 4
+    minimum_loss: 0
+    maximum_loss: 999999
+  # INFO: Anti-farming protections.
+  anti_farming:
+    enabled: true
+    same_player_cooldown_seconds: 60
+    reduced_reward_after_cooldown: 0
+    repeat_kill_reward: 0
+    suicide_reward: 0
+    suicide_loss: 0
+  # INFO: Inactive players lose Stars after 7 full days offline. The first penalty is 50 Stars, then 10 more Stars per additional inactive day. Going online resets the inactivity counter.
+  inactivity:
+    enabled: true
+    grace_days: 7
+    initial_penalty: 50
+    daily_penalty: 10
+  # INFO: Leaderboard display size.
+  leaderboard:
+    size: 10
+  # INFO: Messages use MiniMessage and are intentionally here so the module is self-contained.
+  messages:
+    prefix: "<yellow>⭐ <bold>matier</bold></yellow> "
+    profile: "<yellow>⭐ matier profile</yellow>\n<gray>player: <white>{player}</white>\n<gray>tier: <yellow>{tier}</yellow>\n<gray>stars: <yellow>{stars}★</yellow>\n<gray>next tier: <yellow>{next_tier}</yellow>\n<gray>required: <yellow>{required}★</yellow>\n<gray>progress: <yellow>{stars} / {required}</yellow>"
+    top_header: "<gold>🏆 matier leaderboard</gold>"
+    top_entry: "<gray>#{rank} <yellow>[{tier}]</yellow> <white>{player}</white> <yellow>{stars}★</yellow>"
+    tier_up: "<yellow>⭐ matier up!</yellow>\n<white>you reached <yellow>{tier}</yellow>!\n<yellow>{stars}★</yellow>"
+    m1_achieved: "<gold>👑 m1 achieved!</gold>\n<white>{player}</white> has entered the top 10!\n<yellow>⭐ {stars}★</yellow>\n<gold>🏆 m1 #{rank}</gold>"
+    kill: "<green>+{stars}★</green> <gray>for defeating <white>{player}</white>"
+    death: "<red>-{stars}★</red> <gray>you were defeated by <white>{player}</white>"
+    reset: "<yellow>matier has reset for the new year.</yellow>"
+    no_player: "<red>player not found.</red>"
+    admin_only: "<red>you do not have permission.</red>"
+    invalid_amount: "<red>invalid star amount.</red>"
+    reload: "<green>matier reloaded.</green>"
+
+  # INFO: Cosmetic MaTier aura. Uses only colored dust particles; no potion effects.
+  aura:
+    enabled: true
+    interval_ticks: 3
+    M3:
+      standing:
+        color: "#55FFFF"
+        count: 2
+        size: 1.0
+        radius: 0.45
+      moving:
+        color: "#55FFFF"
+        count: 3
+        size: 1.0
+        radius: 0.50
+      elytra:
+        color: "#55FFFF"
+        count: 5
+        size: 1.0
+        radius: 0.20
+    M2:
+      standing:
+        color: "#AA55FF"
+        count: 3
+        size: 1.0
+        radius: 0.45
+      moving:
+        color: "#AA55FF"
+        count: 4
+        size: 1.0
+        radius: 0.50
+      elytra:
+        color: "#AA55FF"
+        count: 6
+        size: 1.0
+        radius: 0.20
+    M1:
+      standing:
+        color: "#FFD700"
+        count: 4
+        size: 1.2
+        radius: 0.50
+      moving:
+        color: "#FFD700"
+        count: 5
+        size: 1.2
+        radius: 0.55
+      elytra:
+        color: "#FFD700"
+        count: 8
+        size: 1.2
+        radius: 0.22

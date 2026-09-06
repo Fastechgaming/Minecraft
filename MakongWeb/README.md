@@ -86,25 +86,28 @@ page shows.
 
 A player's Star count also decides their rank **tier** (M9 down to M1),
 shown next to their name. Teams just show their Star total, with no tier —
-the tier ladder is a player-only concept. The thresholds (edit
+the tier ladder is a player-only concept. The thresholds match the
+MakongCore plugin's own `module/matier.yml` (`matier.tiers`) exactly - edit
 `tierFor()` in `public/js/ranking.js` and the matching copy in
-`views/rankings.ejs` if you ever change them):
+`views/rankings.ejs` if that file's thresholds ever change:
 
 | Tier | Stars |
 |---|---|
 | M9 | 0 |
-| M8 | 100 |
-| M7 | 200 |
-| M6 | 300 |
-| M5 | 400 |
-| M4 | 500 |
-| M3 | 650 |
-| M2 | 800 |
-| M1 | 1,000+ |
+| M8 | 150 |
+| M7 | 300 |
+| M6 | 450 |
+| M5 | 600 |
+| M4 | 750 |
+| M3 | 975 |
+| M2 | 1,200 |
+| M1 | 1,500+ (top 10 players only, in the plugin) |
 
-There's no live stats feed from the Minecraft server for this (MakongCore
-doesn't track Star), so it's an **admin-curated** leaderboard, same idea as
-store items: go to `http://your-domain/admin/rankings`, log in, and
+This page's Star numbers are currently **admin-curated**, not a live feed
+from the Minecraft server - the MakongCore plugin does track real Star
+totals internally (that's its whole MaTier system), but nothing wires that
+data into this page yet. Same idea as store items: go to
+`http://your-domain/admin/rankings`, log in, and
 add/edit/delete teams and players with a form — name, an optional emoji icon
 (falls back to the name's first letter), and their Star count. Or edit
 `MakongWeb/data/rankings.json` directly — it's a plain JSON file with `teams`

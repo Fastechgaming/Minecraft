@@ -1,0 +1,67 @@
+plugins {
+    id 'java'
+}
+
+group = 'com.angkor'
+version = '1.2.10'
+
+description = 'Simple, fast, Java + Bedrock compatible team plugin for Paper/Purpur 1.21.x'
+
+repositories {
+    maven { name = 'papermc'; url = 'https://repo.papermc.io/repository/maven-public/' }
+    mavenCentral()
+}
+
+dependencies {
+    compileOnly 'io.papermc.paper:paper-api:1.21.11-R0.1-SNAPSHOT'
+    implementation 'com.zaxxer:HikariCP:7.0.2'
+    implementation 'com.h2database:h2:2.4.240'
+    implementation 'com.mysql:mysql-connector-j:9.4.0'
+    implementation 'net.dv8tion:JDA:6.5.0'
+}
+
+java {
+    toolchain { languageVersion = JavaLanguageVersion.of(21) }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 21
+}
+
+/*
+ * Build a self-contained plugin without the Shadow Gradle plugin.
+ * This avoids an extra plugin-resolution step on Termux and keeps the
+ * build compatible with recent Gradle versions.
+ *
+ * JDBC service files from H2/MySQL are intentionally excluded from the
+ * dependency ZIPs and supplied once by MaTeam below.
+ */
+tasks.named('jar', Jar).configure {
+    archiveClassifier = ''
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    from(configurations.runtimeClasspath.collect { file ->
+        zipTree(file).matching {
+            exclude 'META-INF/services/java.sql.Driver'
+            exclude 'META-INF/*.SF'
+            exclude 'META-INF/*.RSA'
+            exclude 'META-INF/*.DSA'
+        }
+    })
+
+    manifest {
+        attributes(
+            'Implementation-Title': 'MakongCore',
+            'Implementation-Version': project.version
+        )
+    }
+}
+
+processResources {
+    filesMatching('plugin.yml') { expand(version: project.version) }
+}
+
+tasks.named('build') {
+    dependsOn(tasks.named('jar'))
+}

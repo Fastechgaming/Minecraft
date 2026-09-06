@@ -1,184 +1,73 @@
 # MakongCore
 
-Connects the Makong Network website ([`../MakongWeb/`](../MakongWeb/)) to your
-Minecraft servers: a **Paper plugin** (one instance per backend server -
-Arcade, EcoSMP, BoxPvP, PlotCity, HyperClash, ...) and a **Velocity plugin**
-(one instance on your proxy, if you run one).
+New-from-scratch team plugin for Paper/Purpur 1.21.x (targeted at 1.21.11).
 
-This first version keeps things deliberately small:
+## Design
+- Java 21
+- Paper API only; no NMS/CraftBukkit internals
+- H2 or MySQL (MariaDB intentionally not supported)
+- HikariCP connection pool
+- Optional Floodgate integration via soft dependency
+- Async database work with virtual threads
+- Simple data-driven GUI architecture
 
-1. Each plugin **connects** to the website (outbound only - no inbound port
-   needed on the Minecraft side, so this works the same whether every server
-   is on one box or scattered across different hosts).
-2. Connected servers show up on the website's **`/admin/servers`** page and
-   can **respond to each other** - `/makong ping <server-id>` from any of
-   them, relayed through the website.
-3. The website can **send a console command** to any connected server - from
-   the admin Servers page directly, or automatically when you press
-   **Accept** on a Telegram order for that server's gamemode.
-
-There's no player/rank/coins sync in this version - that's a separate, older,
-optional API (`MakongWeb/lib/makongcore.js`) documented in the main
-website's README, section 7B. This project only covers the command bridge.
-
-## How it works
-
-```
-  Paper plugin (arcade)  ──┐
-  Paper plugin (ecosmp)  ──┼──HTTPS──▶  MakongWeb  (/api/plugin/*)
-  Paper plugin (boxpvp)  ──┤             │
-  Velocity plugin (proxy)──┘             └─▶ /admin/servers, Telegram Accept
-
-  Every arrow points INTO the website. The website never opens a connection
-  to Minecraft - each plugin polls it every few seconds instead.
-```
-
-- `POST /api/plugin/connect` - a plugin registers itself once at startup
-  (`serverId`, `kind`: `paper` or `velocity`).
-- `GET /api/plugin/poll?serverId=...` - called on a repeating timer
-  (`poll-interval-seconds` in config, default 5s). Doubles as the heartbeat
-  that keeps a server showing "online", and hands back:
-  - `commands` - console commands queued for this server to run right now
-  - `pings` - ping requests from other connected servers to answer
-  - `pongs` - answers to pings this server sent earlier
-  - `servers` - the full current roster, for anyone who wants it
-- `POST /api/plugin/ack` - reports back after running a queued command.
-- `POST /api/plugin/ping` / `POST /api/plugin/pong` - the ping/pong pair
-  behind `/makong ping <server-id>`.
-
-All of it is authenticated by one shared secret (`MAKONGCORE_SECRET` on the
-website, `website.secret` in each plugin's config), sent as the
-`X-Makong-Secret` header. See `MakongWeb/lib/pluginBridge.js` and
-`MakongWeb/routes/plugin.js` for the server side.
-
-## Project layout
-
-```
-MakongCore/
-  settings.gradle.kts       Declares the three modules below
-  build.gradle.kts          Shared config (Java 17, Maven Central) applied to all modules
-  gradlew, gradlew.bat      Gradle wrapper - no local Gradle install needed
-  makongcore-common/       Platform-agnostic HTTP client + JSON (no Bukkit/Velocity imports)
-    .../common/Json.java            Tiny dependency-free JSON reader/writer
-    .../common/WebsiteBridge.java   Talks to /api/plugin/* - shared as-is by both plugins
-  makongcore-paper/        The Paper plugin
-    build.gradle.kts                Shadow plugin + paper-api (compileOnly)
-    .../paper/MakongCorePlugin.java
-    .../paper/MakongCommand.java
-    resources/plugin.yml
-    resources/config.yml
-  makongcore-velocity/     The Velocity plugin
-    build.gradle.kts                Shadow plugin + velocity-api (compileOnly + annotationProcessor)
-    .../velocity/MakongCoreVelocityPlugin.java
-    .../velocity/MakongCommand.java
-```
-
-`makongcore-common` deliberately doesn't use Gson or any other JSON library:
-neither Paper nor Velocity is guaranteed to expose one to plugins on every
-version, so `Json.java` is a small (~150 line) hand-written reader/writer for
-exactly the flat request/response shapes this protocol uses. It's unit-tested
-against real captured payloads from the website - see the parent repo's
-session history if you want to re-run that.
-
-## Building
-
-Requires JDK 17+ (no local Gradle install needed - use the wrapper). From
-this directory:
+## Build
+Use Gradle 9+:
 
 ```bash
-./gradlew build
+gradle clean build
 ```
 
-This produces:
-- `makongcore-paper/build/libs/MakongCore-Paper.jar`
-- `makongcore-velocity/build/libs/MakongCore-Velocity.jar`
+The shaded jar is in `build/libs/`.
 
-Both jars are shaded (they bundle `makongcore-common`) but do **not** bundle
-`paper-api` / `velocity-api` - those are `compileOnly` and provided by the
-server/proxy at runtime, as normal for a Bukkit/Velocity plugin.
+## Notes
+This is the initial foundation build. The architecture intentionally keeps GUI presentation separate from team/business logic so additional menus and actions can be added without duplicating state-specific YAML.
 
-If the build can't resolve `paper-api` or `velocity-api`, your network is
-probably blocking `repo.papermc.io` - that's the only extra repository this
-project needs beyond Maven Central and the Gradle Plugin Portal (for the
-[Shadow](https://gradleup.com/shadow/) plugin, used to bundle
-`makongcore-common` into each jar). Try again from a machine/network that
-can reach it (this is a very common corporate-proxy issue, nothing specific
-to this project).
 
-The Velocity API version pinned in `makongcore-velocity/build.gradle.kts`
-(`velocityApiVersion`) is a snapshot; if it's no longer available, browse
-<https://repo.papermc.io/#browse/browse:maven-public:com%2Fvelocitypowered%2Fvelocity-api>
-for the current one and bump it.
+## Floodgate / Bedrock
+Floodgate is an optional runtime integration. MakongCore intentionally has no compile-time Floodgate dependency; when Floodgate is installed and enabled, MakongCore detects Bedrock players through the Floodgate API using reflection. This avoids old Floodgate/Geyser/Cumulus transitive dependencies during builds.
 
-Building a single module on its own (e.g. while iterating) works the same
-way: `./gradlew :makongcore-paper:build`.
+## configuration
+- `config.yml` controls storage, team limits, validation, PvP, scoring, chat, allies, cleanup, cross-server behavior and weekly rewards.
+- `messages.yml` controls player-facing messages.
+- `gui.yml` controls GUI titles, sizes, slots, materials, names, lore, filler panes and navigation.
+- Run `/mateam reload` after changing configuration.
 
-## Installing
+Modules:
+- module/team.yml - team gameplay configuration
+- module/matier.yml - player MaTier configuration
+- gui.yml - GUI configuration
+- messages.yml - messages
+- config.yml - core/database/network configuration
 
-**Paper (each backend server):**
-1. Drop `MakongCore-Paper.jar` into that server's `plugins/` folder and start
-   it once to generate `plugins/MakongCore/config.yml`.
-2. Edit that config:
-   ```yaml
-   website:
-     url: "https://makongmc.com"      # your website's real SITE_URL
-     secret: "..."                    # must match MAKONGCORE_SECRET in MakongWeb/.env
-   server-id: "arcade"                 # match one of the website's gamemode ids
-   poll-interval-seconds: 5
-   ```
-3. Restart. Console should log `Connected to the Makong Network website as
-   'arcade'.` within a few seconds. It'll also show up on `/admin/servers`.
+MaTier:
+- /matier
+- /matier top
+- /matier stats <player>
+- /matier set|add|remove <player> <stars>
+- /matier reset <player>
+- /matier resetall
+- /matier reload
 
-Repeat for every backend server, each with its own `server-id` matching that
-server's gamemode (`arcade`, `ecosmp`, `boxpvp`, `plotcity`, `hyperclash`) so
-purchases for that gamemode are delivered there automatically on Accept.
 
-**Velocity (the proxy, optional):**
-1. Drop `MakongCore-Velocity.jar` into `plugins/` and start it once to
-   generate `plugins/makongcore/config.properties`.
-2. Edit it the same way (`website.url`, `website.secret`, `server-id` -
-   usually just leave this as `proxy`).
-3. Restart.
+## 1.2.6 changes
+- Added per-player team weekly statistics: Weekly Points, kills, deaths and playtime.
+- Player scoring is configurable in module/team.yml.
+- Weekly reset clears both team totals and each member's weekly statistics.
+- Fixed the main team GUI filter to cycle through configurable modes: join_date, points, name.
+- Added module/autorestart.yml with restartCommands, commandsAfterReboot, restart schedules, interval messages and time formats.
 
-Neither plugin does anything (and logs a warning instead of trying) until
-`website.secret` is actually set to something other than the default
-`change-me` placeholder - so it's safe to install ahead of time and turn on
-later.
+## 1.2.8 changes
+- Added configurable `[AURA MaTier]` colored dust particle auras for M3, M2 and M1 with standing, moving and Elytra states.
+- Added `module/discord.yml` for Discord/Telegram linking, guild requirements, roles and Discord staff commands.
+- Added persistent Minecraft ↔ Discord/Telegram account links.
+- Added `/link` for optional Discord linking.
+- Added cracked-player verification gate with 6-digit codes, 10-minute validity, Discord modal verification and Telegram verification.
+- Added Discord account age (default 180 days) and guild membership age (default 7 days) requirements.
+- Added Discord `/ban` and `/unban` integration with LiteBans sender and sender UUID overrides.
 
-## Using it
+## Linking detection note
+- Bedrock is detected through Floodgate.
+- Premium Java detection on an offline/cracked server uses the configured Mojang username lookup as a best-effort signal. A username existing on Mojang does not cryptographically prove that the joining player owns the premium account. For strict cracked-only enforcement, use an authentication plugin/proxy integration such as FastLogin/online authentication and feed that state into the linking requirement.
 
-- **`/makong status`** - is this server connected, and as what id.
-- **`/makong ping <server-id>`** - pings another connected server (Paper or
-  Velocity) and reports back once the pong arrives, usually well under a
-  second. Requires the `makongcore.admin` permission (defaults to op on
-  Paper; grant it via your permissions plugin on Velocity - the console is
-  always allowed on both).
-- **Website admin → Servers** (`/admin/servers`) - lists every connected
-  server with its online/offline status, and a box to send it any console
-  command on demand.
-- **Telegram Accept** - if the order's gamemode server is currently
-  connected, its delivery command runs automatically instead of only being
-  shown for copy-paste; the Telegram message says which happened.
-
-## Why commands, not a "give item" API
-
-This first version only ever sends whatever command string the website
-already builds from an item's configured **delivery command** (the same
-`{player}`/`{quantity}` template used for the manual copy-paste flow) - it
-doesn't know or care what that command actually does. That keeps the plugin
-tiny and means it works with whatever permissions/economy/crate plugin you
-already run, with zero MakongCore-specific configuration on the Minecraft
-side beyond the website URL and secret. A more structured API (real
-item/coin/rank objects instead of raw command strings) is exactly what the
-older, separate `lib/makongcore.js` API is for, if you want to build that
-out later.
-
-## Velocity: what it can and can't run
-
-Velocity has no access to backend-only plugins (LuckPerms, an economy plugin,
-a crate plugin - all of that lives on the backend servers, not the proxy). A
-command queued for the proxy's own `server-id` only makes sense if it's
-something Velocity itself understands (`/send`, `/alert`, and the like). A
-purchase's delivery command should always be queued against the backend
-server's own `server-id` instead - which is exactly what happens
-automatically via the gamemode match on Telegram Accept.
+- 1.2.10: Discord /ban duration autocomplete presets: Forever, 3d, 5d, 7d, 1month; custom duration text remains supported.

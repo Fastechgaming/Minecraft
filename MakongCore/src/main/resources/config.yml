@@ -1,0 +1,29 @@
+# MakongCore main configuration
+# INFO: Keep this file for plugin-wide/core settings only.
+# INFO: Team gameplay belongs in module/team.yml.
+# INFO: Player MaTier belongs in module/matier.yml.
+# INFO: GUI layout belongs in gui.yml and messages belong in messages.yml.
+
+# INFO: Database/storage configuration shared by MakongCore modules.
+storage:
+  # INFO: Database type. Use h2 for a single server or mysql for a network.
+  type: h2
+  # INFO: MySQL connection settings. Required when type is mysql.
+  mysql:
+    host: localhost
+    port: 3306
+    database: makongcore
+    username: root
+    password: ""
+    use_ssl: false
+    connection_timeout: 10000
+    max_pool_size: 8
+    min_idle: 1
+
+# INFO: Network-wide mode. Keep false when multiple servers share MySQL.
+network:
+  enabled: false
+  server_id: smp
+
+# INFO: Developer diagnostics. Enable only when troubleshooting.
+debug: false

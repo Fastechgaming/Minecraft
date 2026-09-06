@@ -1,8 +1,8 @@
 // Tiny JSON-file "database" for the Ranking page - same pattern as lib/store.js.
-// There's no live stats feed from the Minecraft server (MakongCore doesn't
-// track kills/deaths/star/points), so this is an admin-curated leaderboard:
-// you add/edit teams and players from /admin/rankings with their current
-// numbers, same way items are curated.
+// Nothing wires this up to the MakongCore plugin's own MaTier/Team Star data
+// yet, so it's an admin-curated leaderboard for now: you add/edit teams and
+// players from /admin/rankings with their current numbers, same way items
+// are curated.
 const fs = require("fs");
 const path = require("path");
 const { nanoid } = require("nanoid");

@@ -1,0 +1,167 @@
+# ================================================================
+# MakongCore GUI configuration
+# ================================================================
+# INFO: This file controls GUI titles, sizes, slots, materials,
+# names, lore, filler panes, navigation and selector buttons.
+# INFO: Material names must be valid Bukkit Material names.
+# INFO: Slots are zero-based (0-53 for a 54-slot inventory).
+# INFO: Lore supports MiniMessage and the dynamic placeholders
+#       {team}, {tag}, {members}, {max}, {points}, {kills},
+#       {deaths}, {kdr}, {stars}, {page}, {pages}, {target}.
+# INFO: Run /mateam reload after editing this file.
+# ================================================================
+
+# INFO: Global GUI filler behavior.
+filler:
+  enabled: true
+  material: GRAY_STAINED_GLASS_PANE
+  name: " "
+
+# INFO: Inventory sizes. Valid sizes are multiples of 9.
+sizes:
+  no_team: 27
+  team: 54
+  color: 27
+  leaderboard: 54
+  browse: 54
+  team_info: 27
+  invites: 27
+  settings: 27
+  member: 27
+  join_requests: 54
+  allies: 54
+  confirm: 27
+
+# INFO: GUI titles. Dynamic placeholders can be used.
+titles:
+  no_team: "ᴛᴇᴀᴍ ᴍᴇɴᴜ"
+  team: "<aqua>{team} <gray>[{tag}] <dark_gray>• <white>{members}/{max}"
+  color: "<aqua>ᴄʜᴏᴏsᴇ ᴛᴇᴀᴍ ᴄᴏʟᴏʀ"
+  leaderboard: "<green>ᴛᴏᴘ ᴛᴇᴀᴍs"
+  browse: "<aqua>ʙʀᴏᴡsᴇ ᴛᴇᴀᴍs"
+  team_info: "<aqua>{team} [{tag}]"
+  invites: "<yellow>ᴘᴇɴᴅɪɴɢ ɪɴᴠɪᴛᴇ"
+  settings: "<aqua>ᴛᴇᴀᴍ sᴇᴛᴛɪɴɢs"
+  member: "<aqua>ᴍᴇᴍʙᴇʀ • {target}"
+  join_requests: "<aqua>ᴊᴏɪɴ ʀᴇǫᴜᴇsᴛs"
+  allies: "<aqua>ᴛᴇᴀᴍ ᴀʟʟɪᴇs"
+  confirm: "<yellow>ᴄᴏɴғɪʀᴍ"
+  confirm.disband: "<red>ᴅɪsʙᴀɴᴅ ᴛᴇᴀᴍ?"
+  confirm.leave: "<red>ʟᴇᴀᴠᴇ ᴛᴇᴀᴍ?"
+  confirm.transfer: "<gold>ᴛʀᴀɴsғᴇʀ ᴏᴡɴᴇʀsʜɪᴘ?"
+  confirm.kick: "<red>ᴋɪᴄᴋ ᴍᴇᴍʙᴇʀ?"
+  confirm.ally-remove: "<red>ʀᴇᴍᴏᴠᴇ ᴀʟʟʏ?"
+
+# INFO: Every item below can be customized independently.
+# INFO: Set lore: [] to remove lore from an item.
+items:
+  no_team:
+    create:
+      slot: 11
+      material: WRITABLE_BOOK
+      name: "<aqua><bold>ᴄʀᴇᴀᴛᴇ ᴀ ᴛᴇᴀᴍ</bold>"
+      lore: ["<gray>Create a team for you and your friends.", "", "<yellow>Click to begin.</yellow>"]
+    browse:
+      slot: 13
+      material: BEACON
+      name: "<aqua><bold>ʙʀᴏᴡsᴇ ᴛᴇᴀᴍs</bold>"
+      lore: ["<gray>Browse every team on the server.", "", "<yellow>Click to browse.</yellow>"]
+    top:
+      slot: 15
+      material: EMERALD
+      name: "<green><bold>ᴛᴏᴘ ᴛᴇᴀᴍs</bold>"
+      lore: ["<gray>View Weekly Points, Kills and KDR.", "", "<yellow>Click to view.</yellow>"]
+    invites:
+      slot: 22
+      material: PAPER
+      name: "<yellow><bold>ɪɴᴠɪᴛᴀᴛɪᴏɴs</bold>"
+      lore: ["<gray>View pending invitations.", "", "<yellow>Click to view.</yellow>"]
+
+  team:
+    info: {slot: 45, material: NETHER_STAR, name: "<aqua><bold>ᴛᴇᴀᴍ ɪɴғᴏ</bold>", lore: ["<gray>Members: <white>{members}/{max}", "<gray>Weekly Points: <white>{points}", "<gray>Kills: <white>{kills}", "<gray>Deaths: <white>{deaths}", "<gray>KDR: <white>{kdr}", "<gray>Stars: <yellow>⭐ {stars}"]}
+    pvp: {slot: 46, material: DIAMOND_SWORD, name: "<aqua><bold>ᴛᴇᴀᴍ ᴘᴠᴘ</bold>", lore: ["<gray>Status: {pvp}", "", "<yellow>Click to toggle."]}
+    requests: {slot: 47, material: SOUL_LANTERN, name: "<aqua><bold>ᴊᴏɪɴ ʀᴇǫᴜᴇsᴛs</bold>", lore: ["<gray>View pending requests."]}
+    allies: {slot: 48, material: TOTEM_OF_UNDYING, name: "<aqua><bold>ᴀʟʟɪᴇs</bold>", lore: ["<gray>Manage team alliances.", "", "<yellow>Click to open."]}
+    filter: {slot: 49, material: HOPPER, name: "<yellow><bold>ғɪʟᴛᴇʀ</bold>", modes: [join_date, points, name], click_lore: "<yellow>Click to change.", lore: ["<green>• Weekly Points", "<gray>• Name A-Z", "<gray>• Join Date", "", "<yellow>Click to change."]}
+    settings: {slot: 50, material: COMPARATOR, name: "<aqua><bold>ᴛᴇᴀᴍ sᴇᴛᴛɪɴɢs</bold>", lore: ["<yellow>Click to manage."]}
+    browse: {slot: 51, material: SPYGLASS, name: "<aqua><bold>ʙʀᴏᴡsᴇ ᴛᴇᴀᴍs</bold>", lore: ["<gray>Browse other teams.", "", "<yellow>Click to browse."]}
+    leaderboard: {slot: 52, material: EMERALD, name: "<green><bold>ʟᴇᴀᴅᴇʀʙᴏᴀʀᴅ</bold>", lore: ["<gray>View the top teams.", "<gray>Weekly Points, Kills and KDR.", "", "<yellow>Click to view."]}
+    leave: {slot: 53, material: TNT, name: "<red><bold>ᴅɪsʙᴀɴᴅ ᴛᴇᴀᴍ</bold>", lore: ["<gray>Click to continue."]}
+
+  color:
+    white: {slot: 1, material: WHITE_DYE, name: "<white>White", lore: ["<gray>Select this color.", "<yellow>Click to select.</yellow>"]}
+    light_gray: {slot: 2, material: LIGHT_GRAY_DYE, name: "<gray>Light Gray", lore: ["<gray>Select this color.", "<yellow>Click to select.</yellow>"]}
+    gray: {slot: 3, material: GRAY_DYE, name: "<gray>Gray", lore: ["<gray>Select this color.", "<yellow>Click to select.</yellow>"]}
+    black: {slot: 4, material: BLACK_DYE, name: "<dark_gray>Black", lore: ["<gray>Select this color.", "<yellow>Click to select.</yellow>"]}
+    brown: {slot: 5, material: BROWN_DYE, name: "<gold>Brown", lore: ["<gray>Select this color.", "<yellow>Click to select.</yellow>"]}
+    red: {slot: 6, material: RED_DYE, name: "<red>Red", lore: ["<gray>Select this color.", "<yellow>Click to select.</yellow>"]}
+    orange: {slot: 7, material: ORANGE_DYE, name: "<gold>Orange", lore: ["<gray>Select this color.", "<yellow>Click to select.</yellow>"]}
+    yellow: {slot: 9, material: YELLOW_DYE, name: "<yellow>Yellow", lore: ["<gray>Select this color.", "<yellow>Click to select.</yellow>"]}
+    lime: {slot: 10, material: LIME_DYE, name: "<green>Lime", lore: ["<gray>Select this color.", "<yellow>Click to select.</yellow>"]}
+    green: {slot: 11, material: GREEN_DYE, name: "<dark_green>Green", lore: ["<gray>Select this color.", "<yellow>Click to select.</yellow>"]}
+    cyan: {slot: 12, material: CYAN_DYE, name: "<aqua>Cyan", lore: ["<gray>Select this color.", "<yellow>Click to select.</yellow>"]}
+    light_blue: {slot: 13, material: LIGHT_BLUE_DYE, name: "<aqua>Light Blue", lore: ["<gray>Select this color.", "<yellow>Click to select.</yellow>"]}
+    blue: {slot: 14, material: BLUE_DYE, name: "<blue>Blue", lore: ["<gray>Select this color.", "<yellow>Click to select.</yellow>"]}
+    purple: {slot: 15, material: PURPLE_DYE, name: "<dark_purple>Purple", lore: ["<gray>Select this color.", "<yellow>Click to select.</yellow>"]}
+    magenta: {slot: 16, material: MAGENTA_DYE, name: "<light_purple>Magenta", lore: ["<gray>Select this color.", "<yellow>Click to select.</yellow>"]}
+    pink: {slot: 17, material: PINK_DYE, name: "<light_purple>Pink", lore: ["<gray>Select this color.", "<yellow>Click to select.</yellow>"]}
+    cancel: {slot: 22, material: BARRIER, name: "<red><bold>ᴄᴀɴᴄᴇʟ</bold>", lore: ["<gray>Cancel creation."]}
+
+  leaderboard:
+    star: {slot: 1, material: NETHER_STAR, name: "<yellow><bold>Top Star</bold>", lore: ["<yellow>Click to select."]}
+    points: {slot: 3, material: BELL, name: "<green><bold>Top Points</bold>", lore: ["<yellow>Click to select."]}
+    kills: {slot: 5, material: SKELETON_SKULL, name: "<aqua><bold>Top Kill</bold>", lore: ["<yellow>Click to select."]}
+    kdr: {slot: 7, material: TNT, name: "<red><bold>Top KDR</bold>", lore: ["<yellow>Click to select."]}
+    previous: {slot: 45, material: ARROW, name: "<yellow>← Previous", lore: ["<gray>Page {page}/{pages}"]}
+    back: {slot: 49, material: IRON_DOOR, name: "<gray>ʙᴀᴄᴋ", lore: []}
+    next: {slot: 53, material: ARROW, name: "<yellow>Next →", lore: ["<gray>Page {page}/{pages}"]}
+    entry: {slot: 9, material: BEACON, name: "<green>#{rank} <white>{team} <gray>[{tag}]", lore: ["<gray>Members: <white>{members}/{max}", "<gray>{metric}: <white>{value}", "", "<yellow>Click for team info.</yellow"]}
+
+  browse:
+    previous: {slot: 45, material: ARROW, name: "<yellow>← Previous", lore: []}
+    back: {slot: 49, material: IRON_DOOR, name: "<gray>ʙᴀᴄᴋ", lore: []}
+    next: {slot: 53, material: ARROW, name: "<yellow>Next →", lore: []}
+    entry: {slot: 0, material: BEACON, name: "<aqua><bold>{team}</bold> <gray>[{tag}]", lore: ["<gray>Members: <white>{members}/{max}", "<gray>Status: {status}", "<gray>Weekly Points: <white>{points}", "", "<yellow>Click for info.</yellow"]}
+
+  team_info:
+    summary: {slot: 10, material: BEACON, name: "<aqua><bold>{team}</bold>", lore: ["<gray>Tag: <white>{tag}", "<gray>Members: <white>{members}/{max}", "<gray>Status: {status}"]}
+    owner: {slot: 12, material: PLAYER_HEAD, name: "<gold>Owner: <white>{target}", lore: []}
+    stats: {slot: 14, material: NETHER_STAR, name: "<gold><bold>ᴛᴇᴀᴍ sᴛᴀᴛs</bold>", lore: ["<gray>Weekly Points: <white>{points}", "<gray>Kills: <white>{kills}", "<gray>Deaths: <white>{deaths}", "<gray>KDR: <white>{kdr}", "<gray>Stars: <yellow>⭐ {stars}"]}
+    description: {slot: 16, material: OAK_SIGN, name: "<yellow><bold>ᴅᴇsᴄʀɪᴘᴛɪᴏɴ</bold>", lore: ["<gray>{description}"]}
+    join: {slot: 20, material: LIME_DYE, name: "<green><bold>ʀᴇǫᴜᴇsᴛ ᴛᴏ ᴊᴏɪɴ</bold>", lore: ["<yellow>Click to send a request."]}
+    back: {slot: 22, material: IRON_DOOR, name: "<gray>ʙᴀᴄᴋ", lore: []}
+
+  invites:
+    empty: {slot: 13, material: PAPER, name: "<gray>No pending invitations.", lore: []}
+    entry: {slot: 13, material: DIAMOND, name: "<aqua><bold>{team}</bold>", lore: ["<gray>Tag: <white>{tag}", "<gray>Members: <white>{members}/{max}", "", "<green>Left-click: Accept</green>", "<red>Right-click: Decline</red>"]}
+    back: {slot: 22, material: IRON_DOOR, name: "<gray>ʙᴀᴄᴋ", lore: []}
+
+  settings:
+    tag: {slot: 11, material: NAME_TAG, name: "<aqua><bold>ᴄʜᴀɴɢᴇ ᴛᴀɢ</bold>", lore: ["<gray>Current: <white>{tag}", "", "<yellow>Click to edit in chat."]}
+    description: {slot: 13, material: OAK_SIGN, name: "<aqua><bold>ᴄʜᴀɴɢᴇ ᴅᴇsᴄʀɪᴘᴛɪᴏɴ</bold>", lore: ["<gray>Current: <white>{description}", "", "<yellow>Click to edit in chat."]}
+    status: {slot: 15, material: ENDER_EYE, name: "<aqua><bold>ᴛᴇᴀᴍ sᴛᴀᴛᴜs</bold>", lore: ["<gray>Currently: {status}", "<gray>{status_info}", "", "<yellow>Click to toggle."]}
+    color: {slot: 17, material: CYAN_DYE, name: "<aqua><bold>ᴛᴇᴀᴍ ᴄᴏʟᴏʀ</bold>", lore: ["<gray>Current: <white>{color}", "", "<yellow>Click to change."]}
+    back: {slot: 22, material: IRON_DOOR, name: "<gray>ʙᴀᴄᴋ", lore: []}
+
+  member:
+    profile: {slot: 10, material: PLAYER_HEAD, name: "<gold><bold>{target}</bold>", lore: ["<gray>Role: <white>{role}", "<gray>Joined: <white>{joined}", "<gray>Weekly Points: <white>{points}", "<gray>Kills: <white>{kills}", "<gray>Deaths: <white>{deaths}", "<gray>Playtime: <white>{playtime}m"]}
+    profile: {slot: 10, material: PLAYER_HEAD, name: "<gold><bold>{target}</bold>", lore: ["<gray>Role: <white>{role}", "<gray>Joined: <white>{joined}"]}
+    promote: {slot: 12, material: LIME_DYE, name: "<green>ᴘʀᴏᴍᴏᴛᴇ", lore: ["<yellow>Promote to admin."]}
+    demote: {slot: 12, material: GRAY_DYE, name: "<gray>ᴅᴇᴍᴏᴛᴇ", lore: ["<yellow>Demote to member."]}
+    kick: {slot: 14, material: RED_WOOL, name: "<red>ᴋɪᴄᴋ", lore: ["<gray>Remove this member."]}
+    transfer: {slot: 16, material: BEACON, name: "<gold>ᴛʀᴀɴsғᴇʀ ᴏᴡɴᴇʀsʜɪᴘ", lore: ["<gray>Make this player owner."]}
+    back: {slot: 22, material: IRON_DOOR, name: "<gray>ʙᴀᴄᴋ", lore: []}
+
+  join_requests:
+    empty: {slot: 22, material: PAPER, name: "<gray>No pending requests.", lore: []}
+    entry: {slot: 9, material: PLAYER_HEAD, name: "<yellow>{target}", lore: ["<gray>Wants to join.", "", "<green>Left-click: Accept</green>", "<red>Right-click: Deny</red>"]}
+    back: {slot: 49, material: IRON_DOOR, name: "<gray>ʙᴀᴄᴋ", lore: []}
+
+  allies:
+    entry: {slot: 0, material: TOTEM_OF_UNDYING, name: "<aqua>{team} <gray>[{tag}]", lore: ["<gray>Members: <white>{members}", "", "<red>Click to remove ally.</red>"]}
+    empty: {slot: 22, material: PAPER, name: "<gray>No allies.", lore: ["<gray>Use <white>/team ally <tag></white> to request one."]}
+    back: {slot: 49, material: IRON_DOOR, name: "<gray>ʙᴀᴄᴋ", lore: []}
+
+  confirm:
+    cancel: {slot: 11, material: RED_WOOL, name: "<red><bold>ᴄᴀɴᴄᴇʟ</bold>", lore: ["<gray>Return."]}
+    confirm: {slot: 15, material: GREEN_WOOL, name: "<green><bold>ᴄᴏɴғɪʀᴍ</bold>", lore: ["<gray>Target: <white>{target}", "", "<yellow>Click to confirm.</yellow>"]}

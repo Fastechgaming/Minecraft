@@ -8,17 +8,20 @@ const playersBoard = document.getElementById("ranking-board-players");
 const teamsBoard = document.getElementById("ranking-board-teams");
 
 // Player tier, purely a Star-count lookup - no separate field to maintain.
-// M1 is the top tier, M9 the base. Update the thresholds here if they ever
-// change; nothing else needs to know about them.
+// M1 is the top tier, M9 the base. These thresholds must match the
+// MakongCore plugin's module/matier.yml exactly (matier.tiers) - that's the
+// authoritative source once the plugin is reporting live Star data; until
+// then this page's Star numbers are admin-curated and this is just where
+// they map to a tier for display.
 const TIERS = [
-  { tier: "M1", min: 1000 },
-  { tier: "M2", min: 800 },
-  { tier: "M3", min: 650 },
-  { tier: "M4", min: 500 },
-  { tier: "M5", min: 400 },
-  { tier: "M6", min: 300 },
-  { tier: "M7", min: 200 },
-  { tier: "M8", min: 100 },
+  { tier: "M1", min: 1500 },
+  { tier: "M2", min: 1200 },
+  { tier: "M3", min: 975 },
+  { tier: "M4", min: 750 },
+  { tier: "M5", min: 600 },
+  { tier: "M6", min: 450 },
+  { tier: "M7", min: 300 },
+  { tier: "M8", min: 150 },
   { tier: "M9", min: 0 },
 ];
 function tierFor(star) {

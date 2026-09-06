@@ -18,18 +18,19 @@
 
   <main class="admin-main">
     <%
-      // Same Star -> tier thresholds as public/js/ranking.js's TIERS - kept
-      // in sync by hand since one is EJS and the other browser JS.
+      // Same Star -> tier thresholds as public/js/ranking.js's TIERS (and the
+      // MakongCore plugin's module/matier.yml matier.tiers) - kept in sync by
+      // hand since these are three different files.
       function tierFor(star) {
         var value = Number(star) || 0;
-        if (value >= 1000) return "M1";
-        if (value >= 800) return "M2";
-        if (value >= 650) return "M3";
-        if (value >= 500) return "M4";
-        if (value >= 400) return "M5";
-        if (value >= 300) return "M6";
-        if (value >= 200) return "M7";
-        if (value >= 100) return "M8";
+        if (value >= 1500) return "M1";
+        if (value >= 1200) return "M2";
+        if (value >= 975) return "M3";
+        if (value >= 750) return "M4";
+        if (value >= 600) return "M5";
+        if (value >= 450) return "M6";
+        if (value >= 300) return "M7";
+        if (value >= 150) return "M8";
         return "M9";
       }
     %>
