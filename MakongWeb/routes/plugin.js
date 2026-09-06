@@ -111,6 +111,13 @@ router.post("/command", (req, res) => {
   }
   const clean = String(command).slice(0, COMMAND_MAX_LENGTH).trim();
   if (!clean) return res.status(400).json({ error: "command is empty" });
+  // Refuse rather than queue blindly into a target that isn't actually
+  // polling right now - a command sitting in a dead target's queue forever
+  // looks like success to the caller but never runs. This is the freshest
+  // online check there is (based on that server's own last poll).
+  if (!pluginBridge.isOnline(String(targetServerId))) {
+    return res.status(409).json({ ok: false, error: `${targetServerId} is not currently connected` });
+  }
   const commandId = pluginBridge.queueCommand(String(targetServerId), clean, { from: String(serverId) });
   res.json({ ok: true, commandId });
 });

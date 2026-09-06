@@ -241,7 +241,10 @@ different machines/hosts) and:
 - MakongVelocity's `/mc autorestart <seconds>` uses this same queue
   (`POST /api/plugin/command`) to fan a restart-warning-then-restart command
   out to every connected Paper backend at once — see its own README for the
-  intended panel-scheduling pattern.
+  intended panel-scheduling pattern. This endpoint refuses (409) rather than
+  queuing anything for a `targetServerId` that isn't currently online, so a
+  caller finds out immediately instead of a command silently sitting
+  undelivered forever.
 
 Turn this on by setting **`MAKONGCORE_SECRET`** in `.env` (any long random
 string) and the same value in every plugin's `config.yml` — that one shared

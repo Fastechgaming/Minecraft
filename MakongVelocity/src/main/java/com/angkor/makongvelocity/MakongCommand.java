@@ -152,13 +152,26 @@ final class MakongCommand implements SimpleCommand {
             invocation.source().sendMessage(Component.text("No MakongCore backends are currently connected to the website bridge.", NamedTextColor.RED));
             return;
         }
-        for (WebsiteBridge.ServerInfo backend : backends) {
-            bridge.queueCommand(backend.serverId, "makongcore autorestart " + seconds);
-        }
-        invocation.source().sendMessage(Component.text(
-                "Queued a " + seconds + "s restart warning for " + backends.size() + " server(s): "
-                        + backends.stream().map(s -> s.serverId).reduce((a, b) -> a + ", " + b).orElse(""),
-                NamedTextColor.GREEN));
+
+        // Sends to every backend right now and waits to find out whether
+        // each one actually took it - no queue-and-hope. queueCommand()
+        // itself is a blocking HTTP call (same as ping()'s), so this runs
+        // off the command thread.
+        plugin.proxyServer().getScheduler().buildTask(plugin, () -> {
+            List<String> sent = new ArrayList<>();
+            List<String> failed = new ArrayList<>();
+            for (WebsiteBridge.ServerInfo backend : backends) {
+                boolean ok = bridge.queueCommand(backend.serverId, "makongcore autorestart " + seconds);
+                (ok ? sent : failed).add(backend.serverId);
+            }
+            if (!sent.isEmpty()) {
+                invocation.source().sendMessage(Component.text(
+                        "Sent " + seconds + "s restart warning to: " + String.join(", ", sent), NamedTextColor.GREEN));
+            }
+            if (!failed.isEmpty()) {
+                invocation.source().sendMessage(Component.text("Failed: " + String.join(", ", failed), NamedTextColor.RED));
+            }
+        }).schedule();
     }
 
     private boolean requireBridge(Invocation invocation) {

@@ -100,19 +100,21 @@ public final class WebsiteBridge {
   }
 
   /**
-   * Queues a console command for `targetServerId`'s next poll - used by
+   * Sends a console command for `targetServerId` to run right now - used by
    * /mc autorestart to fan a restart-warning-then-restart command out to
    * every connected backend at once. Same trust model as everything else on
    * this bridge: whoever holds the shared secret can already do this via the
    * website's own admin panel, this is just a second caller of the identical
-   * command queue.
+   * command queue. The website itself refuses (and this returns false) when
+   * `targetServerId` isn't currently connected, rather than accepting a
+   * command that would just sit there forever.
    */
-  public void queueCommand(String targetServerId, String command) {
+  public boolean queueCommand(String targetServerId, String command) {
     Map<String, Object> body = new LinkedHashMap<>();
     body.put("serverId", serverId);
     body.put("targetServerId", targetServerId);
     body.put("command", command);
-    post("/api/plugin/command", body);
+    return post("/api/plugin/command", body) != null;
   }
 
   /* ------------------------------- plumbing ------------------------------- */

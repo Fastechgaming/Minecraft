@@ -112,9 +112,14 @@ every backend you want reachable must have its own `module/website.yml`
 bridge configured and connected too (see MakongCore's README) - this proxy
 only ever sees backends that are themselves already talking to the website.
 
-Once connected, `/mc autorestart <seconds>` queues
-`makongcore autorestart <seconds>` on every currently-connected backend at
-once. Each one broadcasts a countdown (reusing its own
+Once connected, `/mc autorestart <seconds>` sends
+`makongcore autorestart <seconds>` to every currently-connected backend at
+once and reports back per backend - `Sent ... to: a, b` for ones the
+website accepted, `Failed: c` for any it refused (not currently connected)
+or that the HTTP call itself failed for. Nothing is queued for a backend
+that isn't online right now - it's reported as failed immediately instead
+of sitting around waiting for a connection that may never come back. Each
+backend that does get it broadcasts a countdown (reusing its own
 `module/autorestart.yml` interval messages) and restarts itself once the
 countdown reaches zero - see `/mateam autorestart` in MakongCore's README.
 

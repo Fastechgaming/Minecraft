@@ -43,7 +43,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *    itself uses) purely to relay /mc autorestart <seconds> to every
  *    connected backend at once.
  */
-@Plugin(id = "makongvelocity", name = "MakongVelocity", version = "1.2.1", authors = {"Angkor"})
+@Plugin(id = "makongvelocity", name = "MakongVelocity", version = "1.2.2", authors = {"Angkor"})
 public final class MakongVelocity {
 
     static final MinecraftChannelIdentifier ACCOUNT_TYPE_CHANNEL = MinecraftChannelIdentifier.create("makong", "accounttype");
