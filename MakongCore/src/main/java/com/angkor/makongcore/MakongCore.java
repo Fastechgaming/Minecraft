@@ -89,7 +89,7 @@ public final class MakongCore extends JavaPlugin {
         matierAura=new MaTierAuraService(this,matier);
         MaTierCommand mc=new MaTierCommand(this,matier);
         getCommand("matier").setExecutor(mc); getCommand("matier").setTabCompleter(mc);
-        getCommand("link").setExecutor((sender,label,args)->{if(!(sender instanceof org.bukkit.entity.Player p)){sender.sendMessage("Players only.");return true;}accountLinks.optionalLink(p);return true;});
+        getCommand("link").setExecutor((sender,command,label,args)->{if(!(sender instanceof org.bukkit.entity.Player p)){sender.sendMessage("Players only.");return true;}accountLinks.optionalLink(p);return true;});
         getServer().getPluginManager().registerEvents(matier,this);
         
         getServer().getPluginManager().registerEvents(new GuiListener(this,teams,gui),this);
