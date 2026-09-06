@@ -4,8 +4,12 @@ import com.angkor.makongcore.config.Settings; import com.angkor.makongcore.data.
 import java.util.*; import java.util.concurrent.*; import java.util.function.*;
 public final class TeamService {
  public record Invite(UUID team,UUID inviter,long expiresAt){} public record Request(UUID team,UUID player,long expiresAt){}
- private final Database db; private final Settings s; private final Map<UUID,Team> teams=new ConcurrentHashMap<>(); private final Map<String,UUID> tags=new ConcurrentHashMap<>(),names=new ConcurrentHashMap<>(); private final Map<UUID,Invite> invites=new ConcurrentHashMap<>(); private final Map<UUID,Request> requests=new ConcurrentHashMap<>();
+ private final Database db; private volatile Settings s; private final Map<UUID,Team> teams=new ConcurrentHashMap<>(); private final Map<String,UUID> tags=new ConcurrentHashMap<>(),names=new ConcurrentHashMap<>(); private final Map<UUID,Invite> invites=new ConcurrentHashMap<>(); private final Map<UUID,Request> requests=new ConcurrentHashMap<>();
  public TeamService(Database db,Settings s){this.db=db;this.s=s;}
+ // Lets /mateam reload team (and /mc reload team, relayed from MakongVelocity)
+ // pick up new limits/PvP/chat settings without the full reload's database
+ // reconnect and team-data reload - team membership is untouched.
+ public void updateSettings(Settings s){this.s=s;}
  public CompletableFuture<Void> load(){return db.loadTeams().thenAccept(list->{for(Team t:list){teams.put(t.id(),t);tags.put(t.tag().toLowerCase(Locale.ROOT),t.id());names.put(t.name().toLowerCase(Locale.ROOT),t.id());}});}
  public Team team(UUID id){return teams.get(id);} public Team byTag(String tag){UUID id=tags.get(tag.toLowerCase(Locale.ROOT));return id==null?null:team(id);} public Team byPlayer(UUID u){for(Team t:teams.values())if(t.hasMember(u))return t;return null;} public Collection<Team> all(){return Collections.unmodifiableCollection(teams.values());}
  public synchronized Team create(UUID owner,String tag,String name,String color){String tl=tag.toLowerCase(Locale.ROOT),nl=name.toLowerCase(Locale.ROOT);if(tags.containsKey(tl)||names.containsKey(nl))return null;Team t=new Team(UUID.randomUUID(),tag,name,descriptionForCreate(),color,true,s.pvpDefault());

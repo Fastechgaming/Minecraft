@@ -1,8 +1,9 @@
 # MakongVelocity
 
 A small Velocity companion to the [MakongCore](../MakongCore) Paper plugin.
-Entirely optional - the proxy runs fine without it, this just adds four
-independent features that only make sense at the proxy level:
+Entirely optional - the proxy runs fine without it, this just adds five
+independent features that only make sense at the proxy level. All commands
+below are registered as `/mc`, with `/makongcore` and `/macore` as aliases.
 
 1. **`/mc clients`.** Lists this proxy and every backend **actually running
    MakongCore** (i.e. currently connected to the website bridge), actually
@@ -18,19 +19,24 @@ independent features that only make sense at the proxy level:
    authenticating and forwards it to whichever backend they connect to. That
    backend's MakongCore then trusts it directly for account linking instead
    of running its own best-effort Mojang API guess.
-3. **`/mc autorestart <seconds>`.** Relays a restart-warning-then-restart
-   command to every MakongCore backend currently connected to the Makong
-   Network website bridge, all at once. Meant to be triggered by your panel's
-   own scheduled-restart feature a little before the proxy's own restart, so
+3. **`/mc autorestart <seconds|stop>`** (or the shorter `/mc ar now
+   [interval]` / `/mc ar stop`). Relays a restart-warning-then-restart
+   command - or a cancellation of one already in progress - to every
+   MakongCore backend currently connected to the Makong Network website
+   bridge, all at once. Meant to be triggered by your panel's own
+   scheduled-restart feature a little before the proxy's own restart, so
    backends finish restarting first - see "Restart broadcast" below.
-4. **Periodic announcements.** Broadcasts store/Discord (or anything else
+4. **`/mc reload <module>`.** Relays a single-module config reload to every
+   connected backend at once - see "Restart broadcast" below for the full
+   list of modules.
+5. **Periodic announcements.** Broadcasts store/Discord (or anything else
    you add) plugs to every player on the network on independent repeating
    timers - see "Announcements" below.
 
 nLogin forwarding and announcements are on by default and independent of
-everything else. `/mc clients` and `/mc autorestart` both need the website
-bridge configured, since that's this proxy's only way to know which of its
-servers run MakongCore at all.
+everything else. `/mc clients`, `/mc autorestart`/`/mc ar` and `/mc reload`
+all need the website bridge configured, since that's this proxy's only way
+to know which of its servers run MakongCore at all.
 
 ## Building
 
@@ -182,7 +188,8 @@ every backend you want reachable must have its own `config.yml`'s
 README) - this proxy only ever sees backends that are themselves already
 talking to the website.
 
-Once connected, `/mc autorestart <seconds>` sends
+Once connected, `/mc autorestart <seconds>` (or its shorter form,
+`/mc ar now [interval]` - `interval` defaults to 60 if omitted) sends
 `makongcore autorestart <seconds>` to every currently-connected backend at
 once and reports back per backend - `Sent ... to: a, b` for ones the
 website accepted, `Failed: c` for any it refused (not currently connected)
@@ -192,6 +199,12 @@ of sitting around waiting for a connection that may never come back. Each
 backend that does get it broadcasts a countdown (reusing its own
 `module/autorestart.yml` interval messages) and restarts itself once the
 countdown reaches zero - see `/mateam autorestart` in MakongCore's README.
+
+`/mc autorestart stop` (or `/mc ar stop`) cancels a pending ad-hoc restart
+on every connected backend before it fires - useful if a countdown was
+started by mistake or plans changed mid-countdown. It never touches each
+backend's own configured `settings.restarts` schedule, only the one-off
+countdown started by `autorestart`/`ar now`.
 
 **Timing example.** Say your panel restarts the proxy every day at a fixed
 time via its own scheduler. Add a second scheduled task a little earlier -
@@ -206,8 +219,16 @@ MakongCore's own `/mateam ping <server-id>` does, relayed through the
 website - handy for confirming this proxy and a given backend can both
 reach the website bridge.
 
+`/mc reload <module>` sends `makongcore reload <module>` to every
+connected backend, reloading just that one MakongCore module network-wide
+instead of logging into each server individually. Valid modules: `team`,
+`autorestart`, `matier`, `verification`, `gui` - see MakongCore's README
+for what each covers and `/mateam reload [module]` for the same thing run
+locally on one server.
+
 ## Permissions
 
-- `makongvelocity.admin` - required to run `/mc clients`, `/mc ping` or
-  `/mc autorestart` as a player. The proxy console always has it, so a
-  panel's scheduled console command needs no special grant.
+- `makongvelocity.admin` - required to run `/mc clients`, `/mc ping`,
+  `/mc autorestart`/`/mc ar` or `/mc reload` as a player. The proxy console
+  always has it, so a panel's scheduled console command needs no special
+  grant. `/mc` also answers to `/makongcore` and `/macore`.

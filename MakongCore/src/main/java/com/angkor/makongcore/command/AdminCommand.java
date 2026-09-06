@@ -37,7 +37,7 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
         }
 
         switch (args[0].toLowerCase(Locale.ROOT)) {
-            case "reload" -> plugin.reloadMakongCore(sender);
+            case "reload" -> reload(sender, args);
             case "info" -> info(sender);
             case "list" -> list(sender);
             case "team" -> team(sender, args);
@@ -60,7 +60,7 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
     private void help(CommandSender s) {
         send(s, """
                 <gray><bold>MakongCore Admin Commands</bold>
-                <yellow>/mateam reload</yellow> <gray>- Reload MakongCore configuration and data
+                <yellow>/mateam reload [module]</yellow> <gray>- Reload everything, or just team|autorestart|matier|verification|gui
                 <yellow>/mateam info</yellow> <gray>- Plugin/database/team statistics
                 <yellow>/mateam list</yellow> <gray>- List all teams
                 <yellow>/mateam team <tag></yellow> <gray>- Inspect a team
@@ -73,7 +73,15 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
                 <yellow>/mateam givestar <tag> <amount></yellow> <gray>- Give/remove Stars
                 <yellow>/mateam setstars <tag> <amount></yellow> <gray>- Set Stars
                 <yellow>/mateam ping <server-id></yellow> <gray>- Ping another server on the website bridge
-                <yellow>/mateam autorestart <seconds></yellow> <gray>- Broadcast a countdown and restart this server after it elapses""");
+                <yellow>/mateam autorestart <seconds|stop></yellow> <gray>- Broadcast a countdown and restart this server after it elapses, or cancel a pending one""");
+    }
+
+    private void reload(CommandSender s, String[] args) {
+        if (args.length < 2) {
+            plugin.reloadMakongCore(s);
+            return;
+        }
+        plugin.reloadModule(args[1], s);
     }
 
     private void info(CommandSender s) {
@@ -102,14 +110,19 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
 
     private void autorestart(CommandSender s, String[] args) {
         if (args.length < 2) {
-            send(s, "<red>Usage: /mateam autorestart <seconds></red>");
+            send(s, "<red>Usage: /mateam autorestart <seconds|stop></red>");
+            return;
+        }
+        if (args[1].equalsIgnoreCase("stop")) {
+            boolean cancelled = plugin.autoRestart().cancelAdHocRestart();
+            send(s, cancelled ? "<green>Ad-hoc autorestart cancelled.</green>" : "<yellow>No ad-hoc autorestart is currently pending.</yellow>");
             return;
         }
         long seconds;
         try {
             seconds = Long.parseLong(args[1]);
         } catch (NumberFormatException e) {
-            send(s, "<red>Seconds must be a whole number.</red>");
+            send(s, "<red>Seconds must be a whole number (or 'stop').</red>");
             return;
         }
         plugin.autoRestart().triggerAdHocRestart(seconds);
@@ -253,6 +266,13 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
         if (args.length == 2 && List.of("forcejoin", "forceleave").contains(args[0].toLowerCase(Locale.ROOT))) {
             return Bukkit.getOnlinePlayers().stream().map(org.bukkit.entity.Player::getName)
                     .filter(x -> x.toLowerCase(Locale.ROOT).startsWith(args[1].toLowerCase(Locale.ROOT))).sorted().toList();
+        }
+        if (args.length == 2 && args[0].equalsIgnoreCase("reload")) {
+            return List.of("team", "autorestart", "matier", "verification", "gui")
+                    .stream().filter(x -> x.startsWith(args[1].toLowerCase(Locale.ROOT))).toList();
+        }
+        if (args.length == 2 && args[0].equalsIgnoreCase("autorestart")) {
+            return List.of("stop").stream().filter(x -> x.startsWith(args[1].toLowerCase(Locale.ROOT))).toList();
         }
         return List.of();
     }

@@ -45,7 +45,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * 3. Periodic network-wide announcements (store/Discord plugs, etc.) - see
  *    AnnouncementService and announcements.yml.
  */
-@Plugin(id = "makongvelocity", name = "MakongVelocity", version = "1.3.1", authors = {"Angkor"})
+@Plugin(id = "makongvelocity", name = "MakongVelocity", version = "1.3.2", authors = {"Angkor"})
 public final class MakongVelocity {
 
     static final MinecraftChannelIdentifier ACCOUNT_TYPE_CHANNEL = MinecraftChannelIdentifier.create("makong", "accounttype");
@@ -86,7 +86,7 @@ public final class MakongVelocity {
 
         server.getChannelRegistrar().register(ACCOUNT_TYPE_CHANNEL);
         server.getCommandManager().register(
-                server.getCommandManager().metaBuilder("mc").build(),
+                server.getCommandManager().metaBuilder("mc").aliases("makongcore", "macore").build(),
                 new MakongCommand(this));
 
         if (config.websiteEnabled()) startWebsiteBridge();

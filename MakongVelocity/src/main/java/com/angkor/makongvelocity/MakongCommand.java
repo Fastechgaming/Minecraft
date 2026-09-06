@@ -28,6 +28,12 @@ import java.util.concurrent.TimeUnit;
  *   connected to the website bridge at once - see AdminCommand#autorestart
  *   on the Paper side and MakongVelocity's README for the intended
  *   panel-scheduling use.
+ * - /mc ar now [interval] / /mc ar stop are the same restart broadcast
+ *   under a shorter name, plus the ability to cancel a pending one - "ar"
+ *   and "autorestart" both relay to AdminCommand#autorestart on every
+ *   connected backend.
+ * - /mc reload <module> relays to AdminCommand#reload on every connected
+ *   backend, reloading just that one MakongCore module across the network.
  */
 final class MakongCommand implements SimpleCommand {
     private static final int BOX_WIDTH = 70;
@@ -50,12 +56,14 @@ final class MakongCommand implements SimpleCommand {
             case "clients" -> clients(invocation);
             case "ping" -> ping(invocation, args);
             case "autorestart" -> autorestart(invocation, args);
+            case "ar" -> ar(invocation, args);
+            case "reload" -> reload(invocation, args);
             default -> usage(invocation);
         }
     }
 
     private void usage(Invocation invocation) {
-        invocation.source().sendMessage(Component.text("Usage: /mc <clients|ping|autorestart> ...", NamedTextColor.RED));
+        invocation.source().sendMessage(Component.text("Usage: /mc <clients|ping|autorestart|ar|reload> ...", NamedTextColor.RED));
     }
 
     private void clients(Invocation invocation) {
@@ -144,20 +152,79 @@ final class MakongCommand implements SimpleCommand {
         plugin.ping(args[1], invocation.source());
     }
 
+    private static final long DEFAULT_AR_INTERVAL_SECONDS = 60;
+
     private void autorestart(Invocation invocation, String[] args) {
         if (!requireBridge(invocation)) return;
         if (args.length < 2) {
-            invocation.source().sendMessage(Component.text("Usage: /mc autorestart <seconds>", NamedTextColor.RED));
+            invocation.source().sendMessage(Component.text("Usage: /mc autorestart <seconds|stop>", NamedTextColor.RED));
+            return;
+        }
+        if (args[1].equalsIgnoreCase("stop")) {
+            relayToAllBackends(invocation, "makongcore autorestart stop", "Sent restart-cancel to");
             return;
         }
         long seconds;
         try {
             seconds = Long.parseLong(args[1]);
         } catch (NumberFormatException e) {
-            invocation.source().sendMessage(Component.text("Seconds must be a whole number.", NamedTextColor.RED));
+            invocation.source().sendMessage(Component.text("Seconds must be a whole number (or 'stop').", NamedTextColor.RED));
             return;
         }
+        relayToAllBackends(invocation, "makongcore autorestart " + seconds, "Sent " + seconds + "s restart warning to");
+    }
 
+    // "/mc ar" is the same restart-broadcast feature as "/mc autorestart"
+    // under a shorter name, split into explicit now/stop subcommands rather
+    // than autorestart's single "<seconds|stop>" arg.
+    private void ar(Invocation invocation, String[] args) {
+        if (!requireBridge(invocation)) return;
+        if (args.length < 2) {
+            invocation.source().sendMessage(Component.text("Usage: /mc ar <now [interval]|stop>", NamedTextColor.RED));
+            return;
+        }
+        switch (args[1].toLowerCase(Locale.ROOT)) {
+            case "now" -> {
+                long seconds = DEFAULT_AR_INTERVAL_SECONDS;
+                if (args.length >= 3) {
+                    try {
+                        seconds = Long.parseLong(args[2]);
+                    } catch (NumberFormatException e) {
+                        invocation.source().sendMessage(Component.text("Interval must be a whole number of seconds.", NamedTextColor.RED));
+                        return;
+                    }
+                }
+                relayToAllBackends(invocation, "makongcore autorestart " + seconds, "Sent " + seconds + "s restart warning to");
+            }
+            case "stop" -> relayToAllBackends(invocation, "makongcore autorestart stop", "Sent restart-cancel to");
+            default -> invocation.source().sendMessage(Component.text("Usage: /mc ar <now [interval]|stop>", NamedTextColor.RED));
+        }
+    }
+
+    private static final java.util.Set<String> RELOAD_MODULES =
+            java.util.Set.of("team", "autorestart", "matier", "verification", "gui");
+
+    private void reload(Invocation invocation, String[] args) {
+        if (!requireBridge(invocation)) return;
+        if (args.length < 2) {
+            invocation.source().sendMessage(Component.text(
+                    "Usage: /mc reload <team|autorestart|matier|verification|gui>", NamedTextColor.RED));
+            return;
+        }
+        String module = args[1].toLowerCase(Locale.ROOT);
+        if (!RELOAD_MODULES.contains(module)) {
+            invocation.source().sendMessage(Component.text(
+                    "Unknown module '" + module + "'. Valid: team, autorestart, matier, verification, gui.", NamedTextColor.RED));
+            return;
+        }
+        relayToAllBackends(invocation, "makongcore reload " + module, "Reloaded '" + module + "' on");
+    }
+
+    // Sends `remoteCommand` to every connected MakongCore backend right now
+    // and waits to find out whether each one actually took it - no
+    // queue-and-hope. queueCommand() itself is a blocking HTTP call (same as
+    // ping()'s), so this always runs off the command thread.
+    private void relayToAllBackends(Invocation invocation, String remoteCommand, String successVerb) {
         WebsiteBridge bridge = plugin.bridge();
         List<WebsiteBridge.ServerInfo> backends = plugin.knownBackends();
         if (backends.isEmpty()) {
@@ -165,20 +232,16 @@ final class MakongCommand implements SimpleCommand {
             return;
         }
 
-        // Sends to every backend right now and waits to find out whether
-        // each one actually took it - no queue-and-hope. queueCommand()
-        // itself is a blocking HTTP call (same as ping()'s), so this runs
-        // off the command thread.
         plugin.proxyServer().getScheduler().buildTask(plugin, () -> {
             List<String> sent = new ArrayList<>();
             List<String> failed = new ArrayList<>();
             for (WebsiteBridge.ServerInfo backend : backends) {
-                boolean ok = bridge.queueCommand(backend.serverId, "makongcore autorestart " + seconds);
+                boolean ok = bridge.queueCommand(backend.serverId, remoteCommand);
                 (ok ? sent : failed).add(backend.serverId);
             }
             if (!sent.isEmpty()) {
                 invocation.source().sendMessage(Component.text(
-                        "Sent " + seconds + "s restart warning to: " + String.join(", ", sent), NamedTextColor.GREEN));
+                        successVerb + ": " + String.join(", ", sent), NamedTextColor.GREEN));
             }
             if (!failed.isEmpty()) {
                 invocation.source().sendMessage(Component.text("Failed: " + String.join(", ", failed), NamedTextColor.RED));

@@ -56,6 +56,20 @@ public final class AutoRestartService {
         },0L,20L);
     }
 
+    // Cancels a pending triggerAdHocRestart() before it fires - used by
+    // /mateam autorestart stop (see AdminCommand), itself normally triggered
+    // by MakongVelocity's /mc ar stop relayed through the website bridge.
+    // Only touches the ad-hoc countdown; the configured settings.restarts
+    // schedule is untouched. Returns false if nothing was pending.
+    public boolean cancelAdHocRestart(){
+        if(adHocTask==null)return false;
+        adHocTask.cancel();
+        adHocTask=null;
+        Bukkit.broadcast(com.angkor.makongcore.util.Text.mm(
+                c.getString("messages.cancelled","<yellow>The scheduled restart has been cancelled.</yellow>")));
+        return true;
+    }
+
     private boolean enabled(){return c.getBoolean("settings.enabled",true);}
 
     private List<String> commands(String path){return c.getStringList(path);}

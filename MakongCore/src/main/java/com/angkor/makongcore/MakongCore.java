@@ -140,6 +140,46 @@ public final class MakongCore extends JavaPlugin {
         });
     }
 
+    // Modules that can be safely reloaded on their own, without the full
+    // reload's database reconnect and team-data reload - both just re-read
+    // their YAML and swap it into the still-running service (team's Settings
+    // snapshot, autorestart's stop/recreate/start), no event listeners or
+    // other services depend on the object identity being replaced.
+    private static final java.util.Set<String> LIGHTWEIGHT_MODULES = java.util.Set.of("team", "autorestart");
+    private static final java.util.Set<String> KNOWN_MODULES = java.util.Set.of("team", "autorestart", "matier", "verification", "gui");
+
+    /** Used by /mateam reload &lt;module&gt; (see AdminCommand) - and so, relayed, by MakongVelocity's /mc reload &lt;module&gt;. */
+    public void reloadModule(String module, CommandSender sender) {
+        if(!Bukkit.isPrimaryThread()){Bukkit.getScheduler().runTask(this,()->reloadModule(module,sender));return;}
+        String m = module.toLowerCase(java.util.Locale.ROOT);
+        if(!KNOWN_MODULES.contains(m)){
+            sendAdmin(sender,"<red>Unknown module '"+module+"'. Valid: team, autorestart, matier, verification, gui.</red>");
+            return;
+        }
+        if(!LIGHTWEIGHT_MODULES.contains(m)){
+            // matier/verification are registered event listeners and gui backs
+            // the open GUI manager - swapping their config in isolation would
+            // need the same listener re-registration dance the full reload
+            // already does safely, so just do that instead of duplicating it.
+            sendAdmin(sender,"<yellow>'"+m+"' needs a full reload to apply safely - reloading everything...</yellow>");
+            reloadMakongCore(sender);
+            return;
+        }
+        switch(m){
+            case "team" -> {
+                teamConfig.reload();
+                if(teams!=null) teams.updateSettings(Settings.load(teamConfig.get()));
+            }
+            case "autorestart" -> {
+                autoRestartConfig.reload();
+                if(autoRestart!=null) autoRestart.stop();
+                autoRestart=new AutoRestartService(this,autoRestartConfig.get());
+                autoRestart.start();
+            }
+        }
+        sendAdmin(sender,"<green>Reloaded module <white>"+m+"</white>.</green>");
+    }
+
     private void sendAdmin(CommandSender s,String m){s.sendMessage(Text.mm("<green>[ᴍᴀᴛᴇᴀᴍ]</green> "+m));}
     @Override public void onDisable(){HandlerList.unregisterAll(this);if(teamStats!=null)teamStats.stop();if(autoRestart!=null)autoRestart.stop();if(matierAura!=null)matierAura.stop();if(accountLinks!=null)accountLinks.stop();if(websiteBridge!=null)websiteBridge.stop();if(database!=null)database.close();}
     public TeamService teams(){return teams;} public GuiManager gui(){return gui;} public FloodgateHook floodgate(){return floodgate;} public ModuleConfig teamConfig(){return teamConfig;} public ModuleConfig matierConfig(){return matierConfig;} public MaTierService matier(){return matier;} public WebsiteBridgeService websiteBridge(){return websiteBridge;} public AutoRestartService autoRestart(){return autoRestart;}
