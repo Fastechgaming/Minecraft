@@ -48,6 +48,7 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
             case "setpoints", "setweeklypoints" -> points(sender, args, true);
             case "addstars", "givestars", "givestar" -> stars(sender, args, false);
             case "setstars" -> stars(sender, args, true);
+            case "ping" -> ping(sender, args);
             default -> {
                 send(sender, "<red>Unknown admin command. Use <yellow>/mateam help</yellow>.</red>");
             }
@@ -69,14 +70,32 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
                 <yellow>/mateam setweeklypoints <tag> <amount></yellow> <gray>- Set Weekly Points
                 <gray>/mateam addpoints and setpoints remain aliases
                 <yellow>/mateam givestar <tag> <amount></yellow> <gray>- Give/remove Stars
-                <yellow>/mateam setstars <tag> <amount></yellow> <gray>- Set Stars""");
+                <yellow>/mateam setstars <tag> <amount></yellow> <gray>- Set Stars
+                <yellow>/mateam ping <server-id></yellow> <gray>- Ping another server on the website bridge""");
     }
 
     private void info(CommandSender s) {
         long members = teams.all().stream().mapToLong(t -> t.members().size()).sum();
+        String bridge = !plugin.websiteBridge().isEnabled() ? "disabled"
+                : plugin.websiteBridge().isConnected() ? "connected as '" + plugin.websiteBridge().serverId() + "'"
+                : "not connected yet";
         send(s, "<gray>Teams: <white>" + teams.all().size()
                 + " <gray>| Members: <white>" + members
-                + " <gray>| Floodgate: <white>" + (plugin.floodgate().isAvailable() ? "enabled" : "not detected"));
+                + " <gray>| Floodgate: <white>" + (plugin.floodgate().isAvailable() ? "enabled" : "not detected")
+                + " <gray>| Website bridge: <white>" + bridge);
+    }
+
+    private void ping(CommandSender s, String[] args) {
+        if (!plugin.websiteBridge().isEnabled()) {
+            send(s, "<red>The website bridge is not configured - see module/website.yml.</red>");
+            return;
+        }
+        if (args.length < 2) {
+            send(s, "<red>Usage: /mateam ping <server-id></red>");
+            return;
+        }
+        send(s, "<gray>Pinging <white>" + args[1] + "</white>...");
+        plugin.websiteBridge().ping(args[1], s);
     }
 
     private void list(CommandSender s) {
@@ -207,7 +226,7 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (!sender.hasPermission("mateam.admin")) return List.of();
         if (args.length == 1) {
-            return List.of("help", "reload", "info", "list", "team", "disband", "forcejoin", "forceleave", "addweeklypoints", "setweeklypoints", "addpoints", "setpoints", "addstars", "givestars", "givestar", "setstars")
+            return List.of("help", "reload", "info", "list", "team", "disband", "forcejoin", "forceleave", "addweeklypoints", "setweeklypoints", "addpoints", "setpoints", "addstars", "givestars", "givestar", "setstars", "ping")
                     .stream().filter(x -> x.startsWith(args[0].toLowerCase(Locale.ROOT))).toList();
         }
         if (args.length == 2 && List.of("team", "disband", "addweeklypoints", "setweeklypoints", "addpoints", "setpoints", "addstars", "givestars", "givestar", "setstars").contains(args[0].toLowerCase(Locale.ROOT))) {

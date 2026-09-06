@@ -27,6 +27,16 @@ This is the initial foundation build. The architecture intentionally keeps GUI p
 ## Floodgate / Bedrock
 Floodgate is an optional runtime integration. MakongCore intentionally has no compile-time Floodgate dependency; when Floodgate is installed and enabled, MakongCore detects Bedrock players through the Floodgate API using reflection. This avoids old Floodgate/Geyser/Cumulus transitive dependencies during builds.
 
+## Website Bridge
+Optional integration with the Makong Network website's store (see `../MakongWeb/`). This server connects **outward** to the website on a repeating timer - nothing needs to be opened on this server's side, so it works whether the website and this server share a box or sit on entirely different hosts.
+
+Once configured (`module/website.yml`: `enabled: true`, a real `url`, and a `secret` matching the website's `MAKONGCORE_SECRET`):
+- This server shows up on the website's `/admin/servers` page and can be sent any console command from there on demand, or automatically when a Telegram store order is Accepted for this server's gamemode.
+- `/mateam ping <server-id>` reaches any other connected server (another MakongCore instance, or a Velocity proxy running the companion bridge plugin, if one exists on your network), relayed through the website.
+- `server_id` defaults to `config.yml`'s `network.server_id` if left blank in `module/website.yml`, so a network already using MySQL "network mode" doesn't need a second id to keep track of.
+
+This has no dependency on and does not affect MaTier, Teams, or account linking - it's purely a command/ping channel to and from the website.
+
 ## configuration
 - `config.yml` controls storage, team limits, validation, PvP, scoring, chat, allies, cleanup, cross-server behavior and weekly rewards.
 - `messages.yml` controls player-facing messages.
@@ -36,6 +46,9 @@ Floodgate is an optional runtime integration. MakongCore intentionally has no co
 Modules:
 - module/team.yml - team gameplay configuration
 - module/matier.yml - player MaTier configuration
+- module/discord.yml - Discord/Telegram linking, verification and staff commands
+- module/autorestart.yml - scheduled restarts
+- module/website.yml - Makong Network website bridge (see below)
 - gui.yml - GUI configuration
 - messages.yml - messages
 - config.yml - core/database/network configuration
@@ -71,3 +84,6 @@ MaTier:
 - Premium Java detection on an offline/cracked server uses the configured Mojang username lookup as a best-effort signal. A username existing on Mojang does not cryptographically prove that the joining player owns the premium account. For strict cracked-only enforcement, use an authentication plugin/proxy integration such as FastLogin/online authentication and feed that state into the linking requirement.
 
 - 1.2.10: Discord /ban duration autocomplete presets: Forever, 3d, 5d, 7d, 1month; custom duration text remains supported.
+
+## 1.2.11 changes
+- Added `module/website.yml` and the optional Website Bridge (see above) - connects this server to the Makong Network website's `/admin/servers` page, enables sending it console commands on demand or on Telegram order Accept, and adds `/mateam ping <server-id>` for cross-server pings relayed through the website.

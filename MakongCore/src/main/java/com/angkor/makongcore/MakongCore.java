@@ -16,6 +16,7 @@ import com.angkor.makongcore.listener.GuiListener;
 import com.angkor.makongcore.service.TeamService;
 import com.angkor.makongcore.service.WeeklyRewardService;
 import com.angkor.makongcore.service.AutoRestartService;
+import com.angkor.makongcore.service.WebsiteBridgeService;
 import com.angkor.makongcore.listener.TeamStatsListener;
 import com.angkor.makongcore.util.Text;
 import org.bukkit.Bukkit;
@@ -38,6 +39,8 @@ public final class MakongCore extends JavaPlugin {
     private MaTierAuraService matierAura;
     private AccountLinkService accountLinks;
     private ModuleConfig discordConfig;
+    private ModuleConfig websiteConfig;
+    private WebsiteBridgeService websiteBridge;
 
     private void saveBundledFileIfMissing(String name) {
         java.io.File file = new java.io.File(getDataFolder(), name);
@@ -52,10 +55,12 @@ public final class MakongCore extends JavaPlugin {
         saveBundledFileIfMissing("module/matier.yml");
         saveBundledFileIfMissing("module/autorestart.yml");
         saveBundledFileIfMissing("module/discord.yml");
+        saveBundledFileIfMissing("module/website.yml");
         teamConfig=new ModuleConfig(getDataFolder(),"team.yml");
         matierConfig=new ModuleConfig(getDataFolder(),"matier.yml");
         autoRestartConfig=new ModuleConfig(getDataFolder(),"autorestart.yml");
         discordConfig=new ModuleConfig(getDataFolder(),"discord.yml");
+        websiteConfig=new ModuleConfig(getDataFolder(),"website.yml");
         initialize();
     }
 
@@ -97,6 +102,7 @@ public final class MakongCore extends JavaPlugin {
         teamStats=new TeamStatsListener(this,teams); getServer().getPluginManager().registerEvents(teamStats,this); teamStats.start();
         autoRestart=new AutoRestartService(this,autoRestartConfig.get()); autoRestart.start();
         matier.start();
+        websiteBridge=new WebsiteBridgeService(this,websiteConfig.get()); websiteBridge.start();
         getLogger().info("MakongCore enabled. Teams loaded: "+teams.all().size());
     }
 
@@ -108,9 +114,11 @@ public final class MakongCore extends JavaPlugin {
         if(autoRestart!=null) autoRestart.stop();
         if(matierAura!=null) matierAura.stop();
         if(accountLinks!=null) accountLinks.stop();
+        if(websiteBridge!=null) websiteBridge.stop();
         if(database!=null)database.close();
         reloadConfig();saveBundledFileIfMissing("messages.yml");saveBundledFileIfMissing("gui.yml");saveBundledFileIfMissing("module/team.yml");saveBundledFileIfMissing("module/matier.yml");
-        saveBundledFileIfMissing("module/autorestart.yml");saveBundledFileIfMissing("module/discord.yml");teamConfig.reload();matierConfig.reload();autoRestartConfig.reload();discordConfig.reload();
+        saveBundledFileIfMissing("module/autorestart.yml");saveBundledFileIfMissing("module/discord.yml");saveBundledFileIfMissing("module/website.yml");
+        teamConfig.reload();matierConfig.reload();autoRestartConfig.reload();discordConfig.reload();websiteConfig.reload();
         Bukkit.getScheduler().runTaskAsynchronously(this,()->{
             try {
                 Database db=new Database(getConfig(),getDataFolder());
@@ -126,6 +134,6 @@ public final class MakongCore extends JavaPlugin {
     }
 
     private void sendAdmin(CommandSender s,String m){s.sendMessage(Text.mm("<green>[ᴍᴀᴛᴇᴀᴍ]</green> "+m));}
-    @Override public void onDisable(){HandlerList.unregisterAll(this);if(teamStats!=null)teamStats.stop();if(autoRestart!=null)autoRestart.stop();if(matierAura!=null)matierAura.stop();if(accountLinks!=null)accountLinks.stop();if(database!=null)database.close();}
-    public TeamService teams(){return teams;} public GuiManager gui(){return gui;} public FloodgateHook floodgate(){return floodgate;} public ModuleConfig teamConfig(){return teamConfig;} public ModuleConfig matierConfig(){return matierConfig;} public MaTierService matier(){return matier;}
+    @Override public void onDisable(){HandlerList.unregisterAll(this);if(teamStats!=null)teamStats.stop();if(autoRestart!=null)autoRestart.stop();if(matierAura!=null)matierAura.stop();if(accountLinks!=null)accountLinks.stop();if(websiteBridge!=null)websiteBridge.stop();if(database!=null)database.close();}
+    public TeamService teams(){return teams;} public GuiManager gui(){return gui;} public FloodgateHook floodgate(){return floodgate;} public ModuleConfig teamConfig(){return teamConfig;} public ModuleConfig matierConfig(){return matierConfig;} public MaTierService matier(){return matier;} public WebsiteBridgeService websiteBridge(){return websiteBridge;}
 }
