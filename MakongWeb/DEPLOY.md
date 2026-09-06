@@ -158,10 +158,10 @@ That pulls, reinstalls dependencies from the lockfile and restarts the service.
 ## What GitHub *is* good for here
 
 `.github/workflows/website-ci.yml` runs on every push: installs dependencies,
-parses every browser script, loads every server module, checks the English and
-Khmer dictionaries still define the same keys, then boots the server and hits
-the pages and the API. It catches a broken push before you deploy it. It does
-not host anything.
+parses every browser script, loads every server module, checks all four
+language dictionaries (English, Khmer, Chinese, Vietnamese) still define the
+same keys, then boots the server and hits the pages and the API. It catches a
+broken push before you deploy it. It does not host anything.
 
 ---
 

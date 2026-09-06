@@ -1,7 +1,9 @@
 /* ===== Makong Network — cartoony Angkor Wat / jungle Minecraft theme ===== */
-@import url("https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Press+Start+2P&family=Noto+Sans:wght@400;600;700&family=Kantumruy+Pro:wght@400;600;700&display=swap");
-/* Kantumruy Pro carries the Khmer glyphs - it sits in every font stack after
-   the Latin faces so the site reads properly with the language set to ខ្មែរ. */
+@import url("https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Press+Start+2P&family=Noto+Sans:wght@400;600;700&family=Kantumruy+Pro:wght@400;600;700&family=Noto+Sans+SC:wght@400;600;700&display=swap");
+/* Kantumruy Pro carries the Khmer glyphs and Noto Sans SC the Chinese ones -
+   both sit in every font stack after the Latin faces so the site reads
+   properly with the language set to ខ្មែរ or 中文. Vietnamese needs no extra
+   font: Baloo 2 and Noto Sans already cover its Latin Extended diacritics. */
 
 /* The genuine in-game Minecraft font, for English/Latin text - it has no
    Khmer glyphs, so it sits first in the stack and just falls through to
@@ -129,7 +131,7 @@ html { scroll-behavior: smooth; }
 
 body {
   margin: 0;
-  font-family: "Minecraft", "Noto Sans", "Kantumruy Pro", system-ui, sans-serif;
+  font-family: "Minecraft", "Noto Sans", "Kantumruy Pro", "Noto Sans SC", system-ui, sans-serif;
   /* dappled forest light: soft color pools over the base tone, not a flat fill */
   background:
     radial-gradient(720px 420px at 8% 0%, rgba(127, 216, 88, 0.16), transparent 60%),
@@ -141,7 +143,7 @@ body {
 }
 
 h1, h2, h3, .brand {
-  font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", "Noto Sans", sans-serif;
+  font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", "Noto Sans SC", "Noto Sans", sans-serif;
   color: var(--brown-dark);
   letter-spacing: 0.01em;
   font-weight: 800;
@@ -248,7 +250,7 @@ button, input, select, textarea { font-family: inherit; }
   padding: 0;
   border-radius: 10px;
   cursor: pointer;
-  font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", sans-serif;
+  font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", "Noto Sans SC", sans-serif;
   font-weight: 800;
   font-size: 0.95rem;
   color: var(--on-dark);
@@ -292,7 +294,7 @@ button, input, select, textarea { font-family: inherit; }
   align-items: center;
   color: var(--on-dark);
   font-weight: 700;
-  font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", sans-serif;
+  font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", "Noto Sans SC", sans-serif;
   font-size: 0.95rem;
   border-radius: 10px;
   background: linear-gradient(180deg, var(--jungle), var(--jungle-dark));
@@ -867,7 +869,7 @@ a.feature-card.linked .feature-title { color: var(--link-accent); }
   padding: 0.65rem 1.4rem;
   border: 3px solid var(--moss-dark);
   border-radius: 999px;
-  font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", sans-serif;
+  font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", "Noto Sans SC", sans-serif;
   font-weight: 800;
   font-size: 1rem;
   color: var(--brown-darkest);
@@ -911,7 +913,7 @@ a.feature-card.linked .feature-title { color: var(--link-accent); }
   align-items: center;
   color: var(--on-dark);
   font-weight: 700;
-  font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", sans-serif;
+  font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", "Noto Sans SC", sans-serif;
   font-size: 0.95rem;
   border-radius: 10px;
   background: linear-gradient(180deg, var(--jungle), var(--jungle-dark));
@@ -1169,7 +1171,7 @@ a.continue-btn { display: block; box-sizing: border-box; text-align: center; tex
   border-radius: 10px;
   padding: 0.5rem 0.9rem;
   font-weight: 800;
-  font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", sans-serif;
+  font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", "Noto Sans SC", sans-serif;
   font-size: 0.85rem;
   cursor: pointer;
   box-shadow: 0 3px 0 var(--stone-darkest);
@@ -1744,7 +1746,7 @@ body.game-open { overflow: hidden; }
 /* ---------- Build It! ---------- */
 .build-banner {
   text-align: center;
-  font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", sans-serif;
+  font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", "Noto Sans SC", sans-serif;
   font-weight: 800;
   font-size: 1.05rem;
   margin-bottom: 0.6rem;
@@ -1828,11 +1830,13 @@ body.game-open { overflow: hidden; }
   .daily-progress-label { font-size: 0.72rem; }
 }
 
-/* ---------- Khmer typography ----------
+/* ---------- Khmer & Chinese typography ----------
    The small-caps look (uppercase + letter-spacing) is an English design
    device. Khmer is a cluster script: letter-spacing pulls its vowels and
-   diacritics away from the consonants they belong to, so both are switched
-   off wherever the page is set to ខ្មែរ. */
+   diacritics away from the consonants they belong to. Chinese has no case
+   at all, so "uppercase" is a no-op and the extra letter-spacing just looks
+   odd between characters. Both are switched off for ខ្មែរ and 中文 - Vietnamese
+   stays on the English treatment since it's Latin script like French/German. */
 html[lang="km"] .info-card .label,
 html[lang="km"] .info-card.stacked .sub-label,
 html[lang="km"] .player-label,
@@ -1840,7 +1844,15 @@ html[lang="km"] .result-score-label,
 html[lang="km"] .hud-label,
 html[lang="km"] .bb-target-label,
 html[lang="km"] .section-subtitle,
-html[lang="km"] #submit-btn {
+html[lang="km"] #submit-btn,
+html[lang="zh"] .info-card .label,
+html[lang="zh"] .info-card.stacked .sub-label,
+html[lang="zh"] .player-label,
+html[lang="zh"] .result-score-label,
+html[lang="zh"] .hud-label,
+html[lang="zh"] .bb-target-label,
+html[lang="zh"] .section-subtitle,
+html[lang="zh"] #submit-btn {
   text-transform: none;
   letter-spacing: 0;
 }
@@ -1876,9 +1888,9 @@ html[lang="km"] .checkout-hint { line-height: 1.7; }
   font-size: 0.9rem;
 }
 .board-row.is-you { border-color: var(--gold); box-shadow: 0 0 10px rgba(255, 205, 90, 0.45); }
-.board-rank { font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", sans-serif; font-size: 1.05rem; text-align: center; color: var(--ink-soft); }
+.board-rank { font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", "Noto Sans SC", sans-serif; font-size: 1.05rem; text-align: center; color: var(--ink-soft); }
 .board-name { color: var(--ink); overflow-wrap: anywhere; }
-.board-points { font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", sans-serif; font-weight: 800; color: var(--gold-deep); }
+.board-points { font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", "Noto Sans SC", sans-serif; font-weight: 800; color: var(--gold-deep); }
 .board-you {
   display: inline-block;
   margin-left: 0.35rem;
@@ -1936,7 +1948,8 @@ html[lang="km"] .checkout-hint { line-height: 1.7; }
 .board-table tr.is-you td { background: color-mix(in srgb, var(--gold) 22%, transparent); }
 .board-table td.board-rank { width: 48px; text-align: center; }
 .board-table td.board-points { text-align: right; white-space: nowrap; }
-html[lang="km"] .board-table th { text-transform: none; letter-spacing: 0; }
+html[lang="km"] .board-table th,
+html[lang="zh"] .board-table th { text-transform: none; letter-spacing: 0; }
 
 /* the name-change button while the 24h lock is on */
 .back-link.locked { opacity: 0.65; cursor: not-allowed; }
@@ -1958,7 +1971,8 @@ html[lang="km"] .board-table th { text-transform: none; letter-spacing: 0; }
   color: var(--ink-soft);
   margin-bottom: 0.4rem;
 }
-html[lang="km"] .board-mini-title { text-transform: none; letter-spacing: 0; }
+html[lang="km"] .board-mini-title,
+html[lang="zh"] .board-mini-title { text-transform: none; letter-spacing: 0; }
 .board-list.mini { gap: 0.28rem; text-align: left; }
 .board-list.mini .board-row { padding: 0.3rem 0.5rem; font-size: 0.82rem; grid-template-columns: 30px 1fr auto; }
 .board-view-full {
@@ -2010,7 +2024,7 @@ html[lang="km"] .board-mini-title { text-transform: none; letter-spacing: 0; }
 }
 .countdown-screen { padding: 2rem 0 1rem; }
 .countdown-number {
-  font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", sans-serif;
+  font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", "Noto Sans SC", sans-serif;
   font-weight: 800;
   font-size: 4.5rem;
   line-height: 1;
@@ -2168,7 +2182,7 @@ html[lang="km"] .board-mini-title { text-transform: none; letter-spacing: 0; }
   padding: 0.5rem;
   color: var(--on-dark);
   font-weight: 700;
-  font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", sans-serif;
+  font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", "Noto Sans SC", sans-serif;
   font-size: 0.85rem;
   border-radius: 10px;
   background: linear-gradient(180deg, var(--jungle), var(--jungle-dark));

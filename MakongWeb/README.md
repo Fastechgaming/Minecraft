@@ -243,28 +243,38 @@ The "Chill Community / No Raiding / Live Cambodia Map" badges on the Home page c
 
 The layout is responsive: a hamburger nav under ~760px, a stacked hero on mobile, and a grid that reflows from multi-column (desktop) down to single-column (phones) throughout the store.
 
-## 10. Languages (English / ខ្មែរ)
+## 10. Languages (English / ខ្មែរ / 中文 / Tiếng Việt)
 
-Every page has a **KH / EN** button next to the ☀️/🌙 toggle. English is the
-default; the choice is remembered in the browser and applies to the whole site,
-including the games. Prices show the riel equivalent alongside the dollar amount
-when Khmer is selected (**1 USD = 4,000 ៛**) — the amount actually charged is
-still the dollar figure on the KHQR.
+Every page has a language button (next to the ☀️/🌙 toggle) that opens a
+dropdown with all four languages. English is the default; the choice is
+remembered in the browser and applies to the whole site, including the games.
+Prices show the riel equivalent alongside the dollar amount only when Khmer is
+selected (**1 USD = 4,000 ៛**) — Chinese and Vietnamese show the dollar figure
+like English does. The amount actually charged is always the dollar figure on
+the KHQR either way.
 
-All the text lives in one file, `public/js/i18n.js`, as two dictionaries (`en`
-and `km`) keyed by the same strings. To fix a translation, edit the `km` entry;
-to add new text, add the key to both. Markup opts in with `data-i18n="key"`
-(or `data-i18n-html`, `data-i18n-placeholder`, `data-i18n-title`,
-`data-i18n-aria`), and anything rendered from JavaScript calls `t("key", { vars })`
-and re-renders on the `i18n:change` event.
+All the text lives in one file, `public/js/i18n.js`, as four dictionaries
+(`en`, `km`, `zh`, `vi`) keyed by the same strings. To fix a translation, edit
+that language's entry; to add new text, add the key to **all four**. Markup
+opts in with `data-i18n="key"` (or `data-i18n-html`, `data-i18n-placeholder`,
+`data-i18n-title`, `data-i18n-aria`), and anything rendered from JavaScript
+calls `t("key", { vars })` and re-renders on the `i18n:change` event. The
+website's CI checks all four dictionaries define exactly the same set of
+keys, so a typo'd or missing key fails the build instead of silently falling
+back to English at runtime.
 
-Per the brief, Minecraft and technical vocabulary stays in English inside the
-Khmer text — Server, Rank, Keys, Java, Bedrock, Creeper, Zombie, Combo, KHQR,
-Telegram, Discord, block names and so on — because translating those reads
-strangely to a Khmer player who knows the game in English. Khmer glyphs come
-from Kantumruy Pro (loaded with the other Google Fonts), and the small-caps
+Per the brief, Minecraft and technical vocabulary stays in English across
+every translation — Server, Rank, Keys, Java, Bedrock, Creeper, Zombie, Combo,
+KHQR, Telegram, Discord, block names and so on — because translating those
+reads strangely to a player who already knows the game in English. Khmer
+glyphs come from Kantumruy Pro and Chinese from Noto Sans SC (both loaded
+alongside the other Google Fonts); Vietnamese needs no extra font since Baloo
+2 and Noto Sans already cover its Latin Extended diacritics. The small-caps
 styling (uppercase + letter-spacing) is switched off under `html[lang="km"]`
-because letter-spacing pulls Khmer vowels away from their consonants.
+and `html[lang="zh"]` — Khmer because letter-spacing pulls its vowels away
+from their consonants, Chinese because it has no concept of case at all so
+the effect just looks wrong. Vietnamese keeps the English treatment since
+it's a Latin script like French or German.
 
 ## 11. Running in production
 
