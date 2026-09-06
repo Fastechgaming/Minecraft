@@ -55,16 +55,20 @@ website, `website.secret` in each plugin's config), sent as the
 
 ```
 MakongStore/
-  pom.xml                   Maven parent (aggregates the three modules below)
+  settings.gradle.kts       Declares the three modules below
+  build.gradle.kts          Shared config (Java 17, Maven Central) applied to all modules
+  gradlew, gradlew.bat      Gradle wrapper - no local Gradle install needed
   makongstore-common/       Platform-agnostic HTTP client + JSON (no Bukkit/Velocity imports)
     .../common/Json.java            Tiny dependency-free JSON reader/writer
     .../common/WebsiteBridge.java   Talks to /api/plugin/* - shared as-is by both plugins
   makongstore-paper/        The Paper plugin
+    build.gradle.kts                Shadow plugin + paper-api (compileOnly)
     .../paper/MakongStorePlugin.java
     .../paper/MakongCommand.java
     resources/plugin.yml
     resources/config.yml
   makongstore-velocity/     The Velocity plugin
+    build.gradle.kts                Shadow plugin + velocity-api (compileOnly + annotationProcessor)
     .../velocity/MakongStoreVelocityPlugin.java
     .../velocity/MakongCommand.java
 ```
@@ -78,30 +82,36 @@ session history if you want to re-run that.
 
 ## Building
 
-Requires JDK 17+ and Maven. From this directory:
+Requires JDK 17+ (no local Gradle install needed - use the wrapper). From
+this directory:
 
 ```bash
-mvn clean package
+./gradlew build
 ```
 
 This produces:
-- `makongstore-paper/target/MakongStore-Paper.jar`
-- `makongstore-velocity/target/MakongStore-Velocity.jar`
+- `makongstore-paper/build/libs/MakongStore-Paper.jar`
+- `makongstore-velocity/build/libs/MakongStore-Velocity.jar`
 
 Both jars are shaded (they bundle `makongstore-common`) but do **not** bundle
-`paper-api` / `velocity-api` - those are provided by the server/proxy at
-runtime, as normal for a Bukkit/Velocity plugin.
+`paper-api` / `velocity-api` - those are `compileOnly` and provided by the
+server/proxy at runtime, as normal for a Bukkit/Velocity plugin.
 
-If `mvn package` can't resolve `paper-api` or `velocity-api`, your network is
-probably blocking `repo.papermc.io` - that's the only external repository
-this project needs beyond Maven Central. Try again from a machine/network
-that can reach it (this is a very common corporate-proxy issue, nothing
-specific to this project).
+If the build can't resolve `paper-api` or `velocity-api`, your network is
+probably blocking `repo.papermc.io` - that's the only extra repository this
+project needs beyond Maven Central and the Gradle Plugin Portal (for the
+[Shadow](https://gradleup.com/shadow/) plugin, used to bundle
+`makongstore-common` into each jar). Try again from a machine/network that
+can reach it (this is a very common corporate-proxy issue, nothing specific
+to this project).
 
-The Velocity API version pinned in `makongstore-velocity/pom.xml`
-(`velocity.api.version`) is a snapshot; if it's no longer available, browse
+The Velocity API version pinned in `makongstore-velocity/build.gradle.kts`
+(`velocityApiVersion`) is a snapshot; if it's no longer available, browse
 <https://repo.papermc.io/#browse/browse:maven-public:com%2Fvelocitypowered%2Fvelocity-api>
-for the current one and bump the property.
+for the current one and bump it.
+
+Building a single module on its own (e.g. while iterating) works the same
+way: `./gradlew :makongstore-paper:build`.
 
 ## Installing
 

@@ -1,6 +1,6 @@
 name: MakongStore
 main: network.makong.store.paper.MakongStorePlugin
-version: '${project.version}'
+version: '${version}'
 api-version: '1.20'
 author: Makong Network
 description: Connects this server to the Makong Network website's multi-server command bridge.

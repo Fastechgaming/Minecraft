@@ -193,12 +193,13 @@ plugins" below.
 
 ## 7. Connecting the Minecraft plugins (MakongStore)
 
-`../MakongStore/` in this repo is a multi-module Maven project with the actual
-plugins that bridge this website to your Minecraft servers — a **Paper plugin**
-(one instance per backend server: Arcade, EcoSMP, BoxPvP, PlotCity,
-HyperClash…) and a **Velocity plugin** (one instance on your proxy), both
-built the same way (`mvn package` in `../MakongStore/`) and documented in its
-own README. The website works fine with none, some, or all of them running.
+`../MakongStore/` in this repo is a multi-module Gradle project with the
+actual plugins that bridge this website to your Minecraft servers — a
+**Paper plugin** (one instance per backend server: Arcade, EcoSMP, BoxPvP,
+PlotCity, HyperClash…) and a **Velocity plugin** (one instance on your
+proxy), both built the same way (`./gradlew build` in `../MakongStore/`,
+using the bundled wrapper) and documented in its own README. The website
+works fine with none, some, or all of them running.
 
 There are two independent things a MakongStore plugin can do:
 
