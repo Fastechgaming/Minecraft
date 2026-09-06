@@ -11,6 +11,8 @@ import com.angkor.makongcore.command.MaTierCommand;
 import com.angkor.makongcore.data.Database;
 import com.angkor.makongcore.gui.GuiManager;
 import com.angkor.makongcore.hook.FloodgateHook;
+import com.angkor.makongcore.hook.MaTierPlaceholders;
+import com.angkor.makongcore.hook.TeamPlaceholders;
 import com.angkor.makongcore.listener.ChatListener;
 import com.angkor.makongcore.listener.GuiListener;
 import com.angkor.makongcore.service.TeamService;
@@ -40,6 +42,8 @@ public final class MakongCore extends JavaPlugin {
     private AccountLinkService accountLinks;
     private ModuleConfig verificationConfig;
     private WebsiteBridgeService websiteBridge;
+    private TeamPlaceholders teamPlaceholders;
+    private MaTierPlaceholders matierPlaceholders;
 
     private void saveBundledFileIfMissing(String name) {
         java.io.File file = new java.io.File(getDataFolder(), name);
@@ -110,7 +114,24 @@ public final class MakongCore extends JavaPlugin {
         autoRestart=new AutoRestartService(this,autoRestartConfig.get()); autoRestart.start();
         matier.start();
         websiteBridge=new WebsiteBridgeService(this,getConfig()); websiteBridge.start();
+        registerPlaceholders();
         getLogger().info("MakongCore enabled. Teams loaded: "+teams.all().size());
+    }
+
+    // Optional PlaceholderAPI integration (%team_tag%, %team_star%, %matier%,
+    // %matier_star% - see the hook classes). No-op if PlaceholderAPI isn't
+    // installed. Re-registering on every registerRuntime() call (including
+    // reloads) matters: teams/matier are recreated on each reload, and a
+    // stale expansion instance would keep querying the old, now-discarded
+    // service objects forever.
+    private void registerPlaceholders() {
+        if (getServer().getPluginManager().getPlugin("PlaceholderAPI") == null) return;
+        if (teamPlaceholders != null) teamPlaceholders.unregister();
+        if (matierPlaceholders != null) matierPlaceholders.unregister();
+        teamPlaceholders = new TeamPlaceholders(teams);
+        matierPlaceholders = new MaTierPlaceholders(matier);
+        teamPlaceholders.register();
+        matierPlaceholders.register();
     }
 
     public void reloadMakongCore(CommandSender sender) {
@@ -181,6 +202,6 @@ public final class MakongCore extends JavaPlugin {
     }
 
     private void sendAdmin(CommandSender s,String m){s.sendMessage(Text.mm("<green>[ᴍᴀᴛᴇᴀᴍ]</green> "+m));}
-    @Override public void onDisable(){HandlerList.unregisterAll(this);if(teamStats!=null)teamStats.stop();if(autoRestart!=null)autoRestart.stop();if(matierAura!=null)matierAura.stop();if(accountLinks!=null)accountLinks.stop();if(websiteBridge!=null)websiteBridge.stop();if(database!=null)database.close();}
+    @Override public void onDisable(){HandlerList.unregisterAll(this);if(teamStats!=null)teamStats.stop();if(autoRestart!=null)autoRestart.stop();if(matierAura!=null)matierAura.stop();if(accountLinks!=null)accountLinks.stop();if(websiteBridge!=null)websiteBridge.stop();if(teamPlaceholders!=null)teamPlaceholders.unregister();if(matierPlaceholders!=null)matierPlaceholders.unregister();if(database!=null)database.close();}
     public TeamService teams(){return teams;} public GuiManager gui(){return gui;} public FloodgateHook floodgate(){return floodgate;} public ModuleConfig teamConfig(){return teamConfig;} public ModuleConfig matierConfig(){return matierConfig;} public MaTierService matier(){return matier;} public WebsiteBridgeService websiteBridge(){return websiteBridge;} public AutoRestartService autoRestart(){return autoRestart;}
 }

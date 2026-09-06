@@ -3,7 +3,7 @@ version: ${version}
 main: com.angkor.makongcore.MakongCore
 api-version: '1.21'
 author: Angkor
-softdepend: [floodgate]
+softdepend: [floodgate, PlaceholderAPI]
 commands:
   team:
     description: Open and manage your team

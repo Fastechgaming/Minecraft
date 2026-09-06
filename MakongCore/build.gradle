@@ -3,17 +3,25 @@ plugins {
 }
 
 group = 'com.angkor'
-version = '1.2.17'
+version = '1.2.18'
 
 description = 'Simple, fast, Java + Bedrock compatible team plugin for Paper/Purpur 1.21.x'
 
 repositories {
     maven { name = 'papermc'; url = 'https://repo.papermc.io/repository/maven-public/' }
+    maven { name = 'placeholderapi'; url = 'https://repo.extendedclip.com/content/repositories/placeholderapi/' }
     mavenCentral()
 }
 
 dependencies {
     compileOnly 'io.papermc.paper:paper-api:1.21.11-R0.1-SNAPSHOT'
+    // Optional: %team_tag%/%team_star%/%matier%/%matier_star% (see
+    // hook/TeamPlaceholders.java, hook/MaTierPlaceholders.java). compileOnly
+    // because a PlaceholderExpansion subclass must exist at compile time,
+    // but it's still a soft dependency at runtime - see plugin.yml's
+    // softdepend and MakongCore#registerPlaceholders, which only registers
+    // either class if PlaceholderAPI is actually installed.
+    compileOnly 'me.clip:placeholderapi:2.11.6'
     implementation 'com.zaxxer:HikariCP:7.0.2'
     implementation 'com.h2database:h2:2.4.240'
     implementation 'com.mysql:mysql-connector-j:9.4.0'

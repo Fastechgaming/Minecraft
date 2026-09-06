@@ -27,6 +27,18 @@ This is the initial foundation build. The architecture intentionally keeps GUI p
 ## Floodgate / Bedrock
 Floodgate is an optional runtime integration. MakongCore intentionally has no compile-time Floodgate dependency; when Floodgate is installed and enabled, MakongCore detects Bedrock players through the Floodgate API using reflection. This avoids old Floodgate/Geyser/Cumulus transitive dependencies during builds.
 
+## PlaceholderAPI
+Optional - only registered if [PlaceholderAPI](https://www.spigotmc.org/resources/placeholderapi.6245/) is installed (`softdepend`, so load order doesn't matter either way). Unlike Floodgate this is a real `compileOnly` dependency (a `PlaceholderExpansion` subclass has to exist at compile time), but it's still entirely soft at runtime - `MakongCore#registerPlaceholders` checks the plugin is actually present before registering anything, and both expansions are re-registered against the fresh `TeamService`/`MaTierService` on every `/mateam reload`.
+
+| Placeholder | Shows |
+|---|---|
+| `%team_tag%` | The viewed player's team tag, colored in the team's own chosen color (empty if they're not in a team). |
+| `%team_star%` | Their team's current Stars. |
+| `%matier%` | Their current MaTier tier (`M9`-`M1`). |
+| `%matier_star%` | Their current MaTier Stars. |
+
+Use these in any plugin that supports PlaceholderAPI - TAB, DeluxeMenus, a scoreboard/chat plugin, etc.
+
 ## Website Bridge
 Optional integration with the Makong Network website's store (see `../MakongWeb/`). This server connects **outward** to the website on a repeating timer - nothing needs to be opened on this server's side, so it works whether the website and this server share a box or sit on entirely different hosts.
 
@@ -120,3 +132,6 @@ MaTier:
 - `/mateam autorestart` now also accepts `stop`, cancelling a pending ad-hoc restart before it fires (broadcasts `messages.cancelled` from `module/autorestart.yml`). Doesn't touch the configured `settings.restarts` schedule.
 - Added `/mateam reload [module]` - reload just `team`, `autorestart`, `matier`, `verification` or `gui` instead of everything. `team` and `autorestart` reload live in place (no database reconnect, no team-data reload); the other three currently fall back to a full reload to apply safely, since unregistering/re-registering their event listeners in isolation isn't worth the added risk for what it'd save.
 - Both are relayed network-wide by [MakongVelocity](../MakongVelocity)'s new `/mc ar now [interval]` / `/mc ar stop` and `/mc reload <module>` - see that project's changelog.
+
+## 1.2.18 changes
+- Added optional [PlaceholderAPI](https://www.spigotmc.org/resources/placeholderapi.6245/) support - `%team_tag%`, `%team_star%`, `%matier%`, `%matier_star%` (see "PlaceholderAPI" above). Only registered if PlaceholderAPI is installed; nothing changes otherwise.
