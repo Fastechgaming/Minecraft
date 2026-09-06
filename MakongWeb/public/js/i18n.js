@@ -151,10 +151,6 @@ const I18n = (() => {
       "ranking.tab.teams": "Top Team",
       "ranking.tab.players": "Top Player",
       "ranking.stat.star": "Star",
-      "ranking.stat.points": "Points",
-      "ranking.stat.kills": "Kills",
-      "ranking.stat.deaths": "Deaths",
-      "ranking.stat.kdr": "KDR",
       "ranking.empty": "No rankings yet — check back soon!",
       "ranking.loading": "Loading rankings…",
 
@@ -456,10 +452,6 @@ const I18n = (() => {
       "ranking.tab.teams": "ក្រុមកំពូល",
       "ranking.tab.players": "កីឡាករកំពូល",
       "ranking.stat.star": "ផ្កាយ",
-      "ranking.stat.points": "ពិន្ទុ",
-      "ranking.stat.kills": "Kills",
-      "ranking.stat.deaths": "Deaths",
-      "ranking.stat.kdr": "KDR",
       "ranking.empty": "មិនទាន់មានចំណាត់ថ្នាក់ទេ — សូមមកមើលម្តងទៀតឆាប់ៗ!",
       "ranking.loading": "កំពុងផ្ទុកចំណាត់ថ្នាក់…",
 
@@ -759,10 +751,6 @@ const I18n = (() => {
       "ranking.tab.teams": "最佳战队",
       "ranking.tab.players": "最佳玩家",
       "ranking.stat.star": "星级",
-      "ranking.stat.points": "积分",
-      "ranking.stat.kills": "Kills",
-      "ranking.stat.deaths": "Deaths",
-      "ranking.stat.kdr": "KDR",
       "ranking.empty": "还没有排行数据——请稍后再来看看！",
       "ranking.loading": "正在加载排行榜…",
 
@@ -1063,10 +1051,6 @@ const I18n = (() => {
       "ranking.tab.teams": "Đội xuất sắc",
       "ranking.tab.players": "Người chơi xuất sắc",
       "ranking.stat.star": "Sao",
-      "ranking.stat.points": "Điểm",
-      "ranking.stat.kills": "Kills",
-      "ranking.stat.deaths": "Deaths",
-      "ranking.stat.kdr": "KDR",
       "ranking.empty": "Chưa có bảng xếp hạng — hãy quay lại sau nhé!",
       "ranking.loading": "Đang tải bảng xếp hạng…",
 

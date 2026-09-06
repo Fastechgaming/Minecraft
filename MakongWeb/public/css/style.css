@@ -1863,6 +1863,17 @@ html[lang="km"] .daily-progress-label,
 html[lang="km"] .game-hint,
 html[lang="km"] .checkout-hint { line-height: 1.7; }
 
+/* ---------- Ranking page: Top Player (left/top) + Top Team (right/bottom) ---------- */
+.ranking-boards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+@media (max-width: 760px) {
+  .ranking-boards { grid-template-columns: 1fr; }
+}
+
 /* ---------- Points leaderboard ---------- */
 .board-panel { padding: 1rem 1.1rem 1.2rem; }
 .board-head {
@@ -1890,7 +1901,21 @@ html[lang="km"] .checkout-hint { line-height: 1.7; }
 .board-row.is-you { border-color: var(--gold); box-shadow: 0 0 10px rgba(255, 205, 90, 0.45); }
 .board-rank { font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", "Noto Sans SC", sans-serif; font-size: 1.05rem; text-align: center; color: var(--ink-soft); }
 .board-name { color: var(--ink); overflow-wrap: anywhere; }
-.board-points { font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", "Noto Sans SC", sans-serif; font-weight: 800; color: var(--gold-deep); }
+.board-points { font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", "Noto Sans SC", sans-serif; font-weight: 800; color: var(--gold-deep); white-space: nowrap; }
+/* A player's rank tier (M1-M9), derived purely from Star - see tierFor() in
+   public/js/ranking.js. Teams don't get one, only their Star total. */
+.board-tier {
+  display: inline-block;
+  margin-left: 0.4rem;
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  background: var(--jungle);
+  color: #fff;
+  font-family: "Minecraft", "Baloo 2", sans-serif;
+  font-size: 0.7rem;
+  font-weight: 800;
+  vertical-align: middle;
+}
 .board-you {
   display: inline-block;
   margin-left: 0.35rem;

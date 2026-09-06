@@ -180,7 +180,7 @@ router.get("/rankings/new", requireAuth, (req, res) => {
 
 router.post("/rankings", requireAuth, express.urlencoded({ extended: true }), (req, res, next) => {
   try {
-    const { category, name, icon, star, points, kills, deaths } = req.body;
+    const { category, name, icon, star } = req.body;
     if (!rankings.CATEGORIES.includes(category)) throw new Error("Invalid category");
     if (!name) throw new Error("Name is required");
 
@@ -189,9 +189,6 @@ router.post("/rankings", requireAuth, express.urlencoded({ extended: true }), (r
       name,
       icon: icon || "",
       star: Number(star) || 0,
-      points: Number(points) || 0,
-      kills: Number(kills) || 0,
-      deaths: Number(deaths) || 0,
     };
     rankings.upsertEntry(category, entry);
     res.redirect("/admin/rankings");
@@ -211,15 +208,12 @@ router.post("/rankings/:id", requireAuth, express.urlencoded({ extended: true })
     const found = rankings.findAny(req.params.id);
     if (!found) return res.status(404).send("Entry not found");
 
-    const { name, icon, star, points, kills, deaths } = req.body;
+    const { name, icon, star } = req.body;
     const updated = {
       ...found.entry,
       name,
       icon: icon || "",
       star: Number(star) || 0,
-      points: Number(points) || 0,
-      kills: Number(kills) || 0,
-      deaths: Number(deaths) || 0,
     };
     rankings.upsertEntry(found.category, updated);
     res.redirect("/admin/rankings");

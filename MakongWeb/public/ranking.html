@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Ranking | Makong Network</title>
-<meta name="description" content="See the top teams and top players on Makong Network, ranked by Star, Points, Kills, Deaths and KDR." />
+<meta name="description" content="See the top players and top teams on Makong Network, ranked by Star." />
 <link rel="canonical" href="https://www.makongmc.com/ranking" />
 <meta name="theme-color" content="#f7b537" />
 <link rel="icon" href="/images/site/logo-icon.png" />
@@ -14,13 +14,13 @@
 <meta property="og:site_name" content="Makong Network" />
 <meta property="og:url" content="https://www.makongmc.com/ranking" />
 <meta property="og:title" content="Ranking | Makong Network" />
-<meta property="og:description" content="See the top teams and top players on Makong Network, ranked by Star, Points, Kills, Deaths and KDR." />
+<meta property="og:description" content="See the top players and top teams on Makong Network, ranked by Star." />
 <meta property="og:image" content="https://www.makongmc.com/images/site/og-cover.png" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="Ranking | Makong Network" />
-<meta name="twitter:description" content="See the top teams and top players on Makong Network, ranked by Star, Points, Kills, Deaths and KDR." />
+<meta name="twitter:description" content="See the top players and top teams on Makong Network, ranked by Star." />
 <meta name="twitter:image" content="https://www.makongmc.com/images/site/og-cover.png" />
 
 <link rel="stylesheet" href="/css/style.css" />
@@ -65,20 +65,16 @@ try { if (localStorage.getItem("makong-theme") === "light") document.documentEle
         <h2 class="no-rule"><img class="heading-leaf" src="/images/site/icon-leaf.png" alt="" />Makong<img class="heading-leaf" src="/images/site/icon-leaf.png" alt="" /></h2>
         <p class="section-subtitle" data-i18n="ranking.subtitle">RANKING</p>
 
-        <div class="store-tabs" id="ranking-category-tabs">
-          <button type="button" data-category="teams" class="active" data-i18n="ranking.tab.teams">Top Team</button>
-          <button type="button" data-category="players" data-i18n="ranking.tab.players">Top Player</button>
+        <div class="ranking-boards">
+          <div class="checkout-panel board-panel">
+            <div class="board-head"><h3 data-i18n="ranking.tab.players">Top Player</h3></div>
+            <div id="ranking-board-players"></div>
+          </div>
+          <div class="checkout-panel board-panel">
+            <div class="board-head"><h3 data-i18n="ranking.tab.teams">Top Team</h3></div>
+            <div id="ranking-board-teams"></div>
+          </div>
         </div>
-
-        <div class="store-tabs" id="ranking-stat-tabs">
-          <button type="button" data-stat="star" class="active" data-i18n="ranking.stat.star">Star</button>
-          <button type="button" data-stat="points" data-i18n="ranking.stat.points">Points</button>
-          <button type="button" data-stat="kills" data-i18n="ranking.stat.kills">Kills</button>
-          <button type="button" data-stat="deaths" data-i18n="ranking.stat.deaths">Deaths</button>
-          <button type="button" data-stat="kdr" data-i18n="ranking.stat.kdr">KDR</button>
-        </div>
-
-        <div class="checkout-panel board-panel" id="ranking-board"></div>
       </div>
     </section>
   </main>

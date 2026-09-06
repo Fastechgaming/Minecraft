@@ -77,20 +77,38 @@ gamemode** — EcoSMP's VIP and BoxPvP's VIP are unrelated ranks that happen to
 share a name, so a rank id is `rank-<gamemode>-<slug>` (e.g. `rank-ecosmp-vip`),
 not just `rank-<slug>`.
 
-## 4. Managing rankings (`/ranking` — Top Team / Top Player)
+## 4. Managing rankings (`/ranking` — Top Player / Top Team)
 
-The `/ranking` page shows two leaderboards, **Top Team** and **Top Player**,
-each sortable by **Star**, **Points**, **Kills**, **Deaths** or **KDR**
-(kills ÷ deaths, computed automatically — it just shows Kills when Deaths is
-still 0, instead of dividing by zero).
+The `/ranking` page shows two leaderboards side by side on desktop (**Top
+Player** on the left, **Top Team** on the right) and stacked on mobile
+(Player on top, Team below), both ranked by **Star** — the only stat this
+page shows.
+
+A player's Star count also decides their rank **tier** (M9 down to M1),
+shown next to their name. Teams just show their Star total, with no tier —
+the tier ladder is a player-only concept. The thresholds (edit
+`tierFor()` in `public/js/ranking.js` and the matching copy in
+`views/rankings.ejs` if you ever change them):
+
+| Tier | Stars |
+|---|---|
+| M9 | 0 |
+| M8 | 100 |
+| M7 | 200 |
+| M6 | 300 |
+| M5 | 400 |
+| M4 | 500 |
+| M3 | 650 |
+| M2 | 800 |
+| M1 | 1,000+ |
 
 There's no live stats feed from the Minecraft server for this (MakongStore
-doesn't track kills/deaths/star/points), so it's an **admin-curated**
-leaderboard, same idea as store items: go to `http://your-domain/admin/rankings`,
-log in, and add/edit/delete teams and players with a form — name, an optional
-emoji icon (falls back to the name's first letter), and the four raw numbers.
-Or edit `MakongWeb/data/rankings.json` directly — it's a plain JSON file with
-`teams` and `players` arrays.
+doesn't track Star), so it's an **admin-curated** leaderboard, same idea as
+store items: go to `http://your-domain/admin/rankings`, log in, and
+add/edit/delete teams and players with a form — name, an optional emoji icon
+(falls back to the name's first letter), and their Star count. Or edit
+`MakongWeb/data/rankings.json` directly — it's a plain JSON file with `teams`
+and `players` arrays.
 
 ## 5. Purchase flow
 

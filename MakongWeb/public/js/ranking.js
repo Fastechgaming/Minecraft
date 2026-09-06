@@ -1,14 +1,30 @@
 // Ranking page. There's no live stats feed from the Minecraft server, so
-// this is an admin-curated leaderboard (see /admin/rankings) - two boards
-// (Top Team / Top Player), each sortable by Star, Points, Kills, Deaths or
-// KDR (kills per death, computed server-side).
+// this is an admin-curated leaderboard (see /admin/rankings) - Top Player
+// (left on desktop, top on mobile) and Top Team (right/bottom), both ranked
+// by Star only.
 let rankingData = { teams: [], players: [] };
-let activeCategory = "teams";
-let activeStat = "star";
 
-const board = document.getElementById("ranking-board");
-const categoryTabs = document.getElementById("ranking-category-tabs");
-const statTabs = document.getElementById("ranking-stat-tabs");
+const playersBoard = document.getElementById("ranking-board-players");
+const teamsBoard = document.getElementById("ranking-board-teams");
+
+// Player tier, purely a Star-count lookup - no separate field to maintain.
+// M1 is the top tier, M9 the base. Update the thresholds here if they ever
+// change; nothing else needs to know about them.
+const TIERS = [
+  { tier: "M1", min: 1000 },
+  { tier: "M2", min: 800 },
+  { tier: "M3", min: 650 },
+  { tier: "M4", min: 500 },
+  { tier: "M5", min: 400 },
+  { tier: "M6", min: 300 },
+  { tier: "M7", min: 200 },
+  { tier: "M8", min: 100 },
+  { tier: "M9", min: 0 },
+];
+function tierFor(star) {
+  const value = Number(star) || 0;
+  return (TIERS.find((t) => value >= t.min) || TIERS[TIERS.length - 1]).tier;
+}
 
 function medalClass(rank) {
   if (rank === 1) return " rank-1";
@@ -17,31 +33,31 @@ function medalClass(rank) {
   return "";
 }
 
-function formatStat(value, stat) {
-  if (stat === "kdr") return Number(value).toFixed(2);
-  return Number(value).toLocaleString();
-}
-
-function render() {
-  const list = [...(rankingData[activeCategory] || [])].sort((a, b) => (b[activeStat] || 0) - (a[activeStat] || 0));
-
+// `showTier` is true for players (their M-rank comes from Star) and false
+// for teams (a team just shows its Star total, no individual tier).
+function renderBoard(el, list, showTier) {
   if (!list.length) {
-    board.innerHTML = `<p class="board-empty">${escapeHtml(t("ranking.empty"))}</p>`;
+    el.innerHTML = `<p class="board-empty">${escapeHtml(t("ranking.empty"))}</p>`;
     return;
   }
 
-  board.innerHTML = `
+  const sorted = [...list].sort((a, b) => (Number(b.star) || 0) - (Number(a.star) || 0));
+
+  el.innerHTML = `
     <ol class="board-list">
-      ${list
+      ${sorted
         .map((entry, i) => {
           const rank = i + 1;
+          const star = Number(entry.star) || 0;
           return `
             <li class="board-row${medalClass(rank)}">
               <span class="board-rank">${rank}</span>
               <span class="board-name"><span class="board-avatar">${
                 entry.icon ? escapeHtml(entry.icon) : escapeHtml((entry.name || "?").charAt(0).toUpperCase())
-              }</span>${escapeHtml(entry.name)}</span>
-              <span class="board-points">${escapeHtml(formatStat(entry[activeStat], activeStat))}</span>
+              }</span>${escapeHtml(entry.name)}${
+            showTier ? `<span class="board-tier">${tierFor(star)}</span>` : ""
+          }</span>
+              <span class="board-points">⭐ ${star.toLocaleString()}</span>
             </li>`;
         })
         .join("")}
@@ -49,8 +65,15 @@ function render() {
   `;
 }
 
+function render() {
+  renderBoard(playersBoard, rankingData.players || [], true);
+  renderBoard(teamsBoard, rankingData.teams || [], false);
+}
+
 async function loadRankings() {
-  board.innerHTML = `<p class="board-empty">${escapeHtml(t("ranking.loading"))}</p>`;
+  const loading = `<p class="board-empty">${escapeHtml(t("ranking.loading"))}</p>`;
+  playersBoard.innerHTML = loading;
+  teamsBoard.innerHTML = loading;
   try {
     rankingData = await fetchJSON("/api/rankings");
   } catch {
@@ -58,22 +81,6 @@ async function loadRankings() {
   }
   render();
 }
-
-categoryTabs.addEventListener("click", (e) => {
-  const btn = e.target.closest("[data-category]");
-  if (!btn) return;
-  activeCategory = btn.dataset.category;
-  categoryTabs.querySelectorAll("[data-category]").forEach((b) => b.classList.toggle("active", b === btn));
-  render();
-});
-
-statTabs.addEventListener("click", (e) => {
-  const btn = e.target.closest("[data-stat]");
-  if (!btn) return;
-  activeStat = btn.dataset.stat;
-  statTabs.querySelectorAll("[data-stat]").forEach((b) => b.classList.toggle("active", b === btn));
-  render();
-});
 
 document.addEventListener("i18n:change", render);
 loadRankings();

@@ -17,6 +17,22 @@
   </header>
 
   <main class="admin-main">
+    <%
+      // Same Star -> tier thresholds as public/js/ranking.js's TIERS - kept
+      // in sync by hand since one is EJS and the other browser JS.
+      function tierFor(star) {
+        var value = Number(star) || 0;
+        if (value >= 1000) return "M1";
+        if (value >= 800) return "M2";
+        if (value >= 650) return "M3";
+        if (value >= 500) return "M4";
+        if (value >= 400) return "M5";
+        if (value >= 300) return "M6";
+        if (value >= 200) return "M7";
+        if (value >= 100) return "M8";
+        return "M9";
+      }
+    %>
     <% [["teams", "Top Team", teams], ["players", "Top Player", players]].forEach(function(section) { %>
       <% var category = section[0], label = section[1], list = section[2]; %>
       <section class="admin-section">
@@ -33,10 +49,7 @@
                 <tr>
                   <th>Name</th>
                   <th>Star</th>
-                  <th>Points</th>
-                  <th>Kills</th>
-                  <th>Deaths</th>
-                  <th>KDR</th>
+                  <% if (category === "players") { %><th>Tier</th><% } %>
                   <th></th>
                 </tr>
               </thead>
@@ -45,10 +58,7 @@
                   <tr>
                     <td><%= entry.icon ? entry.icon + " " : "" %><%= entry.name %></td>
                     <td><%= entry.star %></td>
-                    <td><%= entry.points %></td>
-                    <td><%= entry.kills %></td>
-                    <td><%= entry.deaths %></td>
-                    <td><%= entry.kdr %></td>
+                    <% if (category === "players") { %><td><%= tierFor(entry.star) %></td><% } %>
                     <td class="admin-table-actions">
                       <a class="btn-ghost" href="/admin/rankings/<%= entry.id %>/edit">Edit</a>
                       <form method="POST" action="/admin/rankings/<%= entry.id %>/delete" onsubmit="return confirm('Delete this entry?')">
