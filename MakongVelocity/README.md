@@ -1,7 +1,7 @@
 # MakongVelocity
 
 A small Velocity companion to the [MakongCore](../MakongCore) Paper plugin.
-Entirely optional - the proxy runs fine without it, this just adds three
+Entirely optional - the proxy runs fine without it, this just adds four
 independent features that only make sense at the proxy level:
 
 1. **`/mc clients`.** Lists this proxy and every backend **actually running
@@ -23,10 +23,14 @@ independent features that only make sense at the proxy level:
    Network website bridge, all at once. Meant to be triggered by your panel's
    own scheduled-restart feature a little before the proxy's own restart, so
    backends finish restarting first - see "Restart broadcast" below.
+4. **Periodic announcements.** Broadcasts store/Discord (or anything else
+   you add) plugs to every player on the network on independent repeating
+   timers - see "Announcements" below.
 
-nLogin forwarding is independent of the other two - but `/mc clients` and
-`/mc autorestart` both need the website bridge configured, since that's
-this proxy's only way to know which of its servers run MakongCore at all.
+nLogin forwarding and announcements are on by default and independent of
+everything else. `/mc clients` and `/mc autorestart` both need the website
+bridge configured, since that's this proxy's only way to know which of its
+servers run MakongCore at all.
 
 ## Building
 
@@ -74,6 +78,65 @@ knows about it) but didn't answer a status ping within 5 seconds - it's
 gone down, is still booting, or the port/firewall changed since it last
 connected. If nothing is configured yet, this errors out asking you to set
 up the website bridge first - see below.
+
+## Announcements
+
+On by default (`announcements.enabled=true` in `config.properties`) - no
+website bridge or nLogin needed, this is purely local to the proxy and
+reaches every player on the network regardless of which backend they're on.
+On first run it writes `plugins/makongvelocity/announcements.yml` with a
+ready-to-use store + Discord example:
+
+```yaml
+announcements:
+  store:
+    link: https://www.makongmc.com
+    interval: 180
+    sound: ENTITY_PLAYER_LEVELUP
+    message: |-
+      &8────────────────
+      &a🛒 &2&lMAKONG STORE
+      &8────────────────
+      &fSupport the server by purchasing
+      &aranks, coins, keys &fand more!
+      &f
+      &a➟ &nwww.makongmc.com
+      &8────────────────
+    action-bar: ''
+
+  discord:
+    link: https://discord.gg/makong
+    interval: 140
+    sound: ENTITY_PLAYER_LEVELUP
+    message: |-
+      &8────────────────
+      &b✉ &3&lDISCORD COMMUNITY
+      &8────────────────
+      &fStay updated with &bannouncements,
+      &bgiveaways, events &fand more!
+      &f
+      &b➟ &ndiscord.gg/makong
+      &8────────────────
+    action-bar: ''
+```
+
+Add, remove, or rename entries under `announcements:` freely - `store` and
+`discord` are just labels, every entry works the same way and runs on its
+own independent repeating timer (its own `interval`, in seconds). A config
+change only takes effect after a proxy restart (there's no reload command).
+
+Per entry:
+- `link` - optional. When set, clicking the broadcast message opens this
+  URL. Leave `""` for an unclickable message.
+- `interval` - seconds between broadcasts of this entry.
+- `sound` - a Minecraft sound name. Both Bukkit-style (`ENTITY_PLAYER_LEVELUP`,
+  as copied from a Paper plugin's config) and Adventure-style
+  (`entity.player.levelup`) work. Leave `""` for no sound.
+- `message` - broadcast to every player's chat, network-wide. Supports
+  legacy `&` color codes (`&a`, `&l`, `&n`, `&8`, ...) exactly like Bukkit's
+  `ChatColor.translateAlternateColorCodes`.
+- `action-bar` - optional, shown in every player's action bar alongside the
+  chat message. Leave `""` to skip it.
 
 ## nLogin account-type forwarding
 

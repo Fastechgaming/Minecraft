@@ -34,10 +34,12 @@ final class VelocityConfig {
             props.setProperty("website.server_id", "proxy");
             props.setProperty("website.poll_interval_seconds", "5");
             props.setProperty("nlogin.forward_account_type", "true");
+            props.setProperty("announcements.enabled", "true");
             try (OutputStream out = Files.newOutputStream(file)) {
                 props.store(out, "MakongVelocity - see ../MakongVelocity/README.md for what each key does."
                         + "\nwebsite.secret must match the website's MAKONGCORE_SECRET exactly."
-                        + "\nnlogin.forward_account_type requires nLogin to be installed and running in proxy mode.");
+                        + "\nnlogin.forward_account_type requires nLogin to be installed and running in proxy mode."
+                        + "\nannouncements.enabled turns the periodic broadcasts in announcements.yml on/off.");
             }
         }
         return new VelocityConfig(props);
@@ -69,5 +71,9 @@ final class VelocityConfig {
 
     boolean forwardAccountType() {
         return Boolean.parseBoolean(props.getProperty("nlogin.forward_account_type", "true"));
+    }
+
+    boolean announcementsEnabled() {
+        return Boolean.parseBoolean(props.getProperty("announcements.enabled", "true"));
     }
 }

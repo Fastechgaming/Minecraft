@@ -32,8 +32,8 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Velocity companion to the MakongCore Paper plugin - see README.md. Two
- * independent features, both optional and off unless configured:
+ * Velocity companion to the MakongCore Paper plugin - see README.md. Three
+ * independent features, each on by default except the website bridge:
  *
  * 1. Forwards nLogin's premium/cracked/bedrock classification (nLogin must be
  *    installed on this proxy in "proxy mode") to whichever backend a player
@@ -42,8 +42,10 @@ import java.util.concurrent.ConcurrentHashMap;
  * 2. Connects to the Makong Network website bridge (same protocol MakongCore
  *    itself uses) purely to relay /mc autorestart <seconds> to every
  *    connected backend at once.
+ * 3. Periodic network-wide announcements (store/Discord plugs, etc.) - see
+ *    AnnouncementService and announcements.yml.
  */
-@Plugin(id = "makongvelocity", name = "MakongVelocity", version = "1.2.2", authors = {"Angkor"})
+@Plugin(id = "makongvelocity", name = "MakongVelocity", version = "1.3.0", authors = {"Angkor"})
 public final class MakongVelocity {
 
     static final MinecraftChannelIdentifier ACCOUNT_TYPE_CHANNEL = MinecraftChannelIdentifier.create("makong", "accounttype");
@@ -62,12 +64,14 @@ public final class MakongVelocity {
     private volatile boolean connected;
     private volatile List<WebsiteBridge.ServerInfo> knownServers = List.of();
     private ScheduledTask pollTask;
+    private final AnnouncementService announcements;
 
     @Inject
     public MakongVelocity(ProxyServer server, Logger logger, @DataDirectory Path dataDirectory) {
         this.server = server;
         this.logger = logger;
         this.dataDirectory = dataDirectory;
+        this.announcements = new AnnouncementService(server, logger);
     }
 
     @Subscribe
@@ -86,11 +90,13 @@ public final class MakongVelocity {
                 new MakongCommand(this));
 
         if (config.websiteEnabled()) startWebsiteBridge();
+        if (config.announcementsEnabled()) announcements.start(dataDirectory);
     }
 
     @Subscribe
     public void onProxyShutdown(ProxyShutdownEvent event) {
         if (pollTask != null) pollTask.cancel();
+        announcements.stop();
     }
 
     // Fires once per successful login, however the player authenticated
