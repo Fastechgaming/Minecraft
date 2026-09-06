@@ -43,10 +43,18 @@ setting off/blank - nothing about your proxy changes until you edit it.
 
 ## `/mc clients`
 
-No configuration needed - lists this proxy and every server in
-`velocity.toml`, pinging each one for real (a status ping, the same thing
+No configuration needed - lists this proxy and **every server in
+`velocity.toml`**, pinging each one for real (a status ping, the same thing
 that populates a server's MOTD/player-count in the multiplayer list) rather
-than just checking it's configured, alongside its live player count:
+than just checking it's configured, alongside its live player count. This is
+Velocity's own routing list, not a MakongCore-specific one - if your proxy
+also routes to an auth/lobby-hub, a build server, a test server, etc., those
+show up too, since a status ping can't tell what plugins a server runs.
+
+If the website bridge is configured (see below), each row is also
+cross-referenced against its live roster, so you can tell at a glance which
+of these are actually MakongCore backends versus other servers on your
+network that just happen to be reachable:
 
 ```
 ╔══════════════════════════════════════════════════════════════════╗
@@ -54,18 +62,21 @@ than just checking it's configured, alongside its live player count:
 ╚══════════════════════════════════════════════════════════════════╝
 Summary
 Connected: 4
+MakongCore: 2/3 (only these are tagged - the rest are other servers on your network with no MakongCore/website bridge)
 
 Sections
 ✔ velocity
-✔ boxpvp · /172.18.0.1:45616 · 29 players
+✔ boxpvp · /172.18.0.1:45616 · 29 players · MakongCore
 ✔ plotcity · /172.18.0.1:58808 · 4 players
-✖ hyperclash · /172.18.0.1:45628 · 0 players
+✖ hyperclash · /172.18.0.1:45628 · 0 players · MakongCore
 ```
 
 A ✖ means that server didn't answer within 5 seconds - it's configured in
 `velocity.toml` but not actually reachable right now (down, still booting,
 firewalled, wrong port, etc.). Player counts come from Velocity's own
-routing, not the ping itself.
+routing, not the ping itself. Without the website bridge configured, every
+row shows plain (no `· MakongCore` tag on any of them) since this proxy has
+no way to know which backends run it.
 
 ## nLogin account-type forwarding
 

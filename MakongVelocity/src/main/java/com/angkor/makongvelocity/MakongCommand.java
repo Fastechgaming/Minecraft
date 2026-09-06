@@ -61,6 +61,20 @@ final class MakongCommand implements SimpleCommand {
         List<RegisteredServer> servers = new ArrayList<>(plugin.proxyServer().getAllServers());
         servers.sort(Comparator.comparing(s -> s.getServerInfo().getName(), String.CASE_INSENSITIVE_ORDER));
 
+        // This is every server velocity.toml routes to - reachability here
+        // is a plain Minecraft status ping and has nothing to do with
+        // MakongCore. Cross-reference the website bridge's own live roster
+        // (only servers that actually registered with the shared secret) so
+        // it's obvious which of these are MakongCore backends versus other
+        // servers on the network (auth, lobby-hub, build, test, ...) that
+        // just happen to also be reachable.
+        java.util.Set<String> makongCoreIds = new java.util.HashSet<>();
+        if (plugin.bridgeEnabled()) {
+            for (WebsiteBridge.ServerInfo backend : plugin.knownBackends()) {
+                makongCoreIds.add(backend.serverId.toLowerCase(Locale.ROOT));
+            }
+        }
+
         List<CompletableFuture<Boolean>> checks = new ArrayList<>();
         for (RegisteredServer server : servers) {
             checks.add(server.ping()
@@ -70,6 +84,7 @@ final class MakongCommand implements SimpleCommand {
 
         CompletableFuture.allOf(checks.toArray(new CompletableFuture<?>[0])).whenComplete((v, error) -> {
             int reachable = 1; // the proxy itself, always - this command only runs because it's up
+            int makongCoreCount = 0;
             StringBuilder sb = new StringBuilder();
             sb.append('\n').append(box("CLIENTS")).append('\n');
             List<String> lines = new ArrayList<>();
@@ -78,12 +93,19 @@ final class MakongCommand implements SimpleCommand {
                 RegisteredServer server = servers.get(i);
                 boolean ok = Boolean.TRUE.equals(checks.get(i).getNow(false));
                 if (ok) reachable++;
+                boolean hasMakongCore = makongCoreIds.contains(server.getServerInfo().getName().toLowerCase(Locale.ROOT));
+                if (hasMakongCore) makongCoreCount++;
                 lines.add((ok ? "✔ " : "✖ ") + server.getServerInfo().getName()
                         + " · " + server.getServerInfo().getAddress()
-                        + " · " + server.getPlayersConnected().size() + " players");
+                        + " · " + server.getPlayersConnected().size() + " players"
+                        + (hasMakongCore ? " · MakongCore" : ""));
             }
             sb.append("Summary\n");
-            sb.append("Connected: ").append(reachable).append('\n').append('\n');
+            sb.append("Connected: ").append(reachable).append('\n');
+            sb.append(plugin.bridgeEnabled()
+                    ? "MakongCore: " + makongCoreCount + "/" + servers.size() + " (only these are tagged - the rest are other servers on your network with no MakongCore/website bridge)\n"
+                    : "MakongCore: unknown - this proxy's own website bridge isn't configured, so it can't tell which backends run it\n");
+            sb.append('\n');
             sb.append("Sections\n");
             for (String line : lines) sb.append(line).append('\n');
             invocation.source().sendMessage(Component.text(sb.toString()));

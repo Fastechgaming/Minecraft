@@ -103,3 +103,6 @@ MaTier:
 ## 1.2.13 changes
 - Added `/mateam autorestart <seconds>` - a one-off broadcast-then-restart, normally triggered remotely by the new [MakongVelocity](../MakongVelocity) companion plugin's `/mc autorestart` (see "Velocity companion" above).
 - `AccountLinkService` now accepts an account-type classification forwarded by MakongVelocity (from nLogin running in proxy mode) over a `makong:accounttype` plugin message, trusting it ahead of its own Mojang API guess when present.
+
+## 1.2.14 changes
+- Fixed `storage.type: mysql` failing to start at all with `Database startup failed: ... Unsupported character encoding 'utf8mb4'`. The JDBC URL's `characterEncoding` option takes a *Java* charset name (`UTF-8`), not a MySQL one (`utf8mb4`) - the actual MySQL-side charset is now requested correctly via `connectionCollation=utf8mb4_unicode_ci` instead.
