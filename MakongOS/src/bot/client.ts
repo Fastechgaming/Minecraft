@@ -17,6 +17,25 @@ declare module 'discord.js' {
 
 const log = createLogger('bot');
 
+function getAllowedGuildIds(): string[] {
+  return (process.env.ALLOWED_GUILD_IDS ?? '')
+    .split(',')
+    .map((id) => id.trim())
+    .filter(Boolean);
+}
+
+/**
+ * Leaves any guild not in ALLOWED_GUILD_IDS — protects against someone adding the
+ * bot to a server it wasn't meant for. Leave that env var empty to allow all guilds.
+ */
+async function leaveDisallowedGuild(guild: { id: string; name: string; leave: () => Promise<unknown> }): Promise<boolean> {
+  const allowed = getAllowedGuildIds();
+  if (allowed.length === 0 || allowed.includes(guild.id)) return false;
+  log.warn(`Leaving unauthorized guild "${guild.name}" (${guild.id}) — not in ALLOWED_GUILD_IDS`);
+  await guild.leave().catch((err) => log.error(`Failed to leave "${guild.name}"`, err));
+  return true;
+}
+
 function buildCommandMap(): Map<string, { command: SlashCommand; module: string }> {
   const map = new Map<string, { command: SlashCommand; module: string }>();
   for (const mod of modules) {
@@ -69,7 +88,8 @@ export async function startBot(): Promise<void> {
       log.error('Failed to initialize Lavalink — is the "lavalink" PM2 process running? See scripts/setup-lavalink.sh', err);
     });
 
-    for (const guild of readyClient.guilds.cache.values()) {
+    for (const guild of [...readyClient.guilds.cache.values()]) {
+      if (await leaveDisallowedGuild(guild)) continue;
       await prisma.guild.upsert({
         where: { id: guild.id },
         update: { name: guild.name, icon: guild.icon, ownerId: guild.ownerId },
@@ -90,6 +110,7 @@ export async function startBot(): Promise<void> {
   });
 
   client.on(Events.GuildCreate, async (guild) => {
+    if (await leaveDisallowedGuild(guild)) return;
     await prisma.guild.upsert({
       where: { id: guild.id },
       update: { name: guild.name, icon: guild.icon, ownerId: guild.ownerId },
