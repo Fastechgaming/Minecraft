@@ -40,11 +40,18 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.regex.Pattern;
 
-public final class AccountLinkService extends ListenerAdapter implements Listener {
+public final class AccountLinkService extends ListenerAdapter implements Listener, org.bukkit.plugin.messaging.PluginMessageListener {
     private final MakongCore plugin; private final Database db; private final FloodgateHook floodgate;
     private final FileConfigurationBridge cfg;
     private final Map<String,Pending> pending=new ConcurrentHashMap<>();
     private final Map<UUID,String> playerCodes=new ConcurrentHashMap<>(); private final Set<UUID> frozen=ConcurrentHashMap.newKeySet();
+    // Populated by the optional MakongVelocity companion's "makong:accounttype"
+    // plugin message, keyed by player UUID - "java"|"cracked"|"bedrock". When
+    // present for a joining player, onJoin() trusts it instead of running its
+    // own async Mojang API guess. Absent entirely on a standalone server (no
+    // Velocity, or Velocity without nLogin/this forwarding disabled) - nothing
+    // here changes in that case.
+    private final Map<UUID,String> externalAccountType=new ConcurrentHashMap<>();
     private final HttpClient http=HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
     private JDA jda; private ScheduledExecutorService telegram; private org.bukkit.scheduler.BukkitTask reminderTask;
     private static final Pattern CODE=Pattern.compile("^\\d{6}$");
@@ -86,7 +93,23 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
         return d;
     }
 
-    public void onJoin(Player p){db.getAccountLink(p.getUniqueId()).thenAccept(link->{if(link!=null)return;boolean bedrock=floodgate!=null&&floodgate.isBedrock(p.getUniqueId());if(bedrock)return;CompletableFuture.supplyAsync(()->detectPremium(p.getName())).thenAccept(premium->{boolean isPremium=Boolean.TRUE.equals(premium);boolean unknown=premium==null;String type=(isPremium||unknown&&!cfg.b("linking.premium_detection.unknown_as_cracked",true))?"java":"cracked";boolean required=cfg.b("linking.required_for_cracked",true)&&type.equals("cracked");if(required)Bukkit.getScheduler().runTask(plugin,()->freezeAndCode(p,type));});});}
+    public void onJoin(Player p){db.getAccountLink(p.getUniqueId()).thenAccept(link->{if(link!=null)return;String external=externalAccountType.remove(p.getUniqueId());if(external!=null){if(external.equals("bedrock"))return;boolean required=cfg.b("linking.required_for_cracked",true)&&external.equals("cracked");if(required)Bukkit.getScheduler().runTask(plugin,()->freezeAndCode(p,external));return;}boolean bedrock=floodgate!=null&&floodgate.isBedrock(p.getUniqueId());if(bedrock)return;CompletableFuture.supplyAsync(()->detectPremium(p.getName())).thenAccept(premium->{boolean isPremium=Boolean.TRUE.equals(premium);boolean unknown=premium==null;String type=(isPremium||unknown&&!cfg.b("linking.premium_detection.unknown_as_cracked",true))?"java":"cracked";boolean required=cfg.b("linking.required_for_cracked",true)&&type.equals("cracked");if(required)Bukkit.getScheduler().runTask(plugin,()->freezeAndCode(p,type));});});}
+
+    // From MakongVelocity's "makong:accounttype" plugin message - see the
+    // externalAccountType field javadoc above. The channel's payload also
+    // carries the player's name/UUID for logging, but `player` here is
+    // already the correctly-resolved Bukkit Player the message arrived for,
+    // so that's what's used to key the map.
+    @Override public void onPluginMessageReceived(String channel,Player player,byte[] message){
+        if(!channel.equals("makong:accounttype"))return;
+        try{
+            java.io.DataInputStream in=new java.io.DataInputStream(new java.io.ByteArrayInputStream(message));
+            in.readUTF(); // username, informational only
+            in.readUTF(); // uuid, informational only - player.getUniqueId() is authoritative
+            String type=in.readUTF();
+            externalAccountType.put(player.getUniqueId(),type);
+        }catch(java.io.IOException ignored){}
+    }
     private Boolean detectPremium(String name){if(Bukkit.getOnlineMode())return true;if(!cfg.b("linking.premium_detection.enabled",true))return false;try{HttpRequest r=HttpRequest.newBuilder(URI.create("https://api.mojang.com/users/profiles/minecraft/"+java.net.URLEncoder.encode(name,java.nio.charset.StandardCharsets.UTF_8))).timeout(Duration.ofSeconds(4)).GET().build();HttpResponse<String> x=http.send(r,HttpResponse.BodyHandlers.ofString());if(x.statusCode()==200)return true;if(x.statusCode()==204||x.statusCode()==404)return false;return null;}catch(Exception e){return null;}}
     public void optionalLink(Player p){if(!cfg.b("discord.enabled",false)){p.sendMessage("§cDiscord linking is currently disabled.");return;}db.getAccountLink(p.getUniqueId()).thenAccept(l->{if(l!=null&&l.discordId()!=null&&!l.discordId().isBlank()){p.sendMessage("§aYour Discord account is already linked.");return;}String type=(floodgate!=null&&floodgate.isBedrock(p.getUniqueId()))?"bedrock":"java";Bukkit.getScheduler().runTask(plugin,()->displayOptionalCode(p,type));});}
     private void displayOptionalCode(Player p,String type){if(!p.isOnline())return;pending.values().removeIf(v->v.uuid.equals(p.getUniqueId()));String code=String.format("%06d",ThreadLocalRandom.current().nextInt(1000000));long expiry=System.currentTimeMillis()+cfg.l("linking.code_expire_minutes",10)*60000L;Pending x=new Pending(p.getUniqueId(),p.getName(),code,expiry,type,true);pending.put(code,x);playerCodes.put(p.getUniqueId(),code);p.sendTitle(code,"Send this code to Discord to link",10,80,10);p.sendActionBar("§bDiscord: "+cfg.s("discord.invite","discord.gg/makong"));p.sendMessage("§aOptional Discord linking code: §e"+code+" §7(expires in 10 minutes)");plugin.getServer().getScheduler().runTaskLater(plugin,()->{if(code.equals(playerCodes.get(p.getUniqueId())))playerCodes.remove(p.getUniqueId());},200L);}

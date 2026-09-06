@@ -32,11 +32,19 @@ Optional integration with the Makong Network website's store (see `../MakongWeb/
 
 Once configured (`module/website.yml`: `enabled: true`, a real `url`, and a `secret` matching the website's `MAKONGCORE_SECRET`):
 - This server shows up on the website's `/admin/servers` page and can be sent any console command from there on demand, or automatically when a Telegram store order is Accepted for this server's gamemode.
-- `/mateam ping <server-id>` reaches any other connected server (another MakongCore instance, or a Velocity proxy running the companion bridge plugin, if one exists on your network), relayed through the website.
+- `/mateam ping <server-id>` reaches any other connected server (another MakongCore instance, or the [MakongVelocity](../MakongVelocity) companion plugin, if one exists on your network), relayed through the website.
 - `server_id` defaults to `config.yml`'s `network.server_id` if left blank in `module/website.yml`, so a network already using MySQL "network mode" doesn't need a second id to keep track of.
 - This server's live Team and MaTier Star standings (top 50 of each) are reported to the website on every poll tick, so the public `/ranking` page can show real data instead of the admin-curated fallback. Each player's tier comes straight from `MaTierService.tierForRanked()`, so the M1 top-10-only cap is respected exactly. This is read-only reporting - the website never writes Team/MaTier data back to this server.
+- `/mateam autorestart <seconds>` broadcasts a countdown (reusing `module/autorestart.yml`'s interval messages) and restarts this server once it elapses - a one-off outside the normal `settings.restarts` schedule. Normally you won't type this yourself: [MakongVelocity](../MakongVelocity)'s `/mc autorestart <seconds>` relays it through this same bridge to every connected backend at once.
 
-This does not affect MaTier, Teams, or account linking beyond that reporting - it's otherwise just a command/ping channel to and from the website.
+This otherwise doesn't affect MaTier, Teams, or account linking - it's just a command/ping/rankings-reporting channel to and from the website.
+
+## Velocity companion (MakongVelocity)
+[MakongVelocity](../MakongVelocity) is a separate, optional Velocity plugin (its own Gradle project, built the same way) for two proxy-level features neither backend server can do on its own:
+- Forwards [nLogin](https://docs.nickuc.com/)'s premium/cracked/Bedrock classification (nLogin running in proxy mode) to whichever backend a player connects to, over a `makong:accounttype` plugin message. `AccountLinkService` trusts this directly when present, skipping its own Mojang API guess entirely - see `linking.premium_detection` in `module/discord.yml` for the guess it falls back to when MakongVelocity isn't installed or nLogin forwarding is off.
+- `/mc autorestart <seconds>` fans the restart broadcast above out to every connected backend through the website bridge.
+
+Nothing here changes if MakongVelocity is never installed - both are additive and off by default.
 
 ## configuration
 - `config.yml` controls storage, team limits, validation, PvP, scoring, chat, allies, cleanup, cross-server behavior and weekly rewards.
@@ -91,3 +99,7 @@ MaTier:
 
 ## 1.2.12 changes
 - The Website Bridge now also reports this server's Team and MaTier Star standings on every poll tick, so the website's public `/ranking` page can show live data (see above).
+
+## 1.2.13 changes
+- Added `/mateam autorestart <seconds>` - a one-off broadcast-then-restart, normally triggered remotely by the new [MakongVelocity](../MakongVelocity) companion plugin's `/mc autorestart` (see "Velocity companion" above).
+- `AccountLinkService` now accepts an account-type classification forwarded by MakongVelocity (from nLogin running in proxy mode) over a `makong:accounttype` plugin message, trusting it ahead of its own Mojang API guess when present.

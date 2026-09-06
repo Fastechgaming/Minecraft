@@ -11,7 +11,7 @@ commands:
     aliases: [teams]
   makongcore:
     description: MakongCore administration
-    usage: /makongcore <help|reload|info|list|team|disband|forcejoin|forceleave|addpoints|setpoints|addstars|setstars|ping>
+    usage: /makongcore <help|reload|info|list|team|disband|forcejoin|forceleave|addpoints|setpoints|addstars|setstars|ping|autorestart>
     aliases: [mateam]
   matier:
     description: Player MaTier profile and leaderboard

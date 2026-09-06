@@ -209,15 +209,15 @@ plugins" below.
 
 ## 7. Connecting the Minecraft plugins (MakongCore)
 
-`../MakongCore/` in this repo is a multi-module Gradle project with the
-actual plugins that bridge this website to your Minecraft servers — a
-**Paper plugin** (one instance per backend server: Arcade, EcoSMP, BoxPvP,
-PlotCity, HyperClash…) and a **Velocity plugin** (one instance on your
-proxy), both built the same way (`./gradlew build` in `../MakongCore/`,
-using the bundled wrapper) and documented in its own README. The website
-works fine with none, some, or all of them running.
+`../MakongCore/` (Paper — one instance per backend server: Arcade, EcoSMP,
+BoxPvP, PlotCity, HyperClash…) and `../MakongVelocity/` (Velocity — one
+instance on your proxy, entirely optional) are two separate Gradle projects
+in this repo that bridge this website to your Minecraft servers, each built
+independently (`./gradlew build` in its own folder, using its own bundled
+wrapper) and documented in its own README. The website works fine with none,
+some, or all of them running.
 
-There are two independent things a MakongCore plugin can do:
+There are two independent things a MakongCore/MakongVelocity plugin can do:
 
 **A) The multi-server command bridge** (`lib/pluginBridge.js` + `routes/plugin.js`,
 `/admin/servers`) — each plugin instance *connects outward* to this website
@@ -231,10 +231,14 @@ different machines/hosts) and:
   **Accept** in Telegram, *if* that item's gamemode server is currently
   connected — falling back to the usual manual copy-paste command when it
   isn't;
-- can ping any other connected server (`/makong ping <server-id>` in-game or
-  on the proxy console) — this is the "servers respond to each other" piece,
-  relayed through the website so it works whether or not the servers share a
-  Velocity proxy.
+- can ping any other connected server (`/mateam ping <server-id>` on Paper,
+  `/mc ping <server-id>` on Velocity) — this is the "servers respond to each
+  other" piece, relayed through the website so it works whether or not the
+  servers share a Velocity proxy;
+- MakongVelocity's `/mc autorestart <seconds>` uses this same queue
+  (`POST /api/plugin/command`) to fan a restart-warning-then-restart command
+  out to every connected Paper backend at once — see its own README for the
+  intended panel-scheduling pattern.
 
 Turn this on by setting **`MAKONGCORE_SECRET`** in `.env` (any long random
 string) and the same value in every plugin's `config.yml` — that one shared

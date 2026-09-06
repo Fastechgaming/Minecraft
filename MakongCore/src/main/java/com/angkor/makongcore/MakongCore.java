@@ -81,6 +81,11 @@ public final class MakongCore extends JavaPlugin {
     }
 
     private void registerRuntime() {
+        // Wipes any stale registration left over from a previous
+        // registerRuntime() call (reload) - Messenger accumulates listeners
+        // per channel rather than replacing them, and accountLinks below is
+        // about to be recreated.
+        getServer().getMessenger().unregisterIncomingPluginChannel(this);
         TeamCommand tc=new TeamCommand(this,teams,gui);
         getCommand("team").setExecutor(tc);getCommand("team").setTabCompleter(tc);
         AdminCommand ac=new AdminCommand(this,teams);
@@ -97,6 +102,11 @@ public final class MakongCore extends JavaPlugin {
         matierAura.start();
         accountLinks=new AccountLinkService(this,database,floodgate,discordConfig.get());
         getServer().getPluginManager().registerEvents(accountLinks,this);
+        // Lets the optional MakongVelocity companion (see ../MakongVelocity)
+        // forward nLogin's premium/cracked/bedrock classification for a
+        // player straight to this server on join, skipping this service's
+        // own best-effort Mojang API guess entirely when it's available.
+        getServer().getMessenger().registerIncomingPluginChannel(this,"makong:accounttype",accountLinks);
         accountLinks.start();
         weeklyRewards=new WeeklyRewardService(this,teams); weeklyRewards.start();
         teamStats=new TeamStatsListener(this,teams); getServer().getPluginManager().registerEvents(teamStats,this); teamStats.start();
@@ -135,5 +145,5 @@ public final class MakongCore extends JavaPlugin {
 
     private void sendAdmin(CommandSender s,String m){s.sendMessage(Text.mm("<green>[ᴍᴀᴛᴇᴀᴍ]</green> "+m));}
     @Override public void onDisable(){HandlerList.unregisterAll(this);if(teamStats!=null)teamStats.stop();if(autoRestart!=null)autoRestart.stop();if(matierAura!=null)matierAura.stop();if(accountLinks!=null)accountLinks.stop();if(websiteBridge!=null)websiteBridge.stop();if(database!=null)database.close();}
-    public TeamService teams(){return teams;} public GuiManager gui(){return gui;} public FloodgateHook floodgate(){return floodgate;} public ModuleConfig teamConfig(){return teamConfig;} public ModuleConfig matierConfig(){return matierConfig;} public MaTierService matier(){return matier;} public WebsiteBridgeService websiteBridge(){return websiteBridge;}
+    public TeamService teams(){return teams;} public GuiManager gui(){return gui;} public FloodgateHook floodgate(){return floodgate;} public ModuleConfig teamConfig(){return teamConfig;} public ModuleConfig matierConfig(){return matierConfig;} public MaTierService matier(){return matier;} public WebsiteBridgeService websiteBridge(){return websiteBridge;} public AutoRestartService autoRestart(){return autoRestart;}
 }

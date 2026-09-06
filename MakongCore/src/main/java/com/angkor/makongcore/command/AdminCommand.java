@@ -49,6 +49,7 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
             case "addstars", "givestars", "givestar" -> stars(sender, args, false);
             case "setstars" -> stars(sender, args, true);
             case "ping" -> ping(sender, args);
+            case "autorestart" -> autorestart(sender, args);
             default -> {
                 send(sender, "<red>Unknown admin command. Use <yellow>/mateam help</yellow>.</red>");
             }
@@ -71,7 +72,8 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
                 <gray>/mateam addpoints and setpoints remain aliases
                 <yellow>/mateam givestar <tag> <amount></yellow> <gray>- Give/remove Stars
                 <yellow>/mateam setstars <tag> <amount></yellow> <gray>- Set Stars
-                <yellow>/mateam ping <server-id></yellow> <gray>- Ping another server on the website bridge""");
+                <yellow>/mateam ping <server-id></yellow> <gray>- Ping another server on the website bridge
+                <yellow>/mateam autorestart <seconds></yellow> <gray>- Broadcast a countdown and restart this server after it elapses""");
     }
 
     private void info(CommandSender s) {
@@ -96,6 +98,22 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
         }
         send(s, "<gray>Pinging <white>" + args[1] + "</white>...");
         plugin.websiteBridge().ping(args[1], s);
+    }
+
+    private void autorestart(CommandSender s, String[] args) {
+        if (args.length < 2) {
+            send(s, "<red>Usage: /mateam autorestart <seconds></red>");
+            return;
+        }
+        long seconds;
+        try {
+            seconds = Long.parseLong(args[1]);
+        } catch (NumberFormatException e) {
+            send(s, "<red>Seconds must be a whole number.</red>");
+            return;
+        }
+        plugin.autoRestart().triggerAdHocRestart(seconds);
+        send(s, "<green>Restarting in <white>" + seconds + "s</white>.</green>");
     }
 
     private void list(CommandSender s) {
@@ -226,7 +244,7 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (!sender.hasPermission("mateam.admin")) return List.of();
         if (args.length == 1) {
-            return List.of("help", "reload", "info", "list", "team", "disband", "forcejoin", "forceleave", "addweeklypoints", "setweeklypoints", "addpoints", "setpoints", "addstars", "givestars", "givestar", "setstars", "ping")
+            return List.of("help", "reload", "info", "list", "team", "disband", "forcejoin", "forceleave", "addweeklypoints", "setweeklypoints", "addpoints", "setpoints", "addstars", "givestars", "givestar", "setstars", "ping", "autorestart")
                     .stream().filter(x -> x.startsWith(args[0].toLowerCase(Locale.ROOT))).toList();
         }
         if (args.length == 2 && List.of("team", "disband", "addweeklypoints", "setweeklypoints", "addpoints", "setpoints", "addstars", "givestars", "givestar", "setstars").contains(args[0].toLowerCase(Locale.ROOT))) {

@@ -96,4 +96,23 @@ router.post("/rankings", (req, res) => {
   res.json({ ok: true });
 });
 
+// A connected plugin (currently just MakongVelocity's /mc autorestart)
+// queuing a console command on ANOTHER connected server - same command
+// queue the admin panel's /admin/servers already uses, just a second
+// caller. No extra authorization boundary beyond the shared secret every
+// plugin route here already requires: whoever holds MAKONGCORE_SECRET can
+// already do this via the admin panel.
+const COMMAND_MAX_LENGTH = 500;
+
+router.post("/command", (req, res) => {
+  const { serverId, targetServerId, command } = req.body || {};
+  if (!serverId || !targetServerId || !command) {
+    return res.status(400).json({ error: "serverId, targetServerId and command are required" });
+  }
+  const clean = String(command).slice(0, COMMAND_MAX_LENGTH).trim();
+  if (!clean) return res.status(400).json({ error: "command is empty" });
+  const commandId = pluginBridge.queueCommand(String(targetServerId), clean, { from: String(serverId) });
+  res.json({ ok: true, commandId });
+});
+
 module.exports = router;

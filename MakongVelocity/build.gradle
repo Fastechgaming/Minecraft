@@ -1,0 +1,32 @@
+plugins {
+    id 'java'
+}
+
+group = 'com.angkor'
+version = '1.0.0'
+
+description = 'Velocity companion for MakongCore - forwards nLogin account types to backends and relays network-wide restart broadcasts through the Makong Network website bridge.'
+
+repositories {
+    maven { name = 'papermc'; url = 'https://repo.papermc.io/repository/maven-public/' }
+    mavenCentral()
+    flatDir { dirs 'libs' }
+}
+
+dependencies {
+    compileOnly 'com.velocitypowered:velocity-api:3.4.0'
+    annotationProcessor 'com.velocitypowered:velocity-api:3.4.0'
+    // Public API classes only, extracted from the real nLogin-2.0.19.jar the
+    // server actually runs - nLogin itself is provided at runtime by the
+    // Velocity proxy, this is compile-time only. See README.md.
+    compileOnly files('libs/nlogin-api-2.0.19.jar')
+}
+
+java {
+    toolchain { languageVersion = JavaLanguageVersion.of(21) }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 21
+}

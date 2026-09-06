@@ -15,6 +15,7 @@ public final class AutoRestartService {
     private final MakongCore plugin;
     private final FileConfiguration c;
     private BukkitTask task;
+    private BukkitTask adHocTask;
     private long nextRestart=-1;
     private final Set<String> executed=new HashSet<>();
     private boolean afterBoot;
@@ -27,7 +28,33 @@ public final class AutoRestartService {
         runAfterReboot();
         task=Bukkit.getScheduler().runTaskTimer(plugin,this::tick,20L,20L);
     }
-    public void stop(){if(task!=null){task.cancel();task=null;}}
+    public void stop(){if(task!=null){task.cancel();task=null;}if(adHocTask!=null){adHocTask.cancel();adHocTask=null;}}
+
+    // A one-off restart outside the configured schedule - used by
+    // /mateam autorestart <seconds> (see AdminCommand), itself normally
+    // triggered by the MakongVelocity companion's /mc autorestart relayed
+    // through the website bridge. Reuses the same interval-broadcast
+    // messages and "normal" restartCommands the scheduled path uses, just
+    // counting down from `seconds` instead of down to a wall-clock target.
+    public void triggerAdHocRestart(long seconds){
+        long target=System.currentTimeMillis()+Math.max(0,seconds)*1000L;
+        if(adHocTask!=null)adHocTask.cancel();
+        adHocTask=Bukkit.getScheduler().runTaskTimer(plugin,new Runnable(){
+            @Override public void run(){
+                long remaining=(target-System.currentTimeMillis()+999)/1000;
+                if(remaining<=0){
+                    String day=ZonedDateTime.now().getDayOfWeek().name();
+                    for(String raw:commands("settings.restartCommands")){
+                        Parsed p=parseCommand(raw,day);
+                        if(p!=null&&p.type.equals("normal"))execute(p.command,false);
+                    }
+                    if(adHocTask!=null){adHocTask.cancel();adHocTask=null;}
+                    return;
+                }
+                announce(remaining);
+            }
+        },0L,20L);
+    }
 
     private boolean enabled(){return c.getBoolean("settings.enabled",true);}
 
