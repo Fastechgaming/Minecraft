@@ -38,8 +38,7 @@ public final class MakongCore extends JavaPlugin {
     private MaTierService matier;
     private MaTierAuraService matierAura;
     private AccountLinkService accountLinks;
-    private ModuleConfig discordConfig;
-    private ModuleConfig websiteConfig;
+    private ModuleConfig verificationConfig;
     private WebsiteBridgeService websiteBridge;
 
     private void saveBundledFileIfMissing(String name) {
@@ -54,13 +53,11 @@ public final class MakongCore extends JavaPlugin {
         saveBundledFileIfMissing("module/team.yml");
         saveBundledFileIfMissing("module/matier.yml");
         saveBundledFileIfMissing("module/autorestart.yml");
-        saveBundledFileIfMissing("module/discord.yml");
-        saveBundledFileIfMissing("module/website.yml");
+        saveBundledFileIfMissing("module/verification.yml");
         teamConfig=new ModuleConfig(getDataFolder(),"team.yml");
         matierConfig=new ModuleConfig(getDataFolder(),"matier.yml");
         autoRestartConfig=new ModuleConfig(getDataFolder(),"autorestart.yml");
-        discordConfig=new ModuleConfig(getDataFolder(),"discord.yml");
-        websiteConfig=new ModuleConfig(getDataFolder(),"website.yml");
+        verificationConfig=new ModuleConfig(getDataFolder(),"verification.yml");
         initialize();
     }
 
@@ -100,7 +97,7 @@ public final class MakongCore extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new GuiListener(this,teams,gui),this);
         getServer().getPluginManager().registerEvents(new ChatListener(this,teams),this);
         matierAura.start();
-        accountLinks=new AccountLinkService(this,database,floodgate,discordConfig.get());
+        accountLinks=new AccountLinkService(this,database,floodgate,verificationConfig.get());
         getServer().getPluginManager().registerEvents(accountLinks,this);
         // Lets the optional MakongVelocity companion (see ../MakongVelocity)
         // forward nLogin's premium/cracked/bedrock classification for a
@@ -112,7 +109,7 @@ public final class MakongCore extends JavaPlugin {
         teamStats=new TeamStatsListener(this,teams); getServer().getPluginManager().registerEvents(teamStats,this); teamStats.start();
         autoRestart=new AutoRestartService(this,autoRestartConfig.get()); autoRestart.start();
         matier.start();
-        websiteBridge=new WebsiteBridgeService(this,websiteConfig.get()); websiteBridge.start();
+        websiteBridge=new WebsiteBridgeService(this,getConfig()); websiteBridge.start();
         getLogger().info("MakongCore enabled. Teams loaded: "+teams.all().size());
     }
 
@@ -127,8 +124,8 @@ public final class MakongCore extends JavaPlugin {
         if(websiteBridge!=null) websiteBridge.stop();
         if(database!=null)database.close();
         reloadConfig();saveBundledFileIfMissing("messages.yml");saveBundledFileIfMissing("gui.yml");saveBundledFileIfMissing("module/team.yml");saveBundledFileIfMissing("module/matier.yml");
-        saveBundledFileIfMissing("module/autorestart.yml");saveBundledFileIfMissing("module/discord.yml");saveBundledFileIfMissing("module/website.yml");
-        teamConfig.reload();matierConfig.reload();autoRestartConfig.reload();discordConfig.reload();websiteConfig.reload();
+        saveBundledFileIfMissing("module/autorestart.yml");saveBundledFileIfMissing("module/verification.yml");
+        teamConfig.reload();matierConfig.reload();autoRestartConfig.reload();verificationConfig.reload();
         Bukkit.getScheduler().runTaskAsynchronously(this,()->{
             try {
                 Database db=new Database(getConfig(),getDataFolder());

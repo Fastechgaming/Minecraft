@@ -63,7 +63,7 @@ public final class WebsiteBridgeService {
         long intervalTicks = Math.max(1, c.getLong("website.poll_interval_seconds", 5)) * 20L;
 
         if (url.isBlank() || secret.isBlank() || secret.equals("change-me")) {
-            plugin.getLogger().warning("module/website.yml: website.url / website.secret are not set - the website bridge is disabled.");
+            plugin.getLogger().warning("config.yml's website.url / website.secret are not set - the website bridge is disabled.");
             return;
         }
 

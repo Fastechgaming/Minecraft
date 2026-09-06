@@ -11,7 +11,7 @@
 // State here is in-memory only and resets on restart - a plugin just
 // reconnects and re-registers on its next poll, so nothing is lost beyond a
 // few seconds of "offline" on the Servers admin page.
-const ONLINE_WINDOW_MS = 20_000; // ~4 poll intervals at the plugin's default 5s
+const ONLINE_WINDOW_MS = 12_000; // ~4 poll intervals at the plugin's default 3s
 const RANKINGS_STALE_MS = 5 * 60 * 1000; // fall back to admin-curated data if nothing's reported in this long
 const { nanoid } = require("nanoid");
 

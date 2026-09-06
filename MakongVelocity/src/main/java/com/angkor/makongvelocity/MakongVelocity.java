@@ -45,7 +45,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * 3. Periodic network-wide announcements (store/Discord plugs, etc.) - see
  *    AnnouncementService and announcements.yml.
  */
-@Plugin(id = "makongvelocity", name = "MakongVelocity", version = "1.3.0", authors = {"Angkor"})
+@Plugin(id = "makongvelocity", name = "MakongVelocity", version = "1.3.1", authors = {"Angkor"})
 public final class MakongVelocity {
 
     static final MinecraftChannelIdentifier ACCOUNT_TYPE_CHANNEL = MinecraftChannelIdentifier.create("makong", "accounttype");
@@ -184,6 +184,16 @@ public final class MakongVelocity {
     List<WebsiteBridge.ServerInfo> knownBackends() {
         List<WebsiteBridge.ServerInfo> servers = knownServers;
         return servers.stream().filter(s -> !"velocity".equals(s.kind)).toList();
+    }
+
+    // /mc clients otherwise reads knownServers as of the last scheduled poll
+    // tick, which can be up to website.poll_interval_seconds stale - a
+    // backend that just started or just died wouldn't show up correctly
+    // yet. Running a poll cycle immediately (blocking, so call this off the
+    // command thread) gets knownBackends() as fresh as this proxy can make
+    // it before /mc clients computes its list.
+    void refreshKnownServersNow() {
+        if (bridgeEnabled()) pollOnce();
     }
 
     /** Used by /mc ping <server-id>. */

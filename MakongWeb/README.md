@@ -105,7 +105,7 @@ MakongCore plugin's own `module/matier.yml` (`matier.tiers`) exactly:
 | M1 | 1,500+ (top 10 players only, in the plugin) |
 
 **Live data.** Once `MAKONGCORE_SECRET` is set and a MakongCore server has
-`module/website.yml`'s `website.enabled: true`, the plugin reports its real
+`config.yml`'s `website.enabled: true`, the plugin reports its real
 Team and MaTier Star standings on every poll tick (see
 `MakongCore/README.md`'s "Website Bridge" section). `GET /api/rankings`
 then serves that live data instead of the admin-curated JSON — the

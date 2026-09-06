@@ -79,6 +79,12 @@ gone down, is still booting, or the port/firewall changed since it last
 connected. If nothing is configured yet, this errors out asking you to set
 up the website bridge first - see below.
 
+Before building its answer, `/mc clients` always forces one extra poll of
+the website bridge itself rather than reading whatever this proxy's own
+background poll last cached - so a backend that only just connected or
+dropped is reflected immediately instead of waiting out the rest of
+`website.poll_interval_seconds`.
+
 ## Announcements
 
 On by default (`announcements.enabled=true` in `config.properties`) - no
@@ -167,13 +173,14 @@ website.enabled=true
 website.url=https://makongmc.com
 website.secret=change-me
 website.server_id=proxy
-website.poll_interval_seconds=5
+website.poll_interval_seconds=3
 ```
 
 `website.secret` must match the website's `MAKONGCORE_SECRET` exactly, and
-every backend you want reachable must have its own `module/website.yml`
-bridge configured and connected too (see MakongCore's README) - this proxy
-only ever sees backends that are themselves already talking to the website.
+every backend you want reachable must have its own `config.yml`'s
+`website:` section bridge configured and connected too (see MakongCore's
+README) - this proxy only ever sees backends that are themselves already
+talking to the website.
 
 Once connected, `/mc autorestart <seconds>` sends
 `makongcore autorestart <seconds>` to every currently-connected backend at

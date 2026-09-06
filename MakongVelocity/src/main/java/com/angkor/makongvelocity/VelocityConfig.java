@@ -32,7 +32,7 @@ final class VelocityConfig {
             props.setProperty("website.url", "https://makongmc.com");
             props.setProperty("website.secret", "change-me");
             props.setProperty("website.server_id", "proxy");
-            props.setProperty("website.poll_interval_seconds", "5");
+            props.setProperty("website.poll_interval_seconds", "3");
             props.setProperty("nlogin.forward_account_type", "true");
             props.setProperty("announcements.enabled", "true");
             try (OutputStream out = Files.newOutputStream(file)) {
@@ -63,7 +63,7 @@ final class VelocityConfig {
 
     long pollIntervalSeconds() {
         try {
-            return Math.max(1, Long.parseLong(props.getProperty("website.poll_interval_seconds", "5")));
+            return Math.max(1, Long.parseLong(props.getProperty("website.poll_interval_seconds", "3")));
         } catch (NumberFormatException e) {
             return 5;
         }

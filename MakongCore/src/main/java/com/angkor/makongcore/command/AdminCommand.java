@@ -89,7 +89,7 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
 
     private void ping(CommandSender s, String[] args) {
         if (!plugin.websiteBridge().isEnabled()) {
-            send(s, "<red>The website bridge is not configured - see module/website.yml.</red>");
+            send(s, "<red>The website bridge is not configured - see config.yml's website: section.</red>");
             return;
         }
         if (args.length < 2) {

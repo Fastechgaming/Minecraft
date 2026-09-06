@@ -1,4 +1,5 @@
-# Discord + Telegram account linking
+# Account verification - cracked-player Discord/Telegram linking, premium
+# detection, and the Discord staff commands that ride along with it.
 # INFO: Keep bot tokens private. Never publish them or commit them to Git.
 discord:
   enabled: false

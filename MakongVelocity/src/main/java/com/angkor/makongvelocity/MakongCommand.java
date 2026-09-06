@@ -61,13 +61,25 @@ final class MakongCommand implements SimpleCommand {
     private void clients(Invocation invocation) {
         if (!requireBridge(invocation)) return;
 
+        // refreshKnownServersNow() is a blocking HTTP call (same as
+        // ping()/autorestart()'s), so the whole thing runs off the command
+        // thread. It gets knownBackends() as fresh as this proxy can make
+        // it - otherwise this command would be reading a server list up to
+        // website.poll_interval_seconds stale from the last scheduled tick.
+        plugin.proxyServer().getScheduler().buildTask(plugin, () -> {
+            plugin.refreshKnownServersNow();
+            clientsAfterRefresh(invocation);
+        }).schedule();
+    }
+
+    private void clientsAfterRefresh(Invocation invocation) {
         // The website bridge's live roster is the only source of truth for
         // "which of my velocity.toml servers actually run MakongCore" - a
         // plain Velocity ping can't tell a MakongCore backend apart from any
         // other server the proxy happens to route to (auth, lobby-hub,
         // build, test, ...). Match by serverId against velocity.toml's own
-        // server names, since that's what a MakongCore backend's
-        // module/website.yml server_id is meant to line up with.
+        // server names, since that's what a MakongCore backend's config.yml
+        // website.server_id is meant to line up with.
         java.util.Set<String> makongCoreIds = new java.util.HashSet<>();
         for (WebsiteBridge.ServerInfo backend : plugin.knownBackends()) {
             makongCoreIds.add(backend.serverId.toLowerCase(Locale.ROOT));

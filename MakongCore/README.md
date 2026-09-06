@@ -30,10 +30,11 @@ Floodgate is an optional runtime integration. MakongCore intentionally has no co
 ## Website Bridge
 Optional integration with the Makong Network website's store (see `../MakongWeb/`). This server connects **outward** to the website on a repeating timer - nothing needs to be opened on this server's side, so it works whether the website and this server share a box or sit on entirely different hosts.
 
-Once configured (`module/website.yml`: `enabled: true`, a real `url`, and a `secret` matching the website's `MAKONGCORE_SECRET`):
+Once configured (`config.yml`'s `website:` section: `enabled: true`, a real `url`, and a `secret` matching the website's `MAKONGCORE_SECRET`):
 - This server shows up on the website's `/admin/servers` page and can be sent any console command from there on demand, or automatically when a Telegram store order is Accepted for this server's gamemode.
 - `/mateam ping <server-id>` reaches any other connected server (another MakongCore instance, or the [MakongVelocity](../MakongVelocity) companion plugin, if one exists on your network), relayed through the website.
-- `server_id` defaults to `config.yml`'s `network.server_id` if left blank in `module/website.yml`, so a network already using MySQL "network mode" doesn't need a second id to keep track of.
+- `server_id` defaults to `config.yml`'s `network.server_id` if left blank in `website.server_id`, so a network already using MySQL "network mode" doesn't need a second id to keep track of.
+- `website.poll_interval_seconds` (default `3`) also controls how quickly [MakongVelocity](../MakongVelocity)'s `/mc clients` sees this server come online or drop - `/mc clients` also forces an immediate poll of its own before answering, so it never waits out a full interval either way.
 - This server's live Team and MaTier Star standings (top 50 of each) are reported to the website on every poll tick, so the public `/ranking` page can show real data instead of the admin-curated fallback. Each player's tier comes straight from `MaTierService.tierForRanked()`, so the M1 top-10-only cap is respected exactly. This is read-only reporting - the website never writes Team/MaTier data back to this server.
 - `/mateam autorestart <seconds>` broadcasts a countdown (reusing `module/autorestart.yml`'s interval messages) and restarts this server once it elapses - a one-off outside the normal `settings.restarts` schedule. Normally you won't type this yourself: [MakongVelocity](../MakongVelocity)'s `/mc autorestart <seconds>` relays it through this same bridge to every connected backend at once.
 
@@ -41,13 +42,13 @@ This otherwise doesn't affect MaTier, Teams, or account linking - it's just a co
 
 ## Velocity companion (MakongVelocity)
 [MakongVelocity](../MakongVelocity) is a separate, optional Velocity plugin (its own Gradle project, built the same way) for two proxy-level features neither backend server can do on its own:
-- Forwards [nLogin](https://docs.nickuc.com/)'s premium/cracked/Bedrock classification (nLogin running in proxy mode) to whichever backend a player connects to, over a `makong:accounttype` plugin message. `AccountLinkService` trusts this directly when present, skipping its own Mojang API guess entirely - see `linking.premium_detection` in `module/discord.yml` for the guess it falls back to when MakongVelocity isn't installed or nLogin forwarding is off.
+- Forwards [nLogin](https://docs.nickuc.com/)'s premium/cracked/Bedrock classification (nLogin running in proxy mode) to whichever backend a player connects to, over a `makong:accounttype` plugin message. `AccountLinkService` trusts this directly when present, skipping its own Mojang API guess entirely - see `linking.premium_detection` in `module/verification.yml` for the guess it falls back to when MakongVelocity isn't installed or nLogin forwarding is off.
 - `/mc autorestart <seconds>` fans the restart broadcast above out to every connected backend through the website bridge.
 
 Nothing here changes if MakongVelocity is never installed - both are additive and off by default.
 
 ## configuration
-- `config.yml` controls storage, team limits, validation, PvP, scoring, chat, allies, cleanup, cross-server behavior and weekly rewards.
+- `config.yml` controls storage, team limits, validation, PvP, scoring, chat, allies, cleanup, cross-server behavior, weekly rewards and the Website Bridge (see below).
 - `messages.yml` controls player-facing messages.
 - `gui.yml` controls GUI titles, sizes, slots, materials, names, lore, filler panes and navigation.
 - Run `/mateam reload` after changing configuration.
@@ -55,12 +56,11 @@ Nothing here changes if MakongVelocity is never installed - both are additive an
 Modules:
 - module/team.yml - team gameplay configuration
 - module/matier.yml - player MaTier configuration
-- module/discord.yml - Discord/Telegram linking, verification and staff commands
+- module/verification.yml - Discord/Telegram linking, premium/cracked verification and Discord staff commands
 - module/autorestart.yml - scheduled restarts
-- module/website.yml - Makong Network website bridge (see below)
 - gui.yml - GUI configuration
 - messages.yml - messages
-- config.yml - core/database/network configuration
+- config.yml - core/database/network/website-bridge configuration
 
 MaTier:
 - /matier
@@ -109,3 +109,8 @@ MaTier:
 
 ## 1.2.15 changes
 - Fixed cracked players being frozen and asked to verify even with both `discord.enabled` and `telegram.enabled` set to `false`. `linking.required_for_cracked` (default `true`) is a separate switch from those two and was never actually checking whether a bot existed for the player to verify through - with both disabled this was a silent, permanent lockout with no way to complete verification. It's now ignored unless at least one of Discord/Telegram is enabled.
+
+## 1.2.16 changes
+- Moved the Website Bridge's settings (`enabled`, `url`, `secret`, `server_id`, `poll_interval_seconds`) from `module/website.yml` into `config.yml`'s new `website:` section - one less file to manage, and it now reloads with everything else `/mateam reload` already covers. Existing `module/website.yml` files are no longer read; re-enter your `url`/`secret` in `config.yml`.
+- Renamed `module/discord.yml` to `module/verification.yml` - the file has always covered Telegram linking and premium/cracked detection alongside Discord, not just Discord, and the old name undersold that. Its contents (including the `discord:`/`telegram:`/`linking:` sections) are unchanged.
+- Lowered the default `website.poll_interval_seconds` from `5` to `3` (and the paired website-side staleness window from 20s to 12s) so a server coming online, going offline, or reconnecting is reflected sooner. Combined with [MakongVelocity](../MakongVelocity)'s `/mc clients` now forcing a fresh poll before it answers (see that project's changelog), `/mc clients` no longer waits out a stale scheduled-poll cache on top of the staleness window.
