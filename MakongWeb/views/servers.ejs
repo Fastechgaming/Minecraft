@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Servers · Admin</title>
+  <link rel="stylesheet" href="/css/admin.css" />
+</head>
+<body class="admin-body">
+  <header class="admin-header">
+    <h1>Makong Network Servers Admin</h1>
+    <nav class="admin-nav">
+      <a class="btn-ghost" href="/admin">Store items</a>
+      <a class="btn-ghost" href="/admin/rankings">Rankings</a>
+      <form method="POST" action="/admin/logout"><button class="btn-ghost">Log out</button></form>
+    </nav>
+  </header>
+
+  <main class="admin-main">
+    <% if (!bridgeEnabled) { %>
+      <p class="muted">
+        The MakongStore plugin bridge isn't turned on — set <code>MAKONGSTORE_SECRET</code>
+        in <code>.env</code> and restart the site, then point every MakongStore plugin's
+        <code>config.yml</code> at the same secret. See <code>../MakongStore/README.md</code>.
+      </p>
+    <% } else { %>
+      <section class="admin-section">
+        <div class="admin-section-head">
+          <h2>Connected servers</h2>
+        </div>
+        <% if (!servers.length) { %>
+          <p class="muted">No MakongStore plugin has connected yet. This page auto-refreshes every 5 seconds.</p>
+        <% } else { %>
+          <div class="admin-table-wrap">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Server</th>
+                  <th>Kind</th>
+                  <th>Status</th>
+                  <th>Last seen</th>
+                  <th>Send a command</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% servers.forEach(function(s) { %>
+                  <tr>
+                    <td><code><%= s.serverId %></code></td>
+                    <td><%= s.kind %></td>
+                    <td><span class="status-dot <%= s.online ? 'online' : '' %>"></span><%= s.online ? "Online" : "Offline" %></td>
+                    <td><%= s.lastSeen ? Math.max(0, Math.round((Date.now() - s.lastSeen) / 1000)) + "s ago" : "never" %></td>
+                    <td>
+                      <form class="command-form" method="POST" action="/admin/servers/<%= encodeURIComponent(s.serverId) %>/command">
+                        <input type="text" name="command" placeholder="lp user Steve parent add vip" required />
+                        <button class="btn">Send</button>
+                      </form>
+                    </td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        <% } %>
+      </section>
+      <p class="muted">
+        A command is queued for that server's next poll (usually within a few
+        seconds) and runs from its console, exactly like a Telegram Accept
+        delivery — this page is just a way to run one on demand. Sent
+        commands aren't confirmed here; check the server's own console/logs.
+      </p>
+    <% } %>
+  </main>
+
+  <script>
+    setTimeout(() => location.reload(), 5000);
+  </script>
+</body>
+</html>

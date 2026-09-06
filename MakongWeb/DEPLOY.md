@@ -4,7 +4,7 @@
 
 **GitHub Pages cannot host this site.** Pages only serves static files. This
 site is a Node.js server — the store checkout, the login
-cookie, the Telegram bot and RCON all need a process running. On Pages you would
+cookie, and the Telegram bot all need a process running. On Pages you would
 get the Home page and nothing that works.
 
 **Cloudflare Workers and Cloudflare Pages cannot host it either**, for the same
@@ -14,7 +14,6 @@ kind of reason plus two more:
 |---|---|
 | Runs Express with `node-telegram-bot-api` polling | Workers are short-lived request handlers, not a long-running process |
 | Pings the Minecraft server (`minecraft-server-util`) | Needs raw TCP and UDP sockets; Workers only speak HTTP |
-| Sends RCON commands (`rcon-client`) | Same — raw TCP |
 | Writes `data/orders.json`, uploaded receipts | Workers have no filesystem |
 
 **The Cloudflare product you want is Cloudflare Tunnel.** The site runs on your
@@ -23,12 +22,14 @@ without opening a single port.
 
 ```
    players ──HTTPS──▶ Cloudflare ──tunnel──▶ your box ──▶ node server.js :3000
-                                                     └──▶ Minecraft + AngkorStore (localhost)
+                                                     └──▶ Minecraft + MakongStore (localhost)
 ```
 
-Running it on the same box as Minecraft is worth doing on purpose: the
-AngkorStore plugin API and RCON both stay on `127.0.0.1`, so you never expose
-them to the internet at all.
+Running it on the same box as Minecraft is worth doing on purpose if you're
+also using the player-verify plugin API (section 7B in the README): it then
+stays on `127.0.0.1` and never touches the internet. The multi-server command
+bridge (7A) doesn't need this — those plugins connect outward to this
+website's public URL, so backend servers can live anywhere.
 
 ---
 
@@ -77,14 +78,10 @@ SESSION_SECRET=...                 # node -e "console.log(require('crypto').rand
 TELEGRAM_BOT_TOKEN=...
 TELEGRAM_ADMIN_CHAT_ID=...
 
-# RCON is on the same machine, so localhost
-RCON_HOST=127.0.0.1
-RCON_PORT=25575
-RCON_PASSWORD=...
-
-# Once the AngkorStore plugin is running (see ../AngkorStore/README.md)
-ANGKORSTORE_URL=http://127.0.0.1:8123
-ANGKORSTORE_SECRET=...
+# Once the MakongStore plugins are running (see ../MakongStore/README.md) -
+# same secret in every plugin's config.yml. Turns on the Servers admin page,
+# live command delivery on Accept, and cross-server ping.
+MAKONGSTORE_SECRET=...
 ```
 
 Check it starts:

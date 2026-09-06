@@ -21,11 +21,12 @@ const I18n = (() => {
   const DICT = {
     en: {
       /* ---- nav / chrome ---- */
-      "nav.home": "🏠 Home",
-      "nav.store": "💰 Store",
+      "nav.home": "Home",
+      "nav.store": "Store",
+      "nav.ranking": "Ranking",
       "nav.menu": "Menu",
       "nav.language": "Language",
-      "footer.copy": "© {year} Makong Network · Cambodia Minecraft Server 🇰🇭",
+      "footer.copy": "© {year} Makong Network · Asia Minecraft Server 🌏",
 
       /* ---- home ---- */
       "home.discord": "Discord",
@@ -35,15 +36,17 @@ const I18n = (() => {
       "home.store": "Store",
       "home.storeSub": "Ranks, keys & more",
       "home.checking": "Checking server status…",
-      "home.online": "Online — {online}/{max} players",
+      "home.online": "{online} Players",
       "home.offline": "Server offline",
       "home.statusUnavailable": "Status unavailable",
-      "home.welcome": "🌿 Welcome 🌿",
+      "home.welcome": "Welcome",
       "home.copied": 'Copied "{ip}" — paste it into Minecraft > Multiplayer > Add Server',
       "home.opening": "Opening Minecraft (Bedrock)… Java IP also copied just in case!",
 
       /* ---- store ---- */
       "store.subtitle": "STORE",
+      "store.gamemode": "Gamemode",
+      "store.changeRegion": "Change store",
       "region.title": "Select your region",
       "region.subtitle": "This decides how you'll pay. You can change it any time.",
       "region.khmer": "Cambodia",
@@ -68,6 +71,11 @@ const I18n = (() => {
       "store.upgradeCaption": "You are upgrading {from} to {to}",
       "store.confirmName": "Name",
       "store.confirmPlatform": "Platform",
+      "store.duration1Month": "1 Month",
+      "store.durationPermanent": "Permanent",
+      "store.quantity": "Quantity",
+      "store.qtyDecrease": "Decrease quantity",
+      "store.qtyIncrease": "Increase quantity",
       "store.confirm": "Confirm",
       "store.cancel": "Cancel",
       "store.changeHint":
@@ -95,6 +103,7 @@ const I18n = (() => {
       "checkout.loading": "Loading your order…",
       "checkout.inServerName": "In server name",
       "checkout.edition": "Edition",
+      "checkout.duration": "Duration",
       "checkout.total": "Total",
       "checkout.step1": "1. Scan to pay",
       "checkout.scanHint": "Scan this KHQR with any Cambodian banking app and pay exactly {amount}.",
@@ -117,6 +126,14 @@ const I18n = (() => {
       "checkout.backToStore": "Back to the store",
       "checkout.loadFailed": "Couldn't load that order ({error}).",
       "checkout.khqrMissing": "KHQR image not uploaded yet — add it at public/images/site/khqr.png",
+      "checkout.orTebex": "Or pay instantly",
+      "checkout.tebexHint": "Pay by card or Tebex Wallet through Tebex's secure checkout — confirmed automatically, no screenshot needed.",
+      "checkout.payTebex": "Pay via Tebex",
+      "checkout.tebexVerifying": "Confirming your Tebex payment…",
+      "checkout.tebexNotPaid": "We haven't received your payment yet. If you completed checkout, give it a moment and try again.",
+      "checkout.tebexCheckAgain": "Check again",
+      "checkout.tebexFailed": "Couldn't start Tebex checkout — please try again or pay by KHQR below.",
+      "checkout.tebexError": "Something went wrong confirming your Tebex payment ({error}).",
 
       /* ---- success ---- */
       "success.title": "Submit successful!",
@@ -128,6 +145,18 @@ const I18n = (() => {
       "success.supportLine": "Haven't received your items after an hour? Please contact support.",
       "success.supportLineLink": "Haven't received your items after an hour?",
       "success.back": "Back to home",
+
+      /* ---- ranking ---- */
+      "ranking.subtitle": "RANKING",
+      "ranking.tab.teams": "Top Team",
+      "ranking.tab.players": "Top Player",
+      "ranking.stat.star": "Star",
+      "ranking.stat.points": "Points",
+      "ranking.stat.kills": "Kills",
+      "ranking.stat.deaths": "Deaths",
+      "ranking.stat.kdr": "KDR",
+      "ranking.empty": "No rankings yet — check back soon!",
+      "ranking.loading": "Loading rankings…",
 
       /* ---- games: gate + hub ---- */
       "games.subtitle": "GAMES",
@@ -297,11 +326,12 @@ const I18n = (() => {
 
     km: {
       /* ---- nav / chrome ---- */
-      "nav.home": "🏠 ទំព័រដើម",
-      "nav.store": "💰 ហាង",
+      "nav.home": "ទំព័រដើម",
+      "nav.store": "ហាង",
+      "nav.ranking": "ចំណាត់ថ្នាក់",
       "nav.menu": "ម៉ឺនុយ",
       "nav.language": "ភាសា",
-      "footer.copy": "© {year} Makong Network · Minecraft Server កម្ពុជា 🇰🇭",
+      "footer.copy": "© {year} Makong Network · Minecraft Server អាស៊ី 🌏",
 
       /* ---- home ---- */
       "home.discord": "Discord",
@@ -311,15 +341,17 @@ const I18n = (() => {
       "home.store": "ហាង",
       "home.storeSub": "Ranks, Keys និងច្រើនទៀត",
       "home.checking": "កំពុងពិនិត្យស្ថានភាព Server…",
-      "home.online": "Online — អ្នកលេង {online}/{max} នាក់",
+      "home.online": "អ្នកលេង {online} នាក់",
       "home.offline": "Server Offline",
       "home.statusUnavailable": "មិនអាចពិនិត្យស្ថានភាពបានទេ",
-      "home.welcome": "🌿 សូមស្វាគមន៍ 🌿",
+      "home.welcome": "សូមស្វាគមន៍",
       "home.copied": 'បានចម្លង "{ip}" — សូមដាក់ក្នុង Minecraft > Multiplayer > Add Server',
       "home.opening": "កំពុងបើក Minecraft (Bedrock)… IP Java ក៏បានចម្លងទុកដែរ!",
 
       /* ---- store ---- */
       "store.subtitle": "ហាង",
+      "store.gamemode": "ប្រភេទហ្គេម",
+      "store.changeRegion": "ប្តូរតំបន់ហាង",
       "region.title": "ជ្រើសរើសតំបន់របស់អ្នក",
       "region.subtitle": "វានឹងកំណត់វិធីបង់ប្រាក់របស់អ្នក។ អ្នកអាចផ្លាស់ប្តូរបានគ្រប់ពេល។",
       "region.khmer": "កម្ពុជា",
@@ -344,6 +376,11 @@ const I18n = (() => {
       "store.upgradeCaption": "អ្នកកំពុងដំឡើងពី {from} ទៅ {to}",
       "store.confirmName": "ឈ្មោះ",
       "store.confirmPlatform": "Platform",
+      "store.duration1Month": "១ ខែ",
+      "store.durationPermanent": "អចិន្ត្រៃយ៍",
+      "store.quantity": "ចំនួន",
+      "store.qtyDecrease": "បន្ថយចំនួន",
+      "store.qtyIncrease": "បន្ថែមចំនួន",
       "store.confirm": "បញ្ជាក់",
       "store.cancel": "បោះបង់",
       "store.changeHint":
@@ -371,6 +408,7 @@ const I18n = (() => {
       "checkout.loading": "កំពុងផ្ទុកការបញ្ជាទិញ…",
       "checkout.inServerName": "ឈ្មោះក្នុង Server",
       "checkout.edition": "Edition",
+      "checkout.duration": "រយៈពេល",
       "checkout.total": "សរុប",
       "checkout.step1": "១. ស្កេនដើម្បីបង់ប្រាក់",
       "checkout.scanHint": "ស្កេន KHQR នេះជាមួយ App ធនាគារកម្ពុជាណាមួយ ហើយបង់ឲ្យត្រូវ {amount}។",
@@ -393,6 +431,14 @@ const I18n = (() => {
       "checkout.backToStore": "ត្រឡប់ទៅហាង",
       "checkout.loadFailed": "មិនអាចផ្ទុកការបញ្ជាទិញនោះបានទេ ({error})។",
       "checkout.khqrMissing": "រូប KHQR មិនទាន់បានដាក់ទេ — សូមដាក់នៅ public/images/site/khqr.png",
+      "checkout.orTebex": "ឬបង់ភ្លាមៗ",
+      "checkout.tebexHint": "បង់ដោយកាតឬ Tebex Wallet តាមរយៈ Checkout សុវត្ថិភាពរបស់ Tebex — បញ្ជាក់ដោយស្វ័យប្រវត្តិ មិនចាំបាច់ថតអេក្រង់ទេ។",
+      "checkout.payTebex": "បង់ប្រាក់តាម Tebex",
+      "checkout.tebexVerifying": "កំពុងបញ្ជាក់ការបង់ប្រាក់ Tebex របស់អ្នក…",
+      "checkout.tebexNotPaid": "យើងមិនទាន់ទទួលបានការបង់ប្រាក់របស់អ្នកនៅឡើយទេ។ ប្រសិនបើអ្នកបានបញ្ចប់ Checkout ហើយ សូមរង់ចាំបន្តិច ហើយសាកល្បងម្តងទៀត។",
+      "checkout.tebexCheckAgain": "ពិនិត្យម្តងទៀត",
+      "checkout.tebexFailed": "មិនអាចចាប់ផ្តើម Tebex Checkout បានទេ — សូមសាកល្បងម្តងទៀត ឬបង់ដោយ KHQR ខាងក្រោម។",
+      "checkout.tebexError": "មានបញ្ហាក្នុងការបញ្ជាក់ការបង់ប្រាក់ Tebex របស់អ្នក ({error})។",
 
       /* ---- success ---- */
       "success.title": "ដាក់ស្នើបានជោគជ័យ!",
@@ -405,6 +451,17 @@ const I18n = (() => {
       "success.supportLineLink": "មិនទាន់ទទួលបានទំនិញក្រោយមួយម៉ោង?",
       "success.back": "ត្រឡប់ទៅទំព័រដើម",
 
+      /* ---- ranking ---- */
+      "ranking.subtitle": "ចំណាត់ថ្នាក់",
+      "ranking.tab.teams": "ក្រុមកំពូល",
+      "ranking.tab.players": "កីឡាករកំពូល",
+      "ranking.stat.star": "ផ្កាយ",
+      "ranking.stat.points": "ពិន្ទុ",
+      "ranking.stat.kills": "Kills",
+      "ranking.stat.deaths": "Deaths",
+      "ranking.stat.kdr": "KDR",
+      "ranking.empty": "មិនទាន់មានចំណាត់ថ្នាក់ទេ — សូមមកមើលម្តងទៀតឆាប់ៗ!",
+      "ranking.loading": "កំពុងផ្ទុកចំណាត់ថ្នាក់…",
 
       /* ---- games: gate + hub ---- */
       "games.subtitle": "ហ្គេម",

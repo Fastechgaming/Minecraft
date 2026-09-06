@@ -21,7 +21,8 @@ function applyTheme(theme) {
 
   document.querySelectorAll(".theme-toggle").forEach((btn) => {
     // Show the theme you'd switch TO, which is the common convention.
-    btn.textContent = isLight ? "🌙" : "☀️";
+    const icon = btn.querySelector(".theme-icon");
+    if (icon) icon.src = isLight ? "/images/site/moon-icon.png" : "/images/site/sun-icon.png";
     btn.setAttribute("aria-label", isLight ? "Switch to dark theme" : "Switch to light theme");
     btn.setAttribute("title", isLight ? "Switch to dark theme" : "Switch to light theme");
   });
@@ -36,6 +37,50 @@ function toggleTheme() {
     /* private browsing - the choice just won't persist */
   }
 }
+
+/* ---------------- Tap/click blink feedback ---------------- */
+// A quick bright-green flash wherever the visitor taps - anywhere on the
+// page, not just buttons/links - so every click gives instant feedback.
+
+// A tiny firework: one quick center flash plus a handful of sparks that
+// shoot outward at random angles/distances, all lime-green.
+function spawnClickSparkle(x, y) {
+  const container = document.createElement("span");
+  container.className = "click-sparkle";
+  container.style.left = `${x}px`;
+  container.style.top = `${y}px`;
+
+  const center = document.createElement("span");
+  center.className = "spark center";
+  container.appendChild(center);
+
+  const sparkCount = 7;
+  for (let i = 0; i < sparkCount; i++) {
+    const spark = document.createElement("span");
+    spark.className = "spark";
+    const angle = (360 / sparkCount) * i + (Math.random() * 26 - 13);
+    const dist = 16 + Math.random() * 16;
+    spark.style.setProperty("--angle", `${angle}deg`);
+    spark.style.setProperty("--dist", `${-dist}px`);
+    spark.style.animationDelay = `${Math.random() * 40}ms`;
+    container.appendChild(spark);
+  }
+
+  document.body.appendChild(container);
+  setTimeout(() => container.remove(), 650);
+}
+
+document.addEventListener("click", (e) => {
+  let { clientX: x, clientY: y } = e;
+  if (!x && !y && e.target instanceof Element) {
+    // Keyboard-triggered activation (Enter/Space) has no pointer position -
+    // center the sparkle on whatever was activated instead.
+    const rect = e.target.getBoundingClientRect();
+    x = rect.left + rect.width / 2;
+    y = rect.top + rect.height / 2;
+  }
+  spawnClickSparkle(x, y);
+});
 
 function toggleNav() {
   document.querySelector(".lang-menu")?.classList.remove("open");
@@ -168,6 +213,95 @@ function copyToClipboard(text) {
   document.body.removeChild(el);
   return Promise.resolve();
 }
+
+/* ---------------- Smooth wheel scrolling ----------------
+   A plain mouse wheel jumps the page in hard steps on a lot of setups
+   (especially Windows) - this eases each wheel tick toward its target
+   instead, frame by frame, so scrolling feels closer to a trackpad.
+   Skipped for prefers-reduced-motion, and passed through untouched
+   whenever the pointer is over something with its own scroll (a modal
+   body, an admin table) so those still scroll natively. */
+(function () {
+  if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+  function isInsideScrollable(el) {
+    while (el && el !== document.body && el !== document.documentElement) {
+      const style = getComputedStyle(el);
+      if ((style.overflowY === "auto" || style.overflowY === "scroll") && el.scrollHeight > el.clientHeight) {
+        return true;
+      }
+      el = el.parentElement;
+    }
+    return false;
+  }
+
+  // The actual scrolling element - not always <body> (quirks mode) or
+  // always <html>, so ask the browser rather than guessing.
+  const scroller = document.scrollingElement || document.documentElement;
+
+  const EASE = 0.15;
+  let targetY = null;
+  let animating = false;
+
+  // `html`'s own scroll-behavior: smooth (set for anchor links) turns out to
+  // apply to *every* way of moving scrollTop - scrollTo(), scrollBy(), and
+  // even a plain `scroller.scrollTop = y` assignment, per the current CSSOM
+  // View spec (older engines treated the last one as always-instant, but
+  // that's no longer something to rely on). Passing scrollTo({behavior})
+  // doesn't reliably sidestep it either: "instant" is a legacy value only
+  // some engines still honor. The one thing that's actually reliable
+  // everywhere is turning the CSS declaration itself off for the moment
+  // this loop is driving the scroll, then handing it back once the
+  // animation settles so anchor links keep their own smooth behavior.
+  function step() {
+    const current = scroller.scrollTop;
+    const diff = targetY - current;
+    const move = diff * EASE;
+    // scrollTop rounds to whole pixels in most engines, so once the eased
+    // step itself is under 1px it would round away to nothing and the loop
+    // would sit re-scheduling itself forever, a few pixels short, with the
+    // CSS override above never handed back. Snap the rest of the way there
+    // instead - imperceptible this close to the target.
+    if (Math.abs(diff) < 0.5 || Math.abs(move) < 1) {
+      scroller.scrollTop = targetY;
+      document.documentElement.style.scrollBehavior = "";
+      animating = false;
+      targetY = null;
+      return;
+    }
+    scroller.scrollTop = current + move;
+    requestAnimationFrame(step);
+  }
+
+  window.addEventListener(
+    "wheel",
+    (e) => {
+      if (e.ctrlKey) return; // pinch-zoom gesture - leave the browser's own handling alone
+      if (isInsideScrollable(e.target)) return;
+
+      // Normalise to pixels - deltaY is already pixels on most setups
+      // (deltaMode 0), but a line-mode mouse wheel (deltaMode 1, common on
+      // Windows/Firefox) reports a handful of "lines" instead, which would
+      // otherwise feel far too slow.
+      let delta = e.deltaY;
+      if (e.deltaMode === 1) delta *= 18;
+      else if (e.deltaMode === 2) delta *= window.innerHeight;
+
+      const maxScroll = scroller.scrollHeight - scroller.clientHeight;
+      if (maxScroll <= 0) return; // nothing to scroll - let the browser handle it (e.g. a bounce)
+
+      e.preventDefault();
+      if (targetY === null) targetY = scroller.scrollTop; // resync in case of a keyboard/scrollbar scroll since the last gesture
+      targetY = Math.min(maxScroll, Math.max(0, targetY + delta));
+      if (!animating) {
+        animating = true;
+        document.documentElement.style.scrollBehavior = "auto";
+        requestAnimationFrame(step);
+      }
+    },
+    { passive: false }
+  );
+})();
 
 document.addEventListener("DOMContentLoaded", async () => {
   // Sync the toggle glyph with whatever theme the inline head script applied.

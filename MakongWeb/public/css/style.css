@@ -3,95 +3,112 @@
 /* Kantumruy Pro carries the Khmer glyphs - it sits in every font stack after
    the Latin faces so the site reads properly with the language set to ខ្មែរ. */
 
+/* The genuine in-game Minecraft font, for English/Latin text - it has no
+   Khmer glyphs, so it sits first in the stack and just falls through to
+   Baloo 2 / Kantumruy Pro for anything it can't render (Khmer included). */
+@font-face {
+  font-family: "Minecraft";
+  src: url("/fonts/minecraft.ttf") format("truetype");
+  font-weight: 400 900;
+  font-display: swap;
+}
+
 /* ---------------------------------------------------------------
    Theming. DARK is the default (plain :root); light is opt-in via
    <html data-theme="light">, set by the ☀️/🌙 toggle in the nav.
    Brand accents (gold, moss, terracotta) stay the same in both.
    --------------------------------------------------------------- */
 :root {
-  /* shared brand accents */
-  --gold: #f7b537;
-  --gold-light: #ffd873;
-  --gold-deep: #c2760f;
-  --jungle: #2f8a4a;
-  --jungle-dark: #1f6636;
-  --moss: #6bb544;
-  --moss-dark: #438029;
-  --moss-light: #99d66d;
-  --flower-pink: #ff9ec4;
-  --flower-white: #fffaf0;
-  /* nav + footer stay dark stone in both themes, so these never flip */
-  --link-accent: #9fe07a;
-  --on-dark: #f8ecd3;
-  --on-dark-soft: #d8c39c;
-  --bar-bg: linear-gradient(180deg, #2a1c0e, #150e06);
+  /* shared brand accents - a white/lime-green "sunlight" family, standing
+     in for the old gold/amber accent everywhere it showed up (buttons,
+     borders, highlighted text). */
+  --gold: #d7ffa0;
+  --gold-light: #ffffff;
+  --gold-deep: #8fd94f;
+  --jungle: #34b358;
+  --jungle-dark: #1d6b34;
+  --moss: #7fd858;
+  --moss-dark: #4f9c34;
+  --moss-light: #b6f08a;
+  --flower-pink: #ff8fc2;
+  --flower-white: #f4fff0;
+  --flower-red: #ff6b5e;
+  --flower-purple: #c58bff;
+  --water-blue: #57d0e8;
+  --firefly-glow: #ddff7e;
+  --firefly-glow-2: #8ce8ff;
+  --click-blink: #9dff57;
+  /* Vivid leaf-green button surface — replaces the old wood-plank look on
+     the hero action buttons and other primary "pill" controls. */
+  --leaf-surface:
+    radial-gradient(circle at 20% 15%, rgba(255, 255, 255, 0.3), transparent 45%),
+    linear-gradient(155deg, var(--moss-light) 0%, var(--jungle) 55%, var(--jungle-dark) 100%);
+  --leaf-bevel: inset 0 2px 0 rgba(255, 255, 255, 0.4), inset 0 -3px 0 rgba(0, 0, 0, 0.32);
+  /* nav + footer stay dark forest in both themes, so these never flip */
+  --link-accent: #a6ff8a;
+  --on-dark: #eef7ea;
+  --on-dark-soft: #bcd9b8;
+  --bar-bg: linear-gradient(180deg, #12281c, #06120c);
   --radius: 18px;
   --nav-h: 72px;
 
-  /* --- DARK theme (default): jungle night --- */
-  --cream: #1d1409;
-  --cream-dark: #2c2013;
-  --ink: #f8ecd3;
-  --ink-soft: #cdb28a;
-  --brown: #8a6238;
-  --brown-dark: #ffd873;
-  --brown-darkest: #100a04;
-  --terracotta: #ff8f5e;
+  /* --- DARK theme (default): magical night forest --- */
+  --cream: #0a1712;
+  --cream-dark: #13291d;
+  --ink: #eef7ea;
+  --ink-soft: #a2c69c;
+  --brown: #7c5a34;
+  --brown-dark: #ffffff;
+  --brown-darkest: #050d08;
+  --terracotta: #9dff57;
   --success: #7ad06a;
-  --sky-top: #3a4f6b;
-  --sky-bottom: #23324a;
-  --sky-deep: #14202f;
-  --input-bg: #33251c;
-  --tagline-shadow: 0 2px 6px rgba(0, 0, 0, 0.75), 0 1px 2px rgba(0, 0, 0, 0.9);
+  --sky-top: #173a2b;
+  --sky-bottom: #0b2118;
+  --sky-deep: #050f0a;
+  --input-bg: #17301f;
 
-  --stone-light: #74593a;
-  --stone: #5d4527;
-  --stone-mid: #48331a;
-  --stone-dark: #8a6a3f;
-  --stone-darkest: #120c06;
+  --stone-light: #3f6b46;
+  --stone: #2c4f34;
+  --stone-mid: #1f3826;
+  --stone-dark: #578a5c;
+  --stone-darkest: #0a1810;
 
   --stone-surface:
-    radial-gradient(circle at 16% 20%, rgba(255, 235, 200, 0.14) 0%, transparent 5%),
+    radial-gradient(circle at 16% 20%, rgba(200, 255, 200, 0.14) 0%, transparent 5%),
     radial-gradient(circle at 74% 62%, rgba(0, 0, 0, 0.22) 0%, transparent 6%),
-    radial-gradient(circle at 42% 82%, rgba(255, 235, 200, 0.09) 0%, transparent 4%),
+    radial-gradient(circle at 42% 82%, rgba(200, 255, 200, 0.09) 0%, transparent 4%),
     radial-gradient(circle at 86% 22%, rgba(0, 0, 0, 0.2) 0%, transparent 5%),
     radial-gradient(circle at 30% 48%, rgba(0, 0, 0, 0.16) 0%, transparent 4%),
     linear-gradient(155deg, var(--stone-light) 0%, var(--stone) 55%, var(--stone-mid) 100%);
-  --stone-bevel: inset 0 2px 0 rgba(255, 224, 176, 0.24), inset 0 -3px 0 rgba(0, 0, 0, 0.4);
-
-  --wood-surface:
-    repeating-linear-gradient(180deg, rgba(0, 0, 0, 0.14) 0 2px, transparent 2px 9px),
-    linear-gradient(155deg, #8f6339 0%, #6f4a28 55%, #58391d 100%);
-  --wood-bevel: inset 0 2px 0 rgba(255, 214, 156, 0.28), inset 0 -3px 0 rgba(0, 0, 0, 0.42);
+  --stone-bevel: inset 0 2px 0 rgba(210, 255, 200, 0.2), inset 0 -3px 0 rgba(0, 0, 0, 0.4);
 
   --shadow-hard: 4px 4px 0 rgba(0, 0, 0, 0.45), 5px 8px 14px rgba(0, 0, 0, 0.35);
   --press-shadow: 0 5px 0 var(--stone-darkest), 0 7px 12px rgba(0, 0, 0, 0.4);
   --press-shadow-active: 0 1px 0 var(--stone-darkest);
 }
 
-/* --- LIGHT theme: warm parchment daylight --- */
+/* --- LIGHT theme: vibrant sunlit forest day --- */
 :root[data-theme="light"] {
-  --link-accent: #2f7d1f;
-  --cream: #fff3d9;
-  --cream-dark: #ffe4ad;
-  --ink: #3a2210;
-  --ink-soft: #6b4423;
-  --brown: #7a4a22;
-  --brown-dark: #40230f;
-  --brown-darkest: #2a1608;
-  --terracotta: #d9542f;
+  --link-accent: #1f7d33;
+  --cream: #eef8e0;
+  --cream-dark: #dcf0c4;
+  --ink: #163a1c;
+  --ink-soft: #3f6b3a;
+  --brown: #8a6030;
+  --brown-dark: #1c4a22;
+  --brown-darkest: #0f2812;
+  --terracotta: #4c9a2a;
   --success: #2f8a4a;
-  --sky-top: #ffe9b8;
-  --sky-bottom: #f7a238;
-  --sky-deep: #c9631f;
-  --input-bg: #fffdf7;
-  --tagline-shadow: none;
+  --sky-top: #bdeaff;
+  --sky-bottom: #cdf0a0;
+  --sky-deep: #9fdd7a;
+  --input-bg: #ffffff;
 
-  --stone-light: #fbeecb;
-  --stone: #f0d99a;
-  --stone-mid: #dfb96a;
-  --stone-dark: #a8783f;
-  --stone-darkest: #6b4726;
+  --stone-light: #f5fbe8;
+  --stone: #e2f2c8;
+  --stone-mid: #c3e39a;
+  --stone-dark: #7fae5a;
+  --stone-darkest: #345c2a;
 
   --stone-surface:
     radial-gradient(circle at 16% 20%, rgba(255, 255, 255, 0.4) 0%, transparent 5%),
@@ -102,13 +119,8 @@
     linear-gradient(155deg, var(--stone-light) 0%, var(--stone) 55%, var(--stone-mid) 100%);
   --stone-bevel: inset 0 2px 0 rgba(255, 255, 255, 0.55), inset 0 -3px 0 rgba(0, 0, 0, 0.16);
 
-  --wood-surface:
-    repeating-linear-gradient(180deg, rgba(0, 0, 0, 0.08) 0 2px, transparent 2px 9px),
-    linear-gradient(155deg, #c9945c 0%, #a8723f 55%, #8a5a30 100%);
-  --wood-bevel: inset 0 2px 0 rgba(255, 224, 176, 0.5), inset 0 -3px 0 rgba(0, 0, 0, 0.25);
-
-  --shadow-hard: 4px 4px 0 rgba(107, 71, 38, 0.28), 5px 8px 14px rgba(107, 71, 38, 0.16);
-  --press-shadow: 0 5px 0 var(--stone-darkest), 0 7px 12px rgba(107, 71, 38, 0.22);
+  --shadow-hard: 4px 4px 0 rgba(53, 74, 38, 0.24), 5px 8px 14px rgba(53, 74, 38, 0.14);
+  --press-shadow: 0 5px 0 var(--stone-darkest), 0 7px 12px rgba(53, 74, 38, 0.2);
   --press-shadow-active: 0 1px 0 var(--stone-darkest);
 }
 
@@ -117,14 +129,19 @@ html { scroll-behavior: smooth; }
 
 body {
   margin: 0;
-  font-family: "Noto Sans", "Kantumruy Pro", system-ui, sans-serif;
-  background: var(--cream);
+  font-family: "Minecraft", "Noto Sans", "Kantumruy Pro", system-ui, sans-serif;
+  /* dappled forest light: soft color pools over the base tone, not a flat fill */
+  background:
+    radial-gradient(720px 420px at 8% 0%, rgba(127, 216, 88, 0.16), transparent 60%),
+    radial-gradient(640px 380px at 95% 15%, rgba(255, 202, 77, 0.12), transparent 55%),
+    radial-gradient(760px 460px at 50% 100%, rgba(87, 208, 232, 0.08), transparent 60%),
+    var(--cream);
   color: var(--ink);
   line-height: 1.5;
 }
 
 h1, h2, h3, .brand {
-  font-family: "Baloo 2", "Kantumruy Pro", "Noto Sans", sans-serif;
+  font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", "Noto Sans", sans-serif;
   color: var(--brown-dark);
   letter-spacing: 0.01em;
   font-weight: 800;
@@ -147,7 +164,7 @@ h1, h2, h3, .brand {
 
 a { color: inherit; }
 img { max-width: 100%; display: block; }
-button { font-family: inherit; }
+button, input, select, textarea { font-family: inherit; }
 
 .container {
   max-width: 1100px;
@@ -155,16 +172,12 @@ button { font-family: inherit; }
   padding: 0 1.25rem;
 }
 
-/* Small carved temple-frieze border used between sections. */
-.khmer-strip {
-  height: 20px;
-  background-image: url("/images/site/khmer-pattern.svg");
-  background-repeat: repeat-x;
-  background-size: 34px 20px;
-  background-position: center;
-}
-
-.flower-accent {
+/* Scoped to .hero (rather than bare .flower-accent) so this reliably beats
+   the later, equal-specificity ".hero > *" rule that flips absolutely
+   positioned hero decorations to position:relative for z-index stacking -
+   without this, each flower-accent <img> (display:block globally) would
+   fall back into normal flow and stack up real page height above the logo. */
+.hero .flower-accent {
   position: absolute;
   width: 30px;
   height: 30px;
@@ -206,17 +219,20 @@ button { font-family: inherit; }
   height: 42px;
   width: 42px;
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 10px;
   cursor: pointer;
-  font-size: 1.15rem;
   line-height: 1;
   color: var(--on-dark);
-  background: linear-gradient(180deg, #7d5936, #5c3f22);
+  background: linear-gradient(180deg, var(--jungle), var(--jungle-dark));
   border: 2px solid var(--stone-darkest);
   box-shadow: 0 3px 0 var(--stone-darkest);
   transition: transform 0.18s cubic-bezier(.34,1.56,.64,1), box-shadow 0.15s;
 }
 .theme-toggle:hover { transform: translateY(-2px) scale(1.06); }
+.theme-icon { width: 24px; height: 24px; object-fit: contain; }
 .theme-toggle:active { transform: translateY(1px); box-shadow: 0 1px 0 var(--stone-darkest); }
 
 /* Language switch - a custom dropdown card styled the same as the mobile
@@ -232,16 +248,15 @@ button { font-family: inherit; }
   padding: 0;
   border-radius: 10px;
   cursor: pointer;
-  font-family: "Baloo 2", "Kantumruy Pro", sans-serif;
+  font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", sans-serif;
   font-weight: 800;
   font-size: 0.95rem;
   color: var(--on-dark);
-  background: linear-gradient(180deg, #7d5936, #5c3f22);
+  background: linear-gradient(180deg, var(--jungle), var(--jungle-dark));
   border: 2px solid var(--stone-darkest);
   box-shadow: 0 3px 0 var(--stone-darkest);
   transition: transform 0.18s cubic-bezier(.34,1.56,.64,1), box-shadow 0.15s;
 }
-.lang-toggle::after { content: "▾"; font-size: 0.7rem; opacity: 0.85; }
 .lang-toggle:hover { transform: translateY(-2px) scale(1.06); }
 .lang-toggle:active { transform: translateY(1px); box-shadow: 0 1px 0 var(--stone-darkest); }
 .lang-toggle:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
@@ -277,10 +292,10 @@ button { font-family: inherit; }
   align-items: center;
   color: var(--on-dark);
   font-weight: 700;
-  font-family: "Baloo 2", "Kantumruy Pro", sans-serif;
+  font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", sans-serif;
   font-size: 0.95rem;
   border-radius: 10px;
-  background: linear-gradient(180deg, #7d5936, #5c3f22);
+  background: linear-gradient(180deg, var(--jungle), var(--jungle-dark));
   border: 2px solid var(--stone-darkest);
   box-shadow: 0 3px 0 var(--stone-darkest);
   cursor: pointer;
@@ -298,18 +313,6 @@ button { font-family: inherit; }
   .lang-toggle { font-size: 0.8rem; }
 }
 
-/* Vine tendrils hanging just below the nav wall. */
-.nav-vine {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -14px;
-  height: 20px;
-  background-image: url("/images/site/vine-drape.svg");
-  background-repeat: repeat-x;
-  background-size: 150px 20px;
-  pointer-events: none;
-}
 .site-nav .brand {
   color: var(--gold-light);
   font-weight: 800;
@@ -331,13 +334,14 @@ button { font-family: inherit; }
   font-weight: 700;
   padding: 0.45rem 1rem;
   border-radius: 10px;
-  background: linear-gradient(180deg, #7d5936, #5c3f22);
+  background: linear-gradient(180deg, var(--jungle), var(--jungle-dark));
   border: 2px solid var(--stone-darkest);
   box-shadow: 0 3px 0 var(--stone-darkest);
   transition: transform 0.18s cubic-bezier(.34,1.56,.64,1), box-shadow 0.15s;
 }
 .nav-links a:hover { transform: translateY(-2px) scale(1.04); }
 .nav-links a.active { background: var(--stone-surface); color: var(--ink); border-color: var(--gold); box-shadow: var(--stone-bevel), 0 3px 0 var(--gold-deep); }
+.nav-icon { width: 18px; height: 18px; object-fit: contain; flex-shrink: 0; }
 .nav-toggle {
   display: none;
   background: none;
@@ -393,46 +397,73 @@ button { font-family: inherit; }
 }
 
 /* ---------- Hero (home) ---------- */
+/* A real jungle photo instead of a flat sky gradient - night by default
+   (moonlit, matches the firefly theme), a sunlit day shot in light theme.
+   The gradient on top darkens toward the bottom so it blends into the
+   section below and keeps the logo/buttons readable over a busy photo. */
 .hero {
   position: relative;
-  background: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-bottom) 60%, var(--sky-deep) 100%);
-  padding: 2.75rem 1.25rem 0;
+  background:
+    linear-gradient(180deg, rgba(3, 8, 6, 0.25) 0%, rgba(3, 8, 6, 0.15) 40%, var(--sky-deep) 100%),
+    url("/images/site/hero-bg-night.jpg") center / cover no-repeat;
+  padding: 1.25rem 1.25rem 0;
   text-align: center;
   overflow: hidden;
 }
-/* soft warm glow behind the logo, like sun filtering through the canopy */
-.hero::before {
-  content: "";
-  position: absolute;
-  top: -10%;
-  left: 50%;
-  width: 640px;
-  height: 640px;
-  transform: translateX(-50%);
-  background: radial-gradient(circle, rgba(255, 244, 214, 0.85) 0%, rgba(255, 216, 115, 0.35) 45%, rgba(255, 216, 115, 0) 72%);
-  pointer-events: none;
-  z-index: 0;
+:root[data-theme="light"] .hero {
+  background:
+    linear-gradient(180deg, rgba(3, 8, 6, 0.1) 0%, rgba(3, 8, 6, 0.05) 40%, var(--sky-deep) 100%),
+    url("/images/site/hero-bg-day.jpg") center / cover no-repeat;
 }
 .hero > * { position: relative; z-index: 1; }
 
+/* Fireflies: night-forest magic. Visible by default (dark is the default
+   theme); hidden in daylight, where glowing bugs would look out of place. */
 .firefly {
   position: absolute;
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #fff3b0;
-  box-shadow: 0 0 8px 3px rgba(255, 243, 176, 0.9);
+  background: var(--firefly-glow);
+  box-shadow: 0 0 6px 2px var(--firefly-glow), 0 0 14px 6px rgba(221, 255, 126, 0.5);
   opacity: 0;
-  animation: firefly-float 7s ease-in-out infinite;
+  animation: firefly-float 8s ease-in-out infinite;
   pointer-events: none;
   z-index: 1;
 }
+.firefly.blue {
+  background: var(--firefly-glow-2);
+  box-shadow: 0 0 6px 2px var(--firefly-glow-2), 0 0 14px 6px rgba(140, 232, 255, 0.5);
+}
+:root[data-theme="light"] .firefly { display: none; }
 @keyframes firefly-float {
-  0% { opacity: 0; transform: translate(0, 0) scale(0.8); }
-  15% { opacity: 0.9; }
-  50% { opacity: 0.5; transform: translate(14px, -22px) scale(1.1); }
-  85% { opacity: 0.9; }
-  100% { opacity: 0; transform: translate(-10px, -40px) scale(0.8); }
+  0% { opacity: 0; transform: translate(0, 0) scale(0.7); }
+  12% { opacity: 1; }
+  30% { transform: translate(16px, -18px) scale(1.15); }
+  50% { opacity: 0.4; transform: translate(-10px, -34px) scale(0.9); }
+  70% { opacity: 1; transform: translate(12px, -50px) scale(1.1); }
+  88% { opacity: 0.8; }
+  100% { opacity: 0; transform: translate(-16px, -68px) scale(0.7); }
+}
+
+/* Floating leaves + petals drifting down through the hero — the "lively,
+   colorful forest" ambience, on in both themes. */
+.leaf-particle {
+  position: absolute;
+  top: -8%;
+  font-size: 1.1rem;
+  opacity: 0;
+  animation: leaf-drift linear infinite;
+  pointer-events: none;
+  z-index: 1;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.25));
+}
+@keyframes leaf-drift {
+  0% { opacity: 0; transform: translate(0, 0) rotate(0deg); }
+  8% { opacity: 0.95; }
+  50% { transform: translate(38px, 46vh) rotate(170deg); }
+  92% { opacity: 0.9; }
+  100% { opacity: 0; transform: translate(-24px, 96vh) rotate(340deg); }
 }
 
 /* Hangs like jungle vines/fronds draping in from the top corners. */
@@ -450,18 +481,10 @@ button { font-family: inherit; }
 @media (max-width: 600px) { .leaf-corner { width: 95px; height: 95px; } }
 
 .hero-logo-full {
-  max-width: 420px;
-  width: 80%;
-  margin: 0 auto 0.75rem;
+  max-width: 504px;
+  width: 96%;
+  margin: 0 auto 1.25rem;
   filter: drop-shadow(4px 6px 0 rgba(42, 22, 8, 0.25));
-}
-.hero p.tagline {
-  color: var(--brown-dark);
-  font-weight: 600;
-  margin: 0 auto 1.5rem;
-  max-width: 42ch;
-  font-size: 1.05rem;
-  text-shadow: var(--tagline-shadow);
 }
 
 .hero-actions {
@@ -472,8 +495,7 @@ button { font-family: inherit; }
   flex-wrap: wrap;
   margin-bottom: 1.5rem;
 }
-/* Carved sandstone tablet with a colored icon "chip" - matches the
-   stone-slab menu button look of the reference art direction. */
+/* Leafy pill button with a colored icon "chip" - vivid leaf-green, not wood. */
 .action-btn {
   position: relative;
   display: flex;
@@ -486,17 +508,17 @@ button { font-family: inherit; }
   border: 3px solid var(--stone-darkest);
   cursor: pointer;
   font-weight: 800;
-  font-family: "Baloo 2", sans-serif;
+  font-family: "Minecraft", "Baloo 2", sans-serif;
   text-decoration: none;
   color: #fff3e0;
   text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.3);
   text-align: left;
-  background: var(--wood-surface);
-  box-shadow: var(--wood-bevel), var(--press-shadow);
+  background: var(--leaf-surface);
+  box-shadow: var(--leaf-bevel), var(--press-shadow);
   transition: transform 0.18s cubic-bezier(.34,1.56,.64,1), box-shadow 0.15s;
 }
 .action-btn:hover { transform: scale(1.05) rotate(-1deg); }
-.action-btn:active { transform: translateY(4px); box-shadow: var(--wood-bevel), var(--press-shadow-active); }
+.action-btn:active { transform: translateY(4px); box-shadow: var(--leaf-bevel), var(--press-shadow-active); }
 .action-btn::after {
   content: "";
   position: absolute;
@@ -508,36 +530,78 @@ button { font-family: inherit; }
   transform: scaleY(-1);
   pointer-events: none;
 }
-.action-btn .btn-icon {
-  flex-shrink: 0;
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.25rem;
-  border: 2px solid var(--stone-darkest);
-  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.35), inset 0 -2px 0 rgba(0, 0, 0, 0.25);
+
+/* Discord/Store as bare glowing badge art instead of a pill button - the
+   artwork already carries its own icon, label, and leaf sprigs, so the
+   pill background/border/shadow and the moss-sprig corner are dropped. */
+.action-btn.action-btn-badge {
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  box-shadow: none;
 }
-.action-btn.discord .btn-icon { background: #5865f2; }
-.action-btn.server-ip .btn-icon { background: linear-gradient(180deg, var(--gold-light), var(--gold)); }
-.action-btn.store .btn-icon { background: linear-gradient(180deg, var(--moss-light), var(--moss)); }
+.action-btn.action-btn-badge::after { content: none; }
+.action-btn.action-btn-badge:active { box-shadow: none; }
+.action-badge {
+  height: 130px;
+  width: auto;
+  filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.35));
+}
 .action-btn .btn-text { display: flex; flex-direction: column; gap: 0.1rem; }
 .action-btn small { font-weight: 600; opacity: 0.85; font-size: 0.72rem; color: #ffe8c2; }
 .action-btn .ip-text { font-size: 1.05rem; }
 
+/* The IP button + player-count pill, stacked as one column that stretches
+   to match the Discord/Store badges' height (.hero-actions has
+   align-items:stretch, and this is a direct flex child of it). */
+.ip-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 0.5rem;
+  min-width: 210px;
+}
+
+/* Same jungle-green pill look as the nav's Home/Store links, just with a
+   two-line label instead of an icon + word. */
+.action-btn.server-ip {
+  justify-content: center;
+  text-align: center;
+  padding: 0.5rem 1rem;
+  min-width: 0;
+  background: linear-gradient(180deg, var(--jungle), var(--jungle-dark));
+  border: 2px solid var(--stone-darkest);
+  border-radius: 10px;
+  box-shadow: 0 3px 0 var(--stone-darkest);
+}
+.action-btn.server-ip:hover { transform: translateY(-2px) scale(1.04); }
+.action-btn.server-ip:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--stone-darkest); }
+.action-btn.server-ip::after { content: none; }
+.action-btn.server-ip .btn-text { align-items: center; }
+.action-btn.server-ip .ip-text { font-size: 1.2rem; }
+.action-btn.server-ip small { font-size: 0.62rem; }
+.action-btn.server-ip .btn-title,
+.action-btn.server-ip small {
+  color: var(--on-dark);
+  opacity: 1;
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.3);
+}
+
 .status-pill {
   display: inline-flex;
   align-items: center;
-  gap: 0.6rem;
+  justify-content: center;
+  align-self: center;
+  gap: 0.5rem;
   background: var(--brown-darkest);
   border: 3px solid var(--gold);
   border-radius: 999px;
-  padding: 0.55rem 1.1rem;
-  margin: 0 auto 2rem;
+  padding: 0.4rem 0.9rem;
+  margin: 0;
   font-weight: 700;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: var(--on-dark);
   box-shadow: var(--shadow-hard);
 }
@@ -545,19 +609,20 @@ button { font-family: inherit; }
 .status-dot.online { background: #57d97a; box-shadow: 0 0 8px #57d97a; }
 .status-dot.offline { background: #e2513a; }
 
-.hero-silhouette {
-  /* cancel the hero's horizontal padding so the treeline reaches both edges */
-  width: calc(100% + 2.5rem);
-  margin-left: -1.25rem;
-  margin-right: -1.25rem;
-  max-width: none;
-  height: 110px;
-  display: block;
-  margin-top: 1.5rem;
-  position: relative;
-  z-index: 1;
+/* Keep Discord/IP/Store side by side even on narrow phones instead of
+   stacking, shrinking each item to fit. */
+@media (max-width: 560px) {
+  .hero-actions { flex-wrap: nowrap; gap: 0.5rem; }
+  .action-badge { height: 78px; }
+  .action-btn { min-width: 0; }
+  .ip-stack { min-width: 0; flex: 1; gap: 0.35rem; }
+  .action-btn.server-ip { padding: 0.4rem 0.5rem; }
+  .action-btn.server-ip .ip-text { font-size: 0.86rem; }
+  .action-btn.server-ip small { font-size: 0.5rem; }
+  .status-pill { padding: 0.3rem 0.55rem; font-size: 0.62rem; gap: 0.35rem; }
+  .status-dot { width: 8px; height: 8px; }
 }
-@media (max-width: 520px) { .hero-silhouette { height: 65px; } }
+
 
 .toast {
   position: fixed;
@@ -578,50 +643,67 @@ button { font-family: inherit; }
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
+/* Tap feedback - a tiny lime-green firework of sparks bursting out from
+   wherever you tap a button, link, or card, spawned by main.js on every
+   click (each spark's --angle/--dist is set inline, per spark). */
+.click-sparkle {
+  position: fixed;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  z-index: 9999;
+}
+.click-sparkle .spark {
+  position: absolute;
+  top: -1.5px;
+  left: -1.5px;
+  width: 3px;
+  height: 9px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #f4ffd6 0%, var(--click-blink) 55%, rgba(157, 255, 87, 0) 100%);
+  box-shadow: 0 0 5px 1px rgba(157, 255, 87, 0.75);
+  transform-origin: center top;
+  transform: rotate(var(--angle)) translateY(0) scaleY(0.5);
+  opacity: 1;
+  animation: spark-burst 0.5s cubic-bezier(.2, .8, .3, 1) forwards;
+}
+.click-sparkle .spark.center {
+  top: -3px;
+  left: -3px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff 0%, var(--click-blink) 60%, rgba(157, 255, 87, 0) 80%);
+  animation: spark-flash 0.25s ease-out forwards;
+}
+@keyframes spark-burst {
+  0% { transform: rotate(var(--angle)) translateY(0) scaleY(0.5); opacity: 1; }
+  100% { transform: rotate(var(--angle)) translateY(var(--dist)) scaleY(1); opacity: 0; }
+}
+@keyframes spark-flash {
+  0% { opacity: 1; transform: scale(0.4); }
+  100% { opacity: 0; transform: scale(2.2); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .click-sparkle { display: none; }
+}
+
 /* ---------- Sections ---------- */
 .section { padding: 1.5rem 0 3rem; }
 .section h2 { text-align: center; font-size: 1.9rem; margin-bottom: 1.75rem; }
-.section h2::after {
-  content: "";
-  display: block;
-  width: 130px;
-  height: 11px;
-  margin: 0.75rem auto 0;
-  border-radius: 6px;
-  border: 2px solid var(--stone-darkest);
-  background:
-    radial-gradient(circle at 7px 50%, var(--stone-darkest) 0 3px, transparent 3.5px),
-    radial-gradient(circle at calc(100% - 7px) 50%, var(--stone-darkest) 0 3px, transparent 3.5px),
-    var(--stone-surface);
-  box-shadow: var(--stone-bevel);
-}
+.heading-leaf { display: inline-block; width: 1.4em; height: 1.4em; object-fit: contain; vertical-align: middle; margin: 0 0.15em; }
 
-/* Heading with its carved divider suppressed (used when a subtitle follows). */
+/* Heading with extra bottom margin trimmed (used when a subtitle follows). */
 .section h2.no-rule { margin-bottom: 0.2rem; }
-.section h2.no-rule::after { display: none; }
 .section-subtitle {
   text-align: center;
-  font-family: "Baloo 2", sans-serif;
+  font-family: "Minecraft", "Baloo 2", sans-serif;
   font-weight: 800;
   font-size: 1.15rem;
   letter-spacing: 0.32em;
   text-indent: 0.32em;
   color: var(--terracotta);
   margin: 0 0 1.4rem;
-}
-.section-subtitle::after {
-  content: "";
-  display: block;
-  width: 130px;
-  height: 11px;
-  margin: 0.7rem auto 0;
-  border-radius: 6px;
-  border: 2px solid var(--stone-darkest);
-  background:
-    radial-gradient(circle at 7px 50%, var(--stone-darkest) 0 3px, transparent 3.5px),
-    radial-gradient(circle at calc(100% - 7px) 50%, var(--stone-darkest) 0 3px, transparent 3.5px),
-    var(--stone-surface);
-  box-shadow: var(--stone-bevel);
 }
 
 .info-grid {
@@ -654,10 +736,10 @@ button { font-family: inherit; }
   transform: scaleY(-1);
   pointer-events: none;
 }
-.info-card .value { font-family: "Baloo 2", serif; font-weight: 800; font-size: 1.6rem; color: var(--terracotta); }
+.info-card .value { font-family: "Minecraft", "Baloo 2", serif; font-weight: 800; font-size: 1.6rem; color: var(--terracotta); }
 .info-card .label { color: var(--ink-soft); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; }
 .info-card.stacked .stat-divider { height: 2px; background: rgba(0, 0, 0, 0.22); border-radius: 2px; margin: 0.9rem 0; box-shadow: 0 1px 0 rgba(255, 255, 255, 0.35); }
-.info-card.stacked .sub-value { font-family: "Baloo 2", serif; font-weight: 700; font-size: 1.2rem; color: var(--moss-dark); }
+.info-card.stacked .sub-value { font-family: "Minecraft", "Baloo 2", serif; font-weight: 700; font-size: 1.2rem; color: var(--moss-dark); }
 .info-card.stacked .sub-label { color: var(--ink-soft); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; }
 
 .welcome-box {
@@ -713,7 +795,8 @@ button { font-family: inherit; }
   border: 2px solid var(--stone-darkest);
   box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.5), inset 0 -2px 0 rgba(0, 0, 0, 0.15), 0 2px 0 var(--stone-dark);
 }
-.feature-card .feature-title { font-family: "Baloo 2", sans-serif; font-weight: 800; color: var(--brown-dark); font-size: 1.02rem; margin-bottom: 0.2rem; }
+.feature-card .feature-icon img { width: 68%; height: 68%; object-fit: contain; }
+.feature-card .feature-title { font-family: "Minecraft", "Baloo 2", sans-serif; font-weight: 800; color: var(--brown-dark); font-size: 1.02rem; margin-bottom: 0.2rem; }
 .feature-card .feature-desc { color: var(--ink-soft); font-size: 0.85rem; font-weight: 600; }
 a.feature-card.linked { border-color: var(--moss); }
 a.feature-card.linked .feature-title { color: var(--link-accent); }
@@ -743,7 +826,7 @@ a.feature-card.linked .feature-title { color: var(--link-accent); }
   padding: 0.6rem 1.4rem;
   border-radius: 999px;
   font-weight: 800;
-  font-family: "Baloo 2", sans-serif;
+  font-family: "Minecraft", "Baloo 2", sans-serif;
   cursor: pointer;
   color: var(--ink-soft);
   box-shadow: var(--stone-bevel), 0 4px 0 var(--stone-darkest), 0 7px 12px rgba(42, 22, 8, 0.22);
@@ -752,6 +835,99 @@ a.feature-card.linked .feature-title { color: var(--link-accent); }
 .store-tabs button:hover { transform: scale(1.06); }
 .store-tabs button:active { transform: translateY(3px); box-shadow: var(--stone-bevel), 0 1px 0 var(--stone-darkest); }
 .store-tabs button.active { background: linear-gradient(180deg, var(--moss-light), var(--moss)); border-color: var(--moss-dark); color: #fff; box-shadow: var(--stone-bevel), 0 4px 0 var(--moss-dark); }
+
+/* Gamemode picker + category tabs, boxed together like the player-bar
+   panel above them. Side by side on desktop (gamemode left, tabs right),
+   stacked on narrow screens (gamemode on its own row, tabs below it). */
+.store-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.6rem;
+}
+.store-controls .gamemode-dropdown { margin-bottom: 0; }
+.store-controls .store-tabs { justify-content: flex-end; margin-bottom: 0; }
+@media (max-width: 620px) {
+  .store-controls { flex-direction: column; align-items: stretch; }
+  .store-controls .gamemode-dropdown { justify-content: center; align-self: center; }
+  .store-controls .store-tabs { justify-content: center; }
+}
+
+/* Gamemode picker - a custom dropdown (same pattern as the language
+   switcher) instead of a native <select>, so the closed button can read
+   "Gamemode: BoxPvP" while the open list just shows "BoxPvP", "SMP", etc. */
+.gamemode-dropdown { position: relative; display: inline-flex; margin-bottom: 1.4rem; }
+.gamemode-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 220px;
+  padding: 0.65rem 1.4rem;
+  border: 3px solid var(--moss-dark);
+  border-radius: 999px;
+  font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", sans-serif;
+  font-weight: 800;
+  font-size: 1rem;
+  color: var(--brown-darkest);
+  cursor: pointer;
+  background: linear-gradient(180deg, var(--moss-light), var(--moss));
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.4), inset 0 -3px 0 rgba(0, 0, 0, 0.2), 0 4px 0 var(--moss-dark), 0 7px 12px rgba(42, 22, 8, 0.22);
+  transition: transform 0.18s cubic-bezier(.34,1.56,.64,1), box-shadow 0.15s;
+}
+.gamemode-toggle:hover { transform: scale(1.05); }
+.gamemode-toggle:active { transform: translateY(3px); box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.4), inset 0 -3px 0 rgba(0, 0, 0, 0.2), 0 1px 0 var(--moss-dark); }
+.gamemode-toggle:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+
+.gamemode-menu {
+  position: absolute;
+  top: calc(100% + 12px);
+  left: 50%;
+  min-width: 220px;
+  margin: 0;
+  padding: 0.5rem;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  background: var(--stone-surface);
+  border: 3px solid var(--stone-darkest);
+  border-radius: 16px;
+  box-shadow: var(--stone-bevel), 0 10px 24px rgba(0, 0, 0, 0.45);
+  transform: translateX(-50%) translateY(-6px) scale(0.97);
+  transform-origin: top center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.22s cubic-bezier(.34,1.4,.64,1);
+  z-index: 80;
+}
+.gamemode-dropdown.open .gamemode-menu { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); pointer-events: auto; }
+.gamemode-option {
+  display: flex;
+  width: 100%;
+  height: 42px;
+  justify-content: center;
+  align-items: center;
+  color: var(--on-dark);
+  font-weight: 700;
+  font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", sans-serif;
+  font-size: 0.95rem;
+  border-radius: 10px;
+  background: linear-gradient(180deg, var(--jungle), var(--jungle-dark));
+  border: 2px solid var(--stone-darkest);
+  box-shadow: 0 3px 0 var(--stone-darkest);
+  cursor: pointer;
+  transition: transform 0.18s cubic-bezier(.34,1.56,.64,1), box-shadow 0.15s;
+}
+.gamemode-option:hover { transform: scale(1.04); }
+.gamemode-option:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--stone-darkest); }
+.gamemode-option.active {
+  background: linear-gradient(180deg, var(--moss-light), var(--moss));
+  color: var(--brown-darkest);
+  border-color: var(--gold);
+  box-shadow: var(--stone-bevel), 0 3px 0 var(--gold-deep);
+}
 
 .item-grid {
   display: grid;
@@ -810,7 +986,7 @@ a.feature-card.linked .feature-title { color: var(--link-accent); }
 .item-card .item-body { padding: 1rem; display: flex; flex-direction: column; gap: 0.4rem; flex: 1; }
 .item-card h3 { margin: 0; font-size: 1.1rem; color: var(--brown-dark); }
 .item-card p { margin: 0; color: var(--ink-soft); font-size: 0.88rem; flex: 1; }
-.item-card .price { font-family: "Baloo 2", sans-serif; color: var(--terracotta); font-size: 1.25rem; font-weight: 800; }
+.item-card .price { font-family: "Minecraft", "Baloo 2", sans-serif; color: var(--terracotta); font-size: 1.25rem; font-weight: 800; }
 .item-card .item-actions { display: flex; gap: 0.5rem; align-items: center; }
 
 /* Price display once an Up Rank trade-in is armed: "$20.00 → $5.00" plus a
@@ -820,7 +996,7 @@ a.feature-card.linked .feature-title { color: var(--link-accent); }
   display: flex;
   align-items: baseline;
   gap: 0.4rem;
-  font-family: "Baloo 2", sans-serif;
+  font-family: "Minecraft", "Baloo 2", sans-serif;
   font-weight: 800;
 }
 .upgrade-price .price-was {
@@ -847,7 +1023,7 @@ a.feature-card.linked .feature-title { color: var(--link-accent); }
   padding: 0.6rem;
   border-radius: 10px;
   font-weight: 800;
-  font-family: "Baloo 2", sans-serif;
+  font-family: "Minecraft", "Baloo 2", sans-serif;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.4), 0 4px 0 var(--stone-darkest), 0 7px 12px rgba(42, 22, 8, 0.22);
@@ -861,7 +1037,7 @@ a.feature-card.linked .feature-title { color: var(--link-accent); }
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(42, 22, 8, 0.55);
+  background: rgba(5, 13, 8, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -900,17 +1076,24 @@ a.feature-card.linked .feature-title { color: var(--link-accent); }
   position: absolute;
   top: 0.7rem;
   right: 0.7rem;
-  background: var(--terracotta);
-  border: 2px solid var(--brown-darkest);
-  border-radius: 8px;
-  width: 32px;
-  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
   font-size: 1.2rem;
   line-height: 1;
   cursor: pointer;
-  color: #fff;
+  color: var(--on-dark);
   font-weight: 800;
+  border-radius: 10px;
+  background: linear-gradient(180deg, var(--jungle), var(--jungle-dark));
+  border: 2px solid var(--stone-darkest);
+  box-shadow: 0 3px 0 var(--stone-darkest);
+  transition: transform 0.18s cubic-bezier(.34,1.56,.64,1), box-shadow 0.15s;
 }
+.modal-close:hover { transform: translateY(-2px) scale(1.06); }
+.modal-close:active { transform: translateY(1px); box-shadow: 0 1px 0 var(--stone-darkest); }
 .modal-box h3 { margin-top: 0; }
 .modal-box video, .modal-box iframe.video-embed {
   width: 100%;
@@ -926,12 +1109,12 @@ a.feature-card.linked .feature-title { color: var(--link-accent); }
 .region-choice { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; margin-top: 1.2rem; }
 .region-btn {
   display: flex; flex-direction: column; align-items: center; gap: 0.2rem;
-  background: var(--wood-surface); border: 3px solid var(--brown-dark); border-radius: 12px;
-  padding: 1.1rem 0.8rem; cursor: pointer; box-shadow: var(--wood-bevel);
+  background: var(--leaf-surface); border: 3px solid var(--brown-dark); border-radius: 12px;
+  padding: 1.1rem 0.8rem; cursor: pointer; box-shadow: var(--leaf-bevel);
   color: var(--on-dark); transition: transform 0.15s ease;
 }
 .region-btn:hover { transform: translateY(-2px) scale(1.02); }
-.region-flag { font-size: 2rem; }
+.region-flag { width: 44px; height: 44px; object-fit: contain; }
 .region-name { font-weight: 800; font-size: 1.05rem; }
 .region-desc { font-size: 0.8rem; opacity: 0.85; }
 
@@ -967,12 +1150,13 @@ a.feature-card.linked .feature-title { color: var(--link-accent); }
   background: linear-gradient(180deg, var(--gold-light), var(--gold));
   color: var(--brown-darkest);
   font-weight: 800;
-  font-family: "Baloo 2", sans-serif;
+  font-family: "Minecraft", "Baloo 2", sans-serif;
   cursor: pointer;
   font-size: 1.05rem;
   box-shadow: var(--press-shadow);
   transition: transform 0.18s cubic-bezier(.34,1.56,.64,1), box-shadow 0.15s;
 }
+a.continue-btn { display: block; box-sizing: border-box; text-align: center; text-decoration: none; }
 .continue-btn:hover, .primary-btn:hover { transform: scale(1.03); }
 .continue-btn:active, .primary-btn:active { transform: translateY(4px); box-shadow: var(--press-shadow-active); }
 .continue-btn:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -985,7 +1169,7 @@ a.feature-card.linked .feature-title { color: var(--link-accent); }
   border-radius: 10px;
   padding: 0.5rem 0.9rem;
   font-weight: 800;
-  font-family: "Baloo 2", "Kantumruy Pro", sans-serif;
+  font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", sans-serif;
   font-size: 0.85rem;
   cursor: pointer;
   box-shadow: 0 3px 0 var(--stone-darkest);
@@ -1020,7 +1204,7 @@ a.feature-card.linked .feature-title { color: var(--link-accent); }
 .map-wrap .section-subtitle { margin-bottom: 0.9rem; }
 .map-age {
   text-align: center;
-  font-family: "Baloo 2", sans-serif;
+  font-family: "Minecraft", "Baloo 2", sans-serif;
   font-weight: 800;
   color: var(--terracotta);
   font-size: 1.1rem;
@@ -1104,7 +1288,7 @@ a.feature-card.linked .feature-title { color: var(--link-accent); }
   font-weight: 600;
 }
 .checkout-rows strong { color: var(--ink); }
-.checkout-rows .price { color: var(--terracotta); font-family: "Baloo 2", sans-serif; font-size: 1.1rem; }
+.checkout-rows .price { color: var(--terracotta); font-family: "Minecraft", "Baloo 2", sans-serif; font-size: 1.1rem; }
 
 .checkout-step { padding: 1.25rem 0 0; }
 .checkout-step h3 { margin: 0 0 0.3rem; font-size: 1.1rem; }
@@ -1191,14 +1375,18 @@ a.feature-card.linked .feature-title { color: var(--link-accent); }
   padding-top: 1rem;
   border-top: 2px dashed var(--stone-dark);
 }
-.info-buy-row .price { font-family: "Baloo 2", sans-serif; font-size: 1.4rem; font-weight: 800; color: var(--terracotta); }
-.info-buy-row .item-actions { flex: 1; min-width: 180px; }
+.info-buy-row .price { font-family: "Minecraft", "Baloo 2", sans-serif; font-size: 1.4rem; font-weight: 800; color: var(--terracotta); }
+.info-buy-row .item-actions { flex: 1; min-width: 180px; display: flex; justify-content: flex-end; }
+.info-buy-row .buy-btn { flex: 0 1 260px; padding: 0.9rem; font-size: 1.05rem; }
+.info-buy-row .rank-split { flex: 0 1 260px; }
 
 @media (max-width: 560px) {
   .checkout-summary { flex-direction: column; align-items: center; text-align: center; }
   .checkout-rows div { justify-content: space-between; }
   .info-buy-row { flex-direction: column; align-items: stretch; }
   .info-buy-row .price { text-align: center; }
+  .info-buy-row .item-actions { justify-content: stretch; }
+  .info-buy-row .buy-btn, .info-buy-row .rank-split { flex: 1 1 auto; }
 }
 
 /* Coming-soon placeholder items in the Other category */
@@ -1228,7 +1416,7 @@ a.feature-card.linked .feature-title { color: var(--link-accent); }
   padding: 0.7rem 1.5rem;
   border-radius: 12px;
   text-decoration: none;
-  font-family: "Baloo 2", sans-serif;
+  font-family: "Minecraft", "Baloo 2", sans-serif;
   font-weight: 800;
   color: var(--ink);
   background: var(--stone-surface);
@@ -1267,13 +1455,15 @@ a.feature-card.linked .feature-title { color: var(--link-accent); }
   align-items: center;
   justify-content: center;
   font-size: 1.6rem;
-  border-radius: 50%;
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
   background: radial-gradient(circle at 35% 30%, rgba(255,255,255,0.3), rgba(0,0,0,0.14) 70%);
   border: 2px solid var(--stone-darkest);
   box-shadow: inset 0 2px 0 rgba(255,255,255,0.4), inset 0 -2px 0 rgba(0,0,0,0.15);
 }
 .player-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; color: var(--ink-soft); }
-.player-name { font-family: "Baloo 2", sans-serif; font-weight: 800; font-size: 1.25rem; color: var(--brown-dark); }
+.player-name { font-family: "Minecraft", "Baloo 2", sans-serif; font-weight: 800; font-size: 1.25rem; color: var(--brown-dark); }
 
 .games-stats { margin-bottom: 1.1rem; max-width: none; }
 .games-stats .info-card .value { color: var(--gold); }
@@ -1290,9 +1480,11 @@ a.feature-card.linked .feature-title { color: var(--link-accent); }
   border-bottom: 3px solid var(--stone-darkest);
 }
 
+.profile-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; }
 @media (max-width: 620px) {
   .player-bar { flex-direction: column; align-items: stretch; text-align: center; }
   .player-id { justify-content: center; }
+  .profile-actions { flex-direction: column; width: 100%; }
 }
 
 /* =========================================================
@@ -1340,9 +1532,9 @@ body.game-open { overflow: hidden; }
 .game-go-btn { max-width: 260px; margin: 0 auto; }
 .result-score { display: flex; flex-direction: column; gap: 0.1rem; margin: 0.6rem 0 0.3rem; }
 .result-score-label { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700; color: var(--ink-soft); }
-.result-score-value { font-family: "Baloo 2", sans-serif; font-weight: 800; font-size: 2.2rem; color: var(--brown-dark); }
+.result-score-value { font-family: "Minecraft", "Baloo 2", sans-serif; font-weight: 800; font-size: 2.2rem; color: var(--brown-dark); }
 .coins-won {
-  font-family: "Baloo 2", sans-serif;
+  font-family: "Minecraft", "Baloo 2", sans-serif;
   font-weight: 800;
   font-size: 2rem;
   color: var(--gold);
@@ -1370,7 +1562,7 @@ body.game-open { overflow: hidden; }
 }
 .hud-cell { display: flex; flex-direction: column; align-items: center; min-width: 60px; }
 .hud-label { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700; color: var(--ink-soft); }
-.hud-value { font-family: "Baloo 2", sans-serif; font-weight: 800; font-size: 1.15rem; color: var(--brown-dark); }
+.hud-value { font-family: "Minecraft", "Baloo 2", sans-serif; font-weight: 800; font-size: 1.15rem; color: var(--brown-dark); }
 .game-hint { text-align: center; font-size: 0.78rem; color: var(--ink-soft); font-weight: 600; margin: 0.6rem 0 0; }
 
 .game-stage {
@@ -1399,7 +1591,7 @@ body.game-open { overflow: hidden; }
 .float-text {
   position: absolute;
   transform: translate(-50%, -50%);
-  font-family: "Baloo 2", sans-serif;
+  font-family: "Minecraft", "Baloo 2", sans-serif;
   font-weight: 800;
   font-size: 1.15rem;
   pointer-events: none;
@@ -1425,7 +1617,7 @@ body.game-open { overflow: hidden; }
 }
 .bb-target-label { font-size: 0.72rem; letter-spacing: 0.14em; font-weight: 800; color: var(--ink-soft); }
 .bb-target-block {
-  font-family: "Baloo 2", sans-serif;
+  font-family: "Minecraft", "Baloo 2", sans-serif;
   font-weight: 800;
   font-size: 1.25rem;
   color: var(--bb, var(--gold));
@@ -1552,7 +1744,7 @@ body.game-open { overflow: hidden; }
 /* ---------- Build It! ---------- */
 .build-banner {
   text-align: center;
-  font-family: "Baloo 2", "Kantumruy Pro", sans-serif;
+  font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", sans-serif;
   font-weight: 800;
   font-size: 1.05rem;
   margin-bottom: 0.6rem;
@@ -1612,7 +1804,7 @@ body.game-open { overflow: hidden; }
   cursor: pointer;
   border: 3px solid var(--stone-darkest);
   border-radius: 10px;
-  background: linear-gradient(180deg, #7d5936, #5c3f22);
+  background: linear-gradient(180deg, var(--jungle), var(--jungle-dark));
   box-shadow: 0 3px 0 var(--stone-darkest);
   transition: transform 0.12s, box-shadow 0.12s;
   touch-action: manipulation;
@@ -1684,9 +1876,9 @@ html[lang="km"] .checkout-hint { line-height: 1.7; }
   font-size: 0.9rem;
 }
 .board-row.is-you { border-color: var(--gold); box-shadow: 0 0 10px rgba(255, 205, 90, 0.45); }
-.board-rank { font-family: "Baloo 2", "Kantumruy Pro", sans-serif; font-size: 1.05rem; text-align: center; color: var(--ink-soft); }
+.board-rank { font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", sans-serif; font-size: 1.05rem; text-align: center; color: var(--ink-soft); }
 .board-name { color: var(--ink); overflow-wrap: anywhere; }
-.board-points { font-family: "Baloo 2", "Kantumruy Pro", sans-serif; font-weight: 800; color: var(--gold-deep); }
+.board-points { font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", sans-serif; font-weight: 800; color: var(--gold-deep); }
 .board-you {
   display: inline-block;
   margin-left: 0.35rem;
@@ -1699,6 +1891,29 @@ html[lang="km"] .checkout-hint { line-height: 1.7; }
   vertical-align: middle;
 }
 .board-empty { color: var(--ink-soft); font-size: 0.88rem; text-align: center; padding: 0.6rem; }
+
+/* Ranking page reuses this leaderboard row for both Top Team and Top Player,
+   just with a stat other than points in .board-points and the top 3 rows
+   picked out with a medal-colored left border. */
+.board-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.7rem;
+  height: 1.7rem;
+  margin-right: 0.5rem;
+  border-radius: 50%;
+  background: var(--input-bg);
+  border: 2px solid var(--stone-darkest);
+  font-size: 0.9rem;
+  vertical-align: middle;
+}
+.board-row.rank-1 { border-color: var(--gold-deep); box-shadow: 0 0 10px rgba(215, 255, 160, 0.35); }
+.board-row.rank-2 { border-color: #c9c9c9; }
+.board-row.rank-3 { border-color: #cd8a4c; }
+.board-row.rank-1 .board-rank { color: var(--gold-deep); }
+.board-row.rank-2 .board-rank { color: #c9c9c9; }
+.board-row.rank-3 .board-rank { color: #cd8a4c; }
 
 /* full table inside the modal */
 .board-table-wrap { max-height: 55vh; overflow-y: auto; overflow-x: auto; margin: 0.6rem 0; border: 3px solid var(--stone-darkest); border-radius: 12px; }
@@ -1752,7 +1967,7 @@ html[lang="km"] .board-mini-title { text-transform: none; letter-spacing: 0; }
   font-size: 0.76rem;
   font-weight: 800;
   color: var(--on-dark);
-  background: linear-gradient(180deg, #7d5936, #5c3f22);
+  background: linear-gradient(180deg, var(--jungle), var(--jungle-dark));
   border: 2px solid var(--stone-darkest);
   border-radius: 999px;
   box-shadow: 0 2px 0 var(--stone-darkest);
@@ -1795,7 +2010,7 @@ html[lang="km"] .board-mini-title { text-transform: none; letter-spacing: 0; }
 }
 .countdown-screen { padding: 2rem 0 1rem; }
 .countdown-number {
-  font-family: "Baloo 2", "Kantumruy Pro", sans-serif;
+  font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", sans-serif;
   font-weight: 800;
   font-size: 4.5rem;
   line-height: 1;
@@ -1907,7 +2122,7 @@ html[lang="km"] .board-mini-title { text-transform: none; letter-spacing: 0; }
 .up-rank-label {
   font-size: 0.56rem;
   font-weight: 800;
-  font-family: "Baloo 2", sans-serif;
+  font-family: "Minecraft", "Baloo 2", sans-serif;
   line-height: 1.1;
   text-align: center;
   max-width: 100%;
@@ -1953,10 +2168,10 @@ html[lang="km"] .board-mini-title { text-transform: none; letter-spacing: 0; }
   padding: 0.5rem;
   color: var(--on-dark);
   font-weight: 700;
-  font-family: "Baloo 2", "Kantumruy Pro", sans-serif;
+  font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", sans-serif;
   font-size: 0.85rem;
   border-radius: 10px;
-  background: linear-gradient(180deg, #7d5936, #5c3f22);
+  background: linear-gradient(180deg, var(--jungle), var(--jungle-dark));
   border: 2px solid var(--stone-darkest);
   box-shadow: 0 3px 0 var(--stone-darkest);
   cursor: pointer;
@@ -2002,9 +2217,61 @@ html[lang="km"] .board-mini-title { text-transform: none; letter-spacing: 0; }
 .confirm-rows div { display: flex; justify-content: space-between; gap: 1rem; padding: 0.28rem 0; border-bottom: 1px dashed var(--stone-dark); font-size: 0.88rem; color: var(--ink-soft); font-weight: 600; }
 .confirm-rows div:last-child { border-bottom: none; }
 .confirm-rows strong { color: var(--ink); text-align: right; }
+.duration-toggle { margin-bottom: 1rem; }
+
+.confirm-qty-label {
+  text-align: center;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+  color: var(--ink-soft);
+  margin-bottom: 0.4rem;
+}
+.qty-stepper {
+  display: flex;
+  align-items: stretch;
+  border-radius: 999px;
+  overflow: hidden;
+  border: 3px solid var(--brown-dark);
+  margin-bottom: 1rem;
+}
+.qty-stepper .qty-btn {
+  flex: 0 0 auto;
+  width: 46px;
+  border: none;
+  background: var(--input-bg);
+  color: var(--brown-dark);
+  font-weight: 800;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.qty-stepper .qty-btn:hover { background: var(--stone-dark); }
+.qty-stepper .qty-btn:active { background: var(--moss-dark); color: #fff; }
+.qty-stepper .qty-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  border-left: 3px solid var(--brown-dark);
+  border-right: 3px solid var(--brown-dark);
+  background: var(--input-bg);
+  color: var(--ink);
+  text-align: center;
+  font-weight: 800;
+  font-family: "Minecraft", "Baloo 2", sans-serif;
+  font-size: 1rem;
+  -moz-appearance: textfield;
+}
+.qty-stepper .qty-input::-webkit-outer-spin-button,
+.qty-stepper .qty-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.qty-stepper .qty-input:focus { outline: none; background: var(--cream-dark); }
 .confirm-price {
   text-align: center;
-  font-family: "Baloo 2", sans-serif;
+  font-family: "Minecraft", "Baloo 2", sans-serif;
   font-size: 1.7rem;
   font-weight: 800;
   color: var(--terracotta);

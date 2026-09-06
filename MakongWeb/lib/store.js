@@ -72,6 +72,13 @@ function saveItems(data) {
   writeJson(ITEMS_FILE, data);
 }
 
+// A rank can be bought for 1 month or permanently. Permanent defaults to 3x
+// the monthly price, but admins can override it per-rank via permanentPrice.
+function permanentPriceFor(item) {
+  if (item && typeof item.permanentPrice === "number" && item.permanentPrice >= 0) return item.permanentPrice;
+  return Math.round((item ? item.price : 0) * 3 * 100) / 100;
+}
+
 function findItem(id) {
   const items = getItems();
   for (const cat of CATEGORIES) {
@@ -137,6 +144,7 @@ module.exports = {
   getItemsFor,
   saveItems,
   findItem,
+  permanentPriceFor,
   upsertItem,
   deleteItem,
   getOrders,

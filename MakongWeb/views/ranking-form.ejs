@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= entry ? "Edit" : "Add" %> Ranking Entry · Admin</title>
+  <link rel="stylesheet" href="/css/admin.css" />
+</head>
+<body class="admin-body">
+  <header class="admin-header">
+    <h1><%= entry ? "Edit" : "Add" %> <%= category === "teams" ? "team" : "player" %></h1>
+    <a class="btn-ghost" href="/admin/rankings">Back to list</a>
+  </header>
+
+  <main class="admin-main">
+    <form class="admin-form" method="POST" action="<%= entry ? '/admin/rankings/' + entry.id : '/admin/rankings' %>">
+      <% if (!entry) { %>
+        <input type="hidden" name="category" value="<%= category %>" />
+      <% } %>
+
+      <label>Name
+        <input type="text" name="name" value="<%= entry ? entry.name : '' %>" required />
+      </label>
+
+      <label>Icon (emoji, optional)
+        <input type="text" name="icon" value="<%= entry ? (entry.icon || '') : '' %>" placeholder="🛕" maxlength="4" />
+        <small style="font-weight:400; color:#7a7060;">Shown instead of the name's first letter. Leave blank to use the initial.</small>
+      </label>
+
+      <label>Star
+        <input type="number" step="1" min="0" name="star" value="<%= entry ? entry.star : 0 %>" required />
+      </label>
+
+      <label>Points
+        <input type="number" step="1" min="0" name="points" value="<%= entry ? entry.points : 0 %>" required />
+      </label>
+
+      <label>Kills
+        <input type="number" step="1" min="0" name="kills" value="<%= entry ? entry.kills : 0 %>" required />
+      </label>
+
+      <label>Deaths
+        <input type="number" step="1" min="0" name="deaths" value="<%= entry ? entry.deaths : 0 %>" required />
+      </label>
+      <small style="font-weight:400; color:#7a7060; margin-top:-0.5rem;">KDR is computed automatically as Kills / Deaths.</small>
+
+      <button class="btn" type="submit"><%= entry ? "Save changes" : "Add entry" %></button>
+    </form>
+  </main>
+</body>
+</html>

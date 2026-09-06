@@ -3,15 +3,11 @@ let lastStatus = null;
 async function loadHome() {
   const cfg = await getSiteConfig();
 
-  // Keep it dynamic (reflects a renamed server), but keyword-rich rather
-  // than "— Home" - this is what a JS-rendering crawler (Googlebot) sees
-  // instead of the static SEO <title> once the page has loaded.
-  document.title = cfg.tagline ? `${cfg.serverName} — ${cfg.tagline}` : cfg.serverName;
+  document.title = `${cfg.serverName} | Home`;
   document.getElementById("hero-logo").src = cfg.logo || "/images/site/logo-full.png";
   const navLogo = document.getElementById("nav-logo");
   if (navLogo) navLogo.src = cfg.logoIcon || cfg.logo || "/images/site/logo-icon.png";
   document.getElementById("hero-title").textContent = cfg.serverName;
-  document.getElementById("hero-tagline").textContent = cfg.tagline || "";
   document.getElementById("welcome-message").textContent = cfg.welcomeMessage || "";
 
   document.getElementById("discord-btn").href = cfg.discordLink || "#";
@@ -62,9 +58,14 @@ function renderFeatures(features) {
       const tag = f.link ? "a" : "div";
       const href = f.link ? ` href="${escapeHtml(f.link)}"` : "";
       const cls = f.link ? "feature-card linked" : "feature-card";
+      // An icon can be a plain emoji (rendered as text) or an image path
+      // (starts with "/"), rendered as an <img> instead.
+      const icon = f.icon && f.icon.startsWith("/")
+        ? `<img src="${escapeHtml(f.icon)}" alt="" />`
+        : escapeHtml(f.icon || "");
       return `
         <${tag} class="${cls}"${href}>
-          <div class="feature-icon">${escapeHtml(f.icon || "")}</div>
+          <div class="feature-icon">${icon}</div>
           <div class="feature-title">${escapeHtml(f.title || "")}</div>
           <div class="feature-desc">${escapeHtml(f.desc || "")}</div>
         </${tag}>`;
@@ -83,7 +84,7 @@ function renderStatus(status) {
   }
   dot.className = `status-dot ${status.online ? "online" : "offline"}`;
   text.textContent = status.online
-    ? t("home.online", { online: status.players.online, max: status.players.max })
+    ? t("home.online", { online: status.players.online })
     : t("home.offline");
 }
 

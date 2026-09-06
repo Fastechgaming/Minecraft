@@ -10,8 +10,8 @@ const https = require("https");
 const TelegramBot = require("node-telegram-bot-api");
 const { nanoid } = require("nanoid");
 const store = require("../lib/store");
-const { runCommand, buildCommand } = require("../lib/rcon");
-const angkorstore = require("../lib/angkorstore");
+const pluginBridge = require("../lib/pluginBridge");
+const { buildCommand } = require("../lib/commandTemplate");
 
 const TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const ADMIN_CHAT_ID = process.env.TELEGRAM_ADMIN_CHAT_ID
@@ -62,7 +62,7 @@ function stepPrompt(step) {
     case "videoUrl":
       return "Kit video URL (YouTube/embeddable link), or send \"skip\"";
     case "deliveryCommand":
-      return 'Delivery command to run when you Accept an order.\nUse {player} for the in-server name, e.g.\n`lp user {player} parent add vip`\nOr send "skip" to deliver this item manually.';
+      return 'Delivery command shown for you to copy-paste when you Accept an order.\nUse {player} for the in-server name, e.g.\n`lp user {player} parent add vip`\nFor a Keys item, {quantity} is how many they bought, e.g.\n`crates give {player} common {quantity}`\nOr send "skip" to deliver this item manually.';
     case "image":
       return "Send a photo for this item, or send \"skip\" to use a placeholder image.";
     default:
@@ -201,6 +201,7 @@ function initBot() {
         "/delitem <id> - delete an item",
         "",
         "Orders arrive here as a photo of the payment receipt with Accept / Reject buttons.",
+        "Accept shows the gamemode, item, amount and a ready-to-copy command - delivery is manual, run it yourself in-game/console.",
       ].join("\n"),
       { parse_mode: "Markdown" }
     );
@@ -305,18 +306,26 @@ function initBot() {
 
 /* ---------------- Order review (payment approval) ---------------- */
 
+function gamemodeName(id) {
+  const gm = store.GAMEMODES.find((g) => g.id === id);
+  return gm ? gm.name : id || "—";
+}
+
 function orderSummaryText(order) {
   return [
     "🛒 *New Makong Network order*",
     "",
+    `*Gamemode:* ${gamemodeName(order.gamemode)}`,
     `*Item:* ${order.itemName}`,
     order.upgrade ? `*Upgrade:* ${order.upgrade.fromRankId} → ${order.upgrade.toRankId}` : "",
-    `*Price:* $${Number(order.amount).toFixed(2)} ${order.currency}`,
+    order.duration ? `*Duration:* ${order.duration === "permanent" ? "Permanent" : "1 Month"}` : "",
+    order.quantity > 1 ? `*Quantity:* ${order.quantity}` : "",
+    `*Amount:* $${Number(order.amount).toFixed(2)} ${order.currency}`,
     `*In-server name:* \`${order.playerName}\``,
     `*Edition:* ${order.edition === "bedrock" ? "Bedrock" : "Java"}`,
     `*Order:* \`${order.id}\``,
     "",
-    "Check the receipt above, then Accept to deliver or Reject to dismiss.",
+    "Check the receipt above, then Accept or Reject.",
   ]
     .filter(Boolean)
     .join("\n");
@@ -346,79 +355,84 @@ async function sendOrderForReview(order, proofPath) {
   }
 }
 
-// A rank upgrade trades one held group for another - handled by the plugin's
-// dedicated /rank/upgrade (it re-checks the player's real current rank
-// against expectedFromRankId before touching anything, so a stale/replayed
-// approval can't downgrade someone who ranked up in the meantime). Falls
-// back to two raw RCON commands only when the plugin itself isn't running.
-async function deliverUpgrade(order) {
-  const { fromGroup, toGroup, fromRankId, toRankId } = order.upgrade;
-  const context = { player: order.playerName, itemName: order.itemName, orderId: order.id };
+// Builds the exact command(s) you'd paste into console/in-game, with
+// {player} etc. already filled in. Never touches the Minecraft server itself
+// - announceAccepted() below separately hands this to pluginBridge if the
+// target server happens to be connected, but the text is always produced
+// here regardless, since it's also what's shown for manual delivery.
+function buildDeliveryCommand(order, item) {
+  const context = { player: order.playerName, itemName: order.itemName, orderId: order.id, quantity: order.quantity || 1 };
 
-  if (angkorstore.enabled()) {
-    const res = await angkorstore.upgradeRank({
-      transactionId: `order_${order.id}`,
-      uuid: order.playerUuid || null,
-      toRankId,
-      expectedFromRankId: fromRankId,
-    });
-    if (res.ok) {
-      return { ok: true, command: `upgrade ${fromRankId} -> ${toRankId}`, via: "plugin", response: res.duplicate ? "Already delivered." : "" };
-    }
-    if (res.status === 409) {
-      return {
-        ok: false,
-        command: `upgrade ${fromRankId} -> ${toRankId}`,
-        reason: `Their rank has changed since this was priced (now holds: ${res.currentRank ? res.currentRank.id : "none"}) — check in-game and deliver manually if still correct.`,
-      };
-    }
-    console.warn(`[delivery] plugin refused upgrade for order ${order.id}: ${res.error || res.status}`);
+  if (order.upgrade) {
+    const { fromGroup, toGroup } = order.upgrade;
+    const remove = buildCommand(`lp user {player} parent remove ${fromGroup}`, context);
+    const add = buildCommand(`lp user {player} parent add ${toGroup}`, context);
+    return `${remove}\n${add}`;
   }
-
-  const remove = await runCommand(`lp user {player} parent remove ${fromGroup}`, context);
-  if (!remove.ok) return { ...remove, via: "rcon" };
-  const add = await runCommand(`lp user {player} parent add ${toGroup}`, context);
-  return { ...add, command: `${remove.command} && ${add.command}`, via: "rcon" };
-}
-
-// Deliver a paid order. The AngkorStore plugin is preferred when it is running:
-// it is idempotent on the order id and queues the delivery if the player is
-// offline. RCON stays as the fallback for servers without the plugin.
-async function deliver(order, item) {
-  if (order.upgrade) return deliverUpgrade(order);
 
   const template = item && item.deliveryCommand;
-  if (!template) return { ok: false, reason: "This item has no delivery command configured." };
+  if (!template) return null;
+  return buildCommand(template, context);
+}
 
-  const context = { player: order.playerName, itemName: order.itemName, orderId: order.id };
-  const command = buildCommand(template, context);
+// Marks an order accepted and sends the gamemode/item/amount/copy-paste
+// command message - shared by the manual Accept button below and an
+// automatically-verified payment (e.g. a Tebex payment already confirmed
+// server-side, so there's nothing left to "Accept").
+async function announceAccepted(order, { label = "✅ *Accepted*" } = {}) {
+  const item = store.findItem(order.itemId);
+  const command = buildDeliveryCommand(order, item);
 
-  if (angkorstore.enabled()) {
-    const res = await angkorstore.deliverPurchase({
-      transactionId: `order_${order.id}`,
-      uuid: order.playerUuid || null,
-      name: order.playerName,
-      edition: order.edition,
-      itemId: order.itemId,
-      itemName: order.itemName,
-      commands: [command],
-      requiresOnline: Boolean(item.requiresOnline),
-    });
-    if (res.ok) {
-      return {
-        ok: true,
-        command,
-        via: "plugin",
-        response: res.queued ? "Player is offline — queued for their next login." : res.duplicate ? "Already delivered." : "",
-      };
-    }
-    // Plugin configured but unhappy: fall through to RCON rather than stranding
-    // a paid order, and say which path actually ran.
-    console.warn(`[delivery] plugin refused order ${order.id}: ${res.error || res.status}`);
+  store.updateOrder(order.id, {
+    status: "accepted",
+    decidedAt: Date.now(),
+    manualCommand: command,
+  });
+
+  // If this order's gamemode server is connected via a MakongStore plugin
+  // right now, queue the command(s) for it to run automatically instead of
+  // only ever showing them for copy-paste. A multi-line command (an upgrade's
+  // remove+add) is split so each line reaches the plugin as its own console
+  // command - it drains and runs them in the order they were queued.
+  let deliveryLine = command
+    ? `Run this manually:\n\`\`\`\n${command}\n\`\`\``
+    : "_No delivery command configured for this item — deliver it manually._";
+  if (command && order.gamemode && pluginBridge.isOnline(order.gamemode)) {
+    command
+      .split("\n")
+      .filter(Boolean)
+      .forEach((line) => pluginBridge.queueCommand(order.gamemode, line, { orderId: order.id }));
+    deliveryLine = `✅ Sent automatically to *${order.gamemode}*:\n\`\`\`\n${command}\n\`\`\``;
   }
 
-  const viaRcon = await runCommand(template, context);
-  return { ...viaRcon, via: "rcon" };
+  if (!bot || !ADMIN_CHAT_ID) {
+    return { ok: false, reason: "Telegram bot is not configured (token / admin chat id missing)." };
+  }
+
+  try {
+    await bot.sendMessage(
+      ADMIN_CHAT_ID,
+      [
+        `${label} order \`${order.id}\``,
+        "",
+        `*Gamemode:* ${gamemodeName(order.gamemode)}`,
+        `*Item:* ${order.itemName}`,
+        order.upgrade ? `*Upgrade:* ${order.upgrade.fromRankId} → ${order.upgrade.toRankId}` : "",
+        order.duration ? `*Duration:* ${order.duration === "permanent" ? "Permanent" : "1 Month"}` : "",
+        order.quantity > 1 ? `*Quantity:* ${order.quantity}` : "",
+        `*Amount:* $${Number(order.amount).toFixed(2)} ${order.currency}`,
+        `*Player:* \`${order.playerName}\` (${order.edition === "bedrock" ? "Bedrock" : "Java"})`,
+        "",
+        deliveryLine,
+      ]
+        .filter(Boolean)
+        .join("\n"),
+      { parse_mode: "Markdown" }
+    );
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, reason: err.message };
+  }
 }
 
 async function handleOrderDecision(query) {
@@ -435,7 +449,7 @@ async function handleOrderDecision(query) {
   if (!order) {
     return bot.answerCallbackQuery(query.id, { text: "Order not found.", show_alert: true });
   }
-  if (order.status === "delivered" || order.status === "rejected") {
+  if (order.status === "accepted" || order.status === "rejected") {
     return bot.answerCallbackQuery(query.id, { text: `Already ${order.status}.`, show_alert: true });
   }
 
@@ -455,45 +469,9 @@ async function handleOrderDecision(query) {
 
   if (action !== "accept") return;
 
-  await bot.answerCallbackQuery(query.id, { text: "Delivering…" });
-  const item = store.findItem(order.itemId);
-  const result = await deliver(order, item);
-
-  if (result.ok) {
-    store.updateOrder(orderId, {
-      status: "delivered",
-      decidedAt: Date.now(),
-      deliveredCommand: result.command,
-    });
-    await clearButtons();
-    return bot.sendMessage(
-      chatId,
-      [
-        `✅ *Delivered* order \`${orderId}\``,
-        `Ran: \`${result.command}\``,
-        result.response ? `Server said: _${result.response}_` : "",
-      ]
-        .filter(Boolean)
-        .join("\n"),
-      { parse_mode: "Markdown" }
-    );
-  }
-
-  // Delivery failed - leave the buttons in place so you can retry after fixing
-  // the cause, and keep the order marked as still pending review.
-  return bot.sendMessage(
-    chatId,
-    [
-      `⚠️ *Could not deliver* order \`${orderId}\``,
-      result.command ? `Command: \`${result.command}\`` : "",
-      `Reason: ${result.reason}`,
-      "",
-      "The order was left pending — fix the issue and press Accept again, or run the command manually in-game.",
-    ]
-      .filter(Boolean)
-      .join("\n"),
-    { parse_mode: "Markdown" }
-  );
+  await clearButtons();
+  await bot.answerCallbackQuery(query.id, { text: "Accepted." });
+  return announceAccepted(order);
 }
 
-module.exports = { initBot, sendOrderForReview };
+module.exports = { initBot, sendOrderForReview, announceAccepted };

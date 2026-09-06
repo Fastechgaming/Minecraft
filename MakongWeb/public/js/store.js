@@ -14,6 +14,9 @@ let account = null;
 let activeCategory = "ranks";
 let pendingItem = null; // the item sitting in the confirmation dialog
 let pendingUpgradeFrom = null; // rank id being traded in, or null for a plain buy
+let pendingDuration = "monthly"; // "monthly" | "permanent" - rank purchases only, meaningless for upgrades
+let pendingQuantity = 1; // keys purchases only - how many of the item to buy at once
+const MAX_KEY_QTY = 20;
 
 const CATEGORY_KEYS = { ranks: "store.tab.ranks", keys: "store.tab.keys", other: "store.tab.other" };
 const REGION_KEY = "makong-region";
@@ -59,6 +62,16 @@ function chooseKhmer() {
 
 document.getElementById("region-khmer").addEventListener("click", chooseKhmer);
 document.getElementById("region-global").addEventListener("click", goGlobal);
+
+// Clicking the backdrop closes the modal - but only once the store is
+// already loaded (i.e. this is a "Change store" reopen). During the
+// mandatory first-visit gate there's no page behind it to fall back to,
+// so a backdrop click is ignored there and a region must be picked.
+document.getElementById("region-modal").addEventListener("click", (e) => {
+  if (e.target.id === "region-modal" && !body.hidden) {
+    document.getElementById("region-modal").classList.remove("open");
+  }
+});
 
 function initRegionGate() {
   if (storedRegion() === "khmer") {
@@ -134,6 +147,16 @@ function rankItemFor(rankId) {
   return (allItems.ranks || []).find((item) => item.id === `rank-${rankId}` || item.id === rankId) || null;
 }
 
+// The player's real Minecraft head when there's a real skin to show, the
+// generic Steve head otherwise. Bedrock has no Java skin to render, so it's
+// always Steve there; for Java, mc-heads.net does the premium-vs-cracked
+// lookup for us - a name that isn't a real Mojang account (offline/cracked,
+// or just made up) renders as Steve automatically, no separate check needed.
+function playerHeadUrl(acct) {
+  if (!acct || !acct.player || acct.edition === "bedrock") return "/images/site/steve-head.png";
+  return `https://mc-heads.net/avatar/${encodeURIComponent(acct.player)}/64`;
+}
+
 function renderProfile() {
   document.getElementById("store-player-name").textContent = account.player;
 
@@ -165,7 +188,7 @@ function renderProfile() {
       icon.textContent = "🏅";
     }
   } else {
-    icon.textContent = "🧑‍🌾";
+    icon.innerHTML = `<img src="${escapeHtml(playerHeadUrl(account))}" alt="" onerror="this.onerror=null; this.src='/images/site/steve-head.png';" />`;
   }
 
   if (typeof account.coins === "number") {
@@ -178,29 +201,69 @@ function renderProfile() {
 
 /* ---------------- Catalogue ---------------- */
 
-// Gamemode tabs (Arcade / EcoSMP / BoxPvP / PlotCity / HyperClash). Switching
-// gamemode also re-picks the active category, since not every gamemode
-// sells the same ones (only EcoSMP/BoxPvP have Keys and Other), and
-// re-fetches the rank ladder, since ranks are priced per gamemode.
+// Gamemode picker (Arcade / EcoSMP / BoxPvP / PlotCity / HyperClash), a
+// custom dropdown (same open/close pattern as the language switcher)
+// rather than a tab row so it scales to more gamemodes without wrapping.
+// The closed button reads "Gamemode: BoxPvP"; the open list just shows
+// the plain names ("BoxPvP", "SMP", ...) since the "Gamemode:" label
+// would be redundant repeated on every option. Switching gamemode also
+// re-picks the active category, since not every gamemode sells the same
+// ones (only EcoSMP/BoxPvP have Keys and Other), and re-fetches the rank
+// ladder, since ranks are priced per gamemode.
 function renderGamemodeTabs() {
-  const wrap = document.getElementById("gamemode-tabs");
-  wrap.innerHTML = "";
-  gamemodes.forEach((gm) => {
-    const btn = document.createElement("button");
-    btn.textContent = gm.name;
-    btn.className = gm.id === activeGamemode ? "active" : "";
-    btn.addEventListener("click", async () => {
-      if (gm.id === activeGamemode) return;
-      activeGamemode = gm.id;
-      if (!gm.categories.includes(activeCategory)) activeCategory = gm.categories[0];
-      renderGamemodeTabs();
-      await loadLadder();
-      renderTabs();
-      renderGrid();
-    });
-    wrap.appendChild(btn);
-  });
+  const menu = document.getElementById("gamemode-menu");
+  const current = document.getElementById("gamemode-current");
+  if (!menu || !current) return;
+  const activeGm = gamemodes.find((g) => g.id === activeGamemode);
+  current.textContent = activeGm ? `${t("store.gamemode")}: ${activeGm.name}` : "";
+  menu.innerHTML = gamemodes
+    .map(
+      (gm) => `
+        <li>
+          <button type="button" class="gamemode-option${gm.id === activeGamemode ? " active" : ""}" data-gamemode-option="${gm.id}">
+            ${escapeHtml(gm.name)}
+          </button>
+        </li>`
+    )
+    .join("");
 }
+
+async function selectGamemode(gm) {
+  activeGamemode = gm.id;
+  if (!gm.categories.includes(activeCategory)) activeCategory = gm.categories[0];
+  renderGamemodeTabs();
+  await loadLadder();
+  renderTabs();
+  renderGrid();
+}
+
+document.addEventListener("click", (e) => {
+  const toggle = e.target.closest("#gamemode-toggle");
+  if (toggle) {
+    e.stopPropagation();
+    const wrap = toggle.closest(".gamemode-dropdown");
+    const wasOpen = wrap.classList.contains("open");
+    document.querySelectorAll(".gamemode-dropdown.open").forEach((el) => el.classList.remove("open"));
+    wrap.classList.toggle("open", !wasOpen);
+    toggle.setAttribute("aria-expanded", String(!wasOpen));
+    return;
+  }
+
+  const option = e.target.closest("[data-gamemode-option]");
+  if (option) {
+    e.stopPropagation();
+    document.querySelectorAll(".gamemode-dropdown.open").forEach((el) => el.classList.remove("open"));
+    document.getElementById("gamemode-toggle")?.setAttribute("aria-expanded", "false");
+    const gm = gamemodes.find((g) => g.id === option.dataset.gamemodeOption);
+    if (gm && gm.id !== activeGamemode) selectGamemode(gm);
+    return;
+  }
+
+  if (!e.target.closest(".gamemode-dropdown")) {
+    document.querySelectorAll(".gamemode-dropdown.open").forEach((el) => el.classList.remove("open"));
+    document.getElementById("gamemode-toggle")?.setAttribute("aria-expanded", "false");
+  }
+});
 
 // Category tabs (Ranks / Keys / Other) — only the ones the active gamemode sells.
 function renderTabs() {
@@ -268,7 +331,7 @@ function buttonState(item) {
 const armedUpgrade = new Map();
 
 // The ladder entry for the rank an item *is* (independent of what the
-// player holds) - e.g. rank-warden -> the "warden" ladder entry.
+// player holds) - e.g. rank-ecosmp-epic -> the "ecosmp-epic" ladder entry.
 function ladderEntryForItem(item) {
   return ladderEntry(item.id.replace(/^rank-/, ""));
 }
@@ -277,6 +340,14 @@ function armedFor(item, state) {
   if (!state || state.kind !== "upgradeable") return null;
   const armedId = armedUpgrade.get(item.id);
   return armedId ? state.eligible.find((r) => r.id === armedId) || null : null;
+}
+
+// Mirrors lib/store.js's permanentPriceFor - permanent defaults to 3x the
+// monthly price unless the admin set an explicit permanentPrice. Only ever
+// used to preview a price client-side; /api/checkout recomputes it for real.
+function permanentPriceFor(item) {
+  if (item && typeof item.permanentPrice === "number" && item.permanentPrice >= 0) return item.permanentPrice;
+  return Math.round((item ? item.price : 0) * 3 * 100) / 100;
 }
 
 // Plain price, or once a trade-in is armed: "$20.00 → $5.00" plus a small
@@ -514,6 +585,8 @@ function closeBuyModal() {
   buyModal.classList.remove("open");
   pendingItem = null;
   pendingUpgradeFrom = null;
+  pendingDuration = "monthly";
+  pendingQuantity = 1;
 }
 document.getElementById("buy-modal-close").addEventListener("click", closeBuyModal);
 buyModal.addEventListener("click", (e) => {
@@ -531,10 +604,25 @@ function openConfirm(item, fromRankId) {
   const fromEntry = fromRankId ? ladderEntry(fromRankId) : null;
   const toEntry = ladderEntry(item.id.replace(/^rank-/, ""));
   pendingUpgradeFrom = fromEntry ? fromEntry.id : null;
+  pendingDuration = "monthly";
+  pendingQuantity = 1;
 
   const toName = (toEntry && toEntry.displayName) || item.name;
-  const displayPrice =
-    fromEntry && toEntry ? Math.max(0, toEntry.priceUsd - fromEntry.priceUsd) : item.price;
+  // A trade-in upgrade prices its own ladder step and ignores duration - only
+  // a plain rank purchase (not owned, not being traded into) offers 1 Month
+  // vs Permanent.
+  const showDuration = item.category === "ranks" && !fromEntry;
+  // Keys are bought in bulk (e.g. 5 Common Keys in one order) - ranks/other
+  // items stay single-purchase.
+  const showQuantity = item.category === "keys" && !fromEntry;
+  const priceFor = () => {
+    if (fromEntry && toEntry) return Math.max(0, toEntry.priceUsd - fromEntry.priceUsd);
+    const base = showDuration && pendingDuration === "permanent" ? permanentPriceFor(item) : item.price;
+    return showQuantity ? Math.round(base * pendingQuantity * 100) / 100 : base;
+  };
+  const refreshPrice = () => {
+    document.getElementById("confirm-price").textContent = formatPrice(priceFor());
+  };
 
   buyModalBody.innerHTML = `
     <div class="confirm-head">
@@ -554,12 +642,69 @@ function openConfirm(item, fromRankId) {
         t(account.edition === "bedrock" ? "buy.bedrock" : "buy.java")
       )}</strong></div>
     </div>
-    <div class="confirm-price">${escapeHtml(formatPrice(displayPrice))}</div>
+    ${
+      showDuration
+        ? `<div class="edition-toggle duration-toggle" id="confirm-duration">
+            <button type="button" data-duration="monthly" class="active">${escapeHtml(t("store.duration1Month"))}</button>
+            <button type="button" data-duration="permanent">${escapeHtml(t("store.durationPermanent"))}</button>
+          </div>`
+        : ""
+    }
+    ${
+      showQuantity
+        ? `<div class="confirm-qty-label">${escapeHtml(t("store.quantity"))}</div>
+          <div class="qty-stepper" id="confirm-qty">
+            <button type="button" class="qty-btn" data-qty-step="-1" aria-label="${escapeHtml(t("store.qtyDecrease"))}">−</button>
+            <input type="number" class="qty-input" id="confirm-qty-input" inputmode="numeric" min="1" max="${MAX_KEY_QTY}" value="1" />
+            <button type="button" class="qty-btn" data-qty-step="1" aria-label="${escapeHtml(t("store.qtyIncrease"))}">+</button>
+          </div>`
+        : ""
+    }
+    <div class="confirm-price" id="confirm-price">${escapeHtml(formatPrice(priceFor()))}</div>
     <div class="confirm-actions">
       <button class="continue-btn" id="confirm-buy">${escapeHtml(t("store.confirm"))}</button>
       <button class="back-link" id="cancel-buy">${escapeHtml(t("store.cancel"))}</button>
     </div>
   `;
+  if (showDuration) {
+    const durationBtns = document.querySelectorAll("#confirm-duration [data-duration]");
+    durationBtns.forEach((btn) =>
+      btn.addEventListener("click", () => {
+        pendingDuration = btn.dataset.duration;
+        durationBtns.forEach((b) => b.classList.toggle("active", b === btn));
+        refreshPrice();
+      })
+    );
+  }
+  if (showQuantity) {
+    const qtyInput = document.getElementById("confirm-qty-input");
+    // Clamped and written back to the input - for the +/- buttons and once
+    // typing is done (blur/Enter), so a bad value always snaps back in range.
+    const commitQuantity = (n) => {
+      pendingQuantity = Math.min(MAX_KEY_QTY, Math.max(1, Math.round(n) || 1));
+      qtyInput.value = pendingQuantity;
+      refreshPrice();
+    };
+    // While typing, just preview against whatever's a valid number so far -
+    // rewriting the field mid-keystroke (e.g. on a cleared/partial value)
+    // would fight the user's typing.
+    const previewQuantity = (n) => {
+      const rounded = Math.round(n);
+      if (Number.isFinite(rounded) && rounded > 0) pendingQuantity = Math.min(MAX_KEY_QTY, rounded);
+      refreshPrice();
+    };
+    document.querySelectorAll("#confirm-qty [data-qty-step]").forEach((btn) =>
+      btn.addEventListener("click", () => commitQuantity(pendingQuantity + Number(btn.dataset.qtyStep)))
+    );
+    qtyInput.addEventListener("input", () => previewQuantity(Number(qtyInput.value)));
+    qtyInput.addEventListener("blur", () => commitQuantity(Number(qtyInput.value)));
+    qtyInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        commitQuantity(Number(qtyInput.value));
+        qtyInput.blur();
+      }
+    });
+  }
   document.getElementById("confirm-buy").addEventListener("click", startCheckout);
   document.getElementById("cancel-buy").addEventListener("click", closeBuyModal);
   buyModal.classList.add("open");
@@ -574,7 +719,12 @@ async function startCheckout() {
     const result = await fetchJSON("/api/checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ itemId: pendingItem.id, upgradeFromRankId: pendingUpgradeFrom || undefined }),
+      body: JSON.stringify({
+        itemId: pendingItem.id,
+        upgradeFromRankId: pendingUpgradeFrom || undefined,
+        duration: pendingDuration,
+        quantity: pendingQuantity,
+      }),
     });
     window.location.href = `/checkout?order=${encodeURIComponent(result.orderId)}`;
   } catch (err) {
@@ -624,6 +774,17 @@ function renderCooldownNote() {
   nameField.hidden = locked;
   editionField.hidden = locked;
 }
+
+// "Change store" re-opens the region picker so the player can switch
+// between Cambodia (stays on this site) and Global (Tebex) again.
+document.getElementById("store-change-region-btn").addEventListener("click", () => {
+  try {
+    sessionStorage.removeItem(REGION_KEY);
+  } catch {
+    /* private browsing — the modal still opens, just won't remember the choice */
+  }
+  document.getElementById("region-modal").classList.add("open");
+});
 
 document.getElementById("store-change-btn").addEventListener("click", () => {
   changeEdition = account ? account.edition : "java";
@@ -692,7 +853,7 @@ document.addEventListener("i18n:change", () => {
 });
 
 /* ---------------- Boot ---------------- */
-// The store works with or without the AngkorStore plugin bridge (see
+// The store works with or without the MakongStore plugin bridge (see
 // routes/account.js `verify()`) — a missing plugin just means names are
 // accepted as typed and ranks/coins stay hidden (`account.linked === false`).
 // The "Unavailable" panel below is reserved for an actual outage: the items
@@ -724,7 +885,10 @@ async function bootStore() {
     return;
   }
 
-  activeGamemode = gamemodes[0] ? gamemodes[0].id : null;
+  // BoxPvP is the default gamemode shown when the store first loads,
+  // falling back to whatever's first if it's ever missing from the catalogue.
+  const defaultGamemode = gamemodes.find((g) => g.id === "boxpvp") || gamemodes[0];
+  activeGamemode = defaultGamemode ? defaultGamemode.id : null;
   if (activeGamemode) {
     const gm = gamemodes.find((g) => g.id === activeGamemode);
     activeCategory = gm.categories[0];

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Store — Makong Network</title>
+<title>Store | Makong Network</title>
 <meta name="description" content="Buy ranks and Makong Coin packs for the Makong Network Minecraft server. Java and Bedrock supported, KHQR payment, instant Telegram delivery." />
 <link rel="canonical" href="https://www.makongmc.com/store" />
 <meta name="theme-color" content="#f7b537" />
@@ -31,7 +31,6 @@ try { if (localStorage.getItem("makong-theme") === "light") document.documentEle
 </head>
 <body>
   <nav class="site-nav">
-    <div class="nav-vine" aria-hidden="true"></div>
     <div class="container">
       <a class="brand" href="/">
         <img id="nav-logo" src="/images/site/logo-icon.png" alt="logo" onerror="this.style.display='none'" />
@@ -47,21 +46,21 @@ try { if (localStorage.getItem("makong-theme") === "light") document.documentEle
             <li role="none"><button type="button" role="menuitem" class="lang-option" data-lang="km" onclick="setLang('km')">ខ្មែរ</button></li>
           </ul>
         </div>
-        <button class="theme-toggle" onclick="toggleTheme()" aria-label="Switch theme">☀️</button>
+        <button class="theme-toggle" onclick="toggleTheme()" aria-label="Switch theme"><img class="theme-icon" src="/images/site/sun-icon.png" alt="" /></button>
       </div>
       <ul class="nav-links">
-        <li><a href="/" data-i18n="nav.home">🏠 Home</a></li>
-        <li><a href="/store" class="active" data-i18n="nav.store">💰 Store</a></li>
+        <li><a href="/"><img class="nav-icon" src="/images/site/icon-home.png" alt="" /><span data-i18n="nav.home">Home</span></a></li>
+        <li><a href="/store" class="active"><img class="nav-icon" src="/images/site/icon-store-nav.png" alt="" /><span data-i18n="nav.store">Store</span></a></li>
+        <li><a href="/ranking"><img class="nav-icon" src="/images/site/icon-ranking.png" alt="" onerror="this.style.display='none'" /><span data-i18n="nav.ranking">Ranking</span></a></li>
       </ul>
       <button class="nav-toggle" onclick="toggleNav()" aria-label="Menu" data-i18n-aria="nav.menu">&#9776;</button>
     </div>
   </nav>
-  <div class="khmer-strip" aria-hidden="true"></div>
 
   <main>
     <section class="section">
       <div class="container">
-        <h2 class="no-rule">🌿 Makong Network 🌿</h2>
+        <h2 class="no-rule"><img class="heading-leaf" src="/images/site/icon-leaf.png" alt="" />Makong<img class="heading-leaf" src="/images/site/icon-leaf.png" alt="" /></h2>
         <p class="section-subtitle" data-i18n="store.subtitle">STORE</p>
         <!-- Sign in first: the store needs to know who it is selling to -->
         <div class="checkout-panel games-gate" id="store-gate">
@@ -104,7 +103,7 @@ try { if (localStorage.getItem("makong-theme") === "light") document.documentEle
         <div id="store-body" hidden>
           <div class="player-bar checkout-panel store-profile">
             <div class="player-id">
-              <span class="player-avatar" id="store-rank-icon">🧑‍🌾</span>
+              <span class="player-avatar" id="store-rank-icon"><img src="/images/site/steve-head.png" alt="" /></span>
               <div>
                 <div class="player-label" data-i18n="store.loggedInAs">Logged in as</div>
                 <div class="player-name" id="store-player-name">—</div>
@@ -114,18 +113,27 @@ try { if (localStorage.getItem("makong-theme") === "light") document.documentEle
                 </div>
               </div>
             </div>
-            <button class="change-name-btn" id="store-change-btn" data-i18n="games.changeName">Change name</button>
+            <div class="profile-actions">
+              <button class="change-name-btn" id="store-change-btn" data-i18n="games.changeName">Change name</button>
+              <button class="change-name-btn" id="store-change-region-btn" data-i18n="store.changeRegion">Change store</button>
+            </div>
           </div>
 
-          <div class="store-tabs gamemode-tabs" id="gamemode-tabs"></div>
-          <div class="store-tabs" id="store-tabs"></div>
+          <div class="store-controls checkout-panel">
+            <div class="gamemode-dropdown">
+              <button type="button" class="gamemode-toggle" id="gamemode-toggle" aria-haspopup="true" aria-expanded="false">
+                <span class="gamemode-current" id="gamemode-current"></span>
+              </button>
+              <ul class="gamemode-menu" id="gamemode-menu" role="menu"></ul>
+            </div>
+            <div class="store-tabs" id="store-tabs"></div>
+          </div>
           <div class="item-grid" id="item-grid"></div>
         </div>
       </div>
     </section>
   </main>
 
-  <div class="khmer-strip" aria-hidden="true"></div>
   <footer class="site-footer">
     <p id="footer-copy" data-i18n="footer.copy"></p>
   </footer>
@@ -139,12 +147,12 @@ try { if (localStorage.getItem("makong-theme") === "light") document.documentEle
       </p>
       <div class="region-choice">
         <button type="button" class="region-btn" id="region-khmer">
-          <span class="region-flag">🇰🇭</span>
+          <img class="region-flag" src="/images/site/flag-cambodia.png" alt="" />
           <span class="region-name" data-i18n="region.khmer">Cambodia</span>
           <span class="region-desc" data-i18n="region.khmerDesc">Pay with KHQR</span>
         </button>
         <button type="button" class="region-btn" id="region-global">
-          <span class="region-flag">🌍</span>
+          <img class="region-flag" src="/images/site/icon-global.png" alt="" />
           <span class="region-name" data-i18n="region.global">Global</span>
           <span class="region-desc" data-i18n="region.globalDesc">Pay via Tebex</span>
         </button>
