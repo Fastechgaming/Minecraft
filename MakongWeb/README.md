@@ -51,6 +51,7 @@ Everything below lives in **`MakongWeb/.env`** (secrets) and **`MakongWeb/config
 | `TELEGRAM_ADMIN_CHAT_ID` | Your personal numeric Telegram ID — message [@userinfobot](https://t.me/userinfobot) to get it. Purchase alerts and the `/additem` etc. admin commands are locked to this ID only. |
 | `TELEGRAM_SUPPORT_USERNAME` | Your public support `@username` shown on the purchase-success screen. |
 | `RCON_HOST` / `RCON_PORT` / `RCON_PASSWORD` | Currently unused — delivery is manual via Telegram for now (see "Purchase flow"). Reserved for a future automatic-delivery option. |
+| `ABA_PAYWAY_MERCHANT_ID` / `ABA_PAYWAY_API_KEY` / `ABA_PAYWAY_SANDBOX` | Optional — adds a "Pay by Card" option. Register at [sandbox.payway.com.kh](https://sandbox.payway.com.kh) to get sandbox credentials for free. See "Card payments" under Purchase flow. |
 
 ## 3. Managing store items (3 ways — pick whichever is easiest for you)
 
@@ -118,6 +119,7 @@ from Telegram with one tap.
    - Bedrock names are normalised the way Geyser/Floodgate does it: a single leading `.` is added and spaces become `_`. So `Play er`, `.Play er` and `Play_er` all become `.Play_er` — never `..Play er`. The form shows the exact result live as **"In server name: …"**.
    - **Keys** items let the customer pick a **quantity** (1-20) right in the confirmation dialog — the price scales with it, recomputed server-side from `item.price × quantity`, never trusting the browser's total.
 2. **Continue** → they land on **Complete your Purchase** (`/checkout`): a summary of what they're buying, your KHQR to scan, and a drop zone for their payment screenshot.
+   - If **ABA PayWay** is configured (see below), a **💳 Pay by Card** button also appears here as a faster alternative — see "Card payments" below for that path instead of the manual one.
 3. **SUBMIT** → they get a **Submit successful** page telling them to wait for the owner to confirm, with a support link and a **Back to home** button.
 4. You receive a Telegram message with the receipt photo, the gamemode, the item, the price, and the in-server name, plus **✅ Accept** and **❌ Reject** buttons.
    - **Reject** → the order is marked rejected. Nothing else happens.
@@ -132,6 +134,35 @@ handle that item entirely by hand, with no command shown.
 
 Payment screenshots are stored in `MakongWeb/data/proofs/` and are **not** served
 publicly — they only go to your Telegram.
+
+### Card payments (ABA PayWay, optional)
+
+Set `ABA_PAYWAY_MERCHANT_ID` and `ABA_PAYWAY_API_KEY` in `.env` (see the table
+above) and a **💳 Pay by Card** button appears on `/checkout` next to the KHQR
+step — Visa/Mastercard/ABA PAY via ABA Bank's hosted checkout, no bank app or
+screenshot needed. Leave them blank and the site works exactly as it does
+today, KHQR only.
+
+1. **Pay by Card** → the customer is sent to ABA's own hosted checkout page to
+   pay (their card details never touch this website).
+2. ABA redirects them back to `/checkout?...&aba=1`, which immediately asks
+   *ABA's own server* whether that payment actually went through — the
+   redirect itself is never trusted on its own, exactly like every other
+   price/amount in this codebase is always recomputed server-side rather than
+   taken from the browser.
+3. If approved, the order is marked paid and you get the same kind of
+   Telegram message as a manual **Accept** (gamemode, item, amount, the
+   delivery command to paste in) — just labelled "💳 Paid by Card" and without
+   Accept/Reject buttons, since PayWay has already confirmed the money moved.
+   If it wasn't completed, the customer can retry the card or fall back to KHQR.
+
+Getting credentials: register for a **sandbox** account at
+[sandbox.payway.com.kh](https://sandbox.payway.com.kh) to test with fake
+cards for free, then email `paywaysales@ababank.com` for **production**
+access once it works. Either way you'll need to whitelist this site's real
+domain in the ABA merchant portal, and `ABA_PAYWAY_SANDBOX=false` once you
+switch to production credentials. (Unofficial but detailed API reference:
+[Joselay/aba-payway-docs](https://github.com/Joselay/aba-payway-docs).)
 
 ## 6. The player account
 
@@ -237,6 +268,7 @@ MakongWeb/
   lib/store.js            Tiny JSON-file data layer
   lib/rankings.js         Tiny JSON-file data layer for the ranking page
   lib/angkorstore.js      Client for the AngkorStore Minecraft plugin
+  lib/abapayway.js        Client for ABA PayWay - optional card payment on /checkout
   deploy/                 systemd unit, Cloudflare Tunnel config, update script
   DEPLOY.md               How to put the site online
   lib/minecraft.js        Java+Bedrock status ping
