@@ -82,15 +82,15 @@ app.use((err, req, res, next) => {
 app.listen(PORT, HOST, () => {
   console.log(`Makong Network website running on ${HOST}:${PORT}`);
   if (BEHIND_HTTPS) console.log(`[https] trusting proxy headers, session cookies marked Secure (SITE_URL=${process.env.SITE_URL})`);
-  if (require("./lib/makongstore").enabled()) {
-    console.log("[makongstore] plugin bridge configured — verifying names against the Minecraft server");
+  if (require("./lib/makongcore").enabled()) {
+    console.log("[makongcore] plugin bridge configured — verifying names against the Minecraft server");
   } else {
-    console.log("[makongstore] no plugin configured — names are accepted without server verification");
+    console.log("[makongcore] no plugin configured — names are accepted without server verification");
   }
   if (require("./lib/pluginBridge").enabled()) {
-    console.log("[pluginBridge] MAKONGSTORE_SECRET set — /api/plugin is open for MakongStore plugins to connect");
+    console.log("[pluginBridge] MAKONGCORE_SECRET set — /api/plugin is open for MakongCore plugins to connect");
   } else {
-    console.log("[pluginBridge] MAKONGSTORE_SECRET not set — /api/plugin is disabled");
+    console.log("[pluginBridge] MAKONGCORE_SECRET not set — /api/plugin is disabled");
   }
   telegram.initBot();
 });

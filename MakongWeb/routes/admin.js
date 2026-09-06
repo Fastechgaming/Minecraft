@@ -80,7 +80,7 @@ router.post("/items", requireAuth, upload.single("imageFile"), (req, res, next) 
     // A rank item is matched to the Minecraft plugin's LuckPerms ladder (and
     // to the catalogue-derived fallback ladder when the plugin isn't
     // connected) by exact id: `rank-<gamemode>-<ladder id>` - see
-    // MakongStore's config.yml `ranks.ladder`. Ranks are per-gamemode
+    // MakongCore's config.yml `ranks.ladder`. Ranks are per-gamemode
     // (EcoSMP's VIP and BoxPvP's VIP are unrelated), so the gamemode is part
     // of the id, not just a random nanoid suffix - it has to be
     // `rank-<gamemode>-<slug>` with a trailing "rank" word stripped (name
@@ -227,7 +227,7 @@ router.post("/rankings/:id/delete", requireAuth, (req, res) => {
   res.redirect("/admin/rankings");
 });
 
-/* ---------------- Servers (MakongStore plugin bridge) ---------------- */
+/* ---------------- Servers (MakongCore plugin bridge) ---------------- */
 
 router.get("/servers", requireAuth, (req, res) => {
   res.render("servers", {

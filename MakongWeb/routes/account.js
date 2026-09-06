@@ -13,12 +13,12 @@
 // farm — it only exists to know who to deliver an order to — so its cooldown
 // is a token 60s, purely to stop someone hammering the verify endpoint.
 //
-// When the MakongStore plugin is configured, verifying checks the name against
+// When the MakongCore plugin is configured, verifying checks the name against
 // the Minecraft server and the reply carries the player's UUID, coin balance
 // and rank. Without the plugin the name is accepted on its own so the site
 // still works — the response says which of the two happened via `linked`.
 const express = require("express");
-const makongstore = require("../lib/makongstore");
+const makongcore = require("../lib/makongcore");
 const store = require("../lib/store");
 const { normalizeServerName, isValidRawName } = require("../public/js/playername");
 
@@ -56,7 +56,7 @@ function current(req, scope) {
 function payload(identity, scope, now = Date.now()) {
   const cooldownMs = COOLDOWN_MS[normalizeScope(scope)];
   if (!identity) {
-    return { player: null, edition: "java", canChange: true, canChangeAt: now, cooldownMs, linked: makongstore.enabled() };
+    return { player: null, edition: "java", canChange: true, canChangeAt: now, cooldownMs, linked: makongcore.enabled() };
   }
   const canChangeAt = identity.setAt + cooldownMs;
   const linked = Boolean(identity.linked);
@@ -81,10 +81,10 @@ function payload(identity, scope, now = Date.now()) {
 // Ask the plugin about a name. Falls back to "accept it, but we know nothing"
 // when the plugin isn't set up yet.
 async function verify(player, edition) {
-  if (!makongstore.enabled()) {
+  if (!makongcore.enabled()) {
     return { linked: false, found: true, player, uuid: null, coins: null, rank: null, nextRank: null, ranks: [] };
   }
-  const res = await makongstore.verifyPlayer(player, edition);
+  const res = await makongcore.verifyPlayer(player, edition);
   if (!res.linked) {
     // Plugin configured but unreachable — let the player in rather than
     // locking the whole site behind a Minecraft server that is restarting.
@@ -114,8 +114,8 @@ router.get("/", async (req, res) => {
   // from whenever the player last verified: a plugin that goes down mid-
   // session must flip the site to "Unavailable" on the very next check,
   // not keep showing whatever balance happened to be cached.
-  if (identity && identity.uuid && makongstore.enabled()) {
-    const profile = await makongstore.getProfile(identity.uuid);
+  if (identity && identity.uuid && makongcore.enabled()) {
+    const profile = await makongcore.getProfile(identity.uuid);
     identity.linked = Boolean(profile.ok);
     if (profile.ok) {
       identity.coins = typeof profile.coins === "number" ? profile.coins : identity.coins;
@@ -126,7 +126,7 @@ router.get("/", async (req, res) => {
     const both = pair(req);
     both[scope] = identity;
     req.session.account = both;
-  } else if (identity && !makongstore.enabled()) {
+  } else if (identity && !makongcore.enabled()) {
     identity.linked = false;
   }
   res.json(payload(identity, scope));
@@ -213,8 +213,8 @@ router.post("/logout", (req, res) => {
 // live plugin path isn't gamemode-scoped — that's the plugin's own ladder,
 // out of scope here — so it's only used when a gamemode isn't given.
 async function getRankLadder(gamemodeId) {
-  if (makongstore.enabled()) {
-    const fromPlugin = await makongstore.getRanks();
+  if (makongcore.enabled()) {
+    const fromPlugin = await makongcore.getRanks();
     if (fromPlugin.ok && Array.isArray(fromPlugin.ranks) && fromPlugin.ranks.length) {
       return { ranks: fromPlugin.ranks, source: "plugin" };
     }

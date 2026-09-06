@@ -50,8 +50,8 @@ Everything below lives in **`MakongWeb/.env`** (secrets) and **`MakongWeb/config
 | `TELEGRAM_BOT_TOKEN` | Create a bot via [@BotFather](https://t.me/BotFather) on Telegram. |
 | `TELEGRAM_ADMIN_CHAT_ID` | Your personal numeric Telegram ID — message [@userinfobot](https://t.me/userinfobot) to get it. Purchase alerts and the `/additem` etc. admin commands are locked to this ID only. |
 | `TELEGRAM_SUPPORT_USERNAME` | Your public support `@username` shown on the purchase-success screen. |
-| `MAKONGSTORE_SECRET` | Optional — any long random string, matched in every MakongStore plugin's `config.yml`. Turns on the Servers admin page, live command delivery on Accept, and cross-server ping — see "Connecting the Minecraft plugins". |
-| `MAKONGSTORE_URL` | Optional, separate from the above — only if you're also running the older single-plugin player-verify HTTP API. |
+| `MAKONGCORE_SECRET` | Optional — any long random string, matched in every MakongCore plugin's `config.yml`. Turns on the Servers admin page, live command delivery on Accept, and cross-server ping — see "Connecting the Minecraft plugins". |
+| `MAKONGCORE_URL` | Optional, separate from the above — only if you're also running the older single-plugin player-verify HTTP API. |
 | `TEBEX_WEBSTORE_TOKEN` | Optional — Tebex Creator Panel → Webstore → Integrations → Headless API. Adds a "Pay via Tebex" (card/wallet) button on checkout, see "Purchase flow". Leave empty to skip it. |
 
 ## 3. Managing store items (3 ways — pick whichever is easiest for you)
@@ -102,7 +102,7 @@ the tier ladder is a player-only concept. The thresholds (edit
 | M2 | 800 |
 | M1 | 1,000+ |
 
-There's no live stats feed from the Minecraft server for this (MakongStore
+There's no live stats feed from the Minecraft server for this (MakongCore
 doesn't track Star), so it's an **admin-curated** leaderboard, same idea as
 store items: go to `http://your-domain/admin/rankings`, log in, and
 add/edit/delete teams and players with a form — name, an optional emoji icon
@@ -141,7 +141,7 @@ from Telegram with one tap.
 3. **SUBMIT** → they get a **Submit successful** page telling them to wait for the owner to confirm, with a support link and a **Back to home** button.
 4. You receive a Telegram message with the receipt photo, the gamemode, the item, the price, and the in-server name, plus **✅ Accept** and **❌ Reject** buttons.
    - **Reject** → the order is marked rejected. Nothing else happens.
-   - **Accept** → the bot replies with the gamemode, item, amount, player name, and that item's **delivery command** with `{player}` already filled in (e.g. `lp user .Play_er parent add ecosmp_vip`), in a tap-to-copy code block. If that item's gamemode server is currently connected via a MakongStore plugin (section 7), the command is also **run automatically** and the message says so; otherwise paste it into your server console yourself, same as always.
+   - **Accept** → the bot replies with the gamemode, item, amount, player name, and that item's **delivery command** with `{player}` already filled in (e.g. `lp user .Play_er parent add ecosmp_vip`), in a tap-to-copy code block. If that item's gamemode server is currently connected via a MakongCore plugin (section 7), the command is also **run automatically** and the message says so; otherwise paste it into your server console yourself, same as always.
 
 Each item's delivery command is configured per item — set it in the web admin
 form ("Delivery command") or via `/edititem <id> deliveryCommand <command>` in
@@ -186,22 +186,22 @@ cookie (`makong_player`, handled by `routes/account.js`), so:
 * changing the name has a **60-second cooldown**, purely so nobody can hammer
   the verify endpoint.
 
-When the MakongStore plugin's player-verify API is connected, verifying also
+When the MakongCore plugin's player-verify API is connected, verifying also
 **checks the name really exists** on the Minecraft server and brings back the
 player's UUID, live coin balance and rank(s). See "Connecting the Minecraft
 plugins" below.
 
-## 7. Connecting the Minecraft plugins (MakongStore)
+## 7. Connecting the Minecraft plugins (MakongCore)
 
-`../MakongStore/` in this repo is a multi-module Gradle project with the
+`../MakongCore/` in this repo is a multi-module Gradle project with the
 actual plugins that bridge this website to your Minecraft servers — a
 **Paper plugin** (one instance per backend server: Arcade, EcoSMP, BoxPvP,
 PlotCity, HyperClash…) and a **Velocity plugin** (one instance on your
-proxy), both built the same way (`./gradlew build` in `../MakongStore/`,
+proxy), both built the same way (`./gradlew build` in `../MakongCore/`,
 using the bundled wrapper) and documented in its own README. The website
 works fine with none, some, or all of them running.
 
-There are two independent things a MakongStore plugin can do:
+There are two independent things a MakongCore plugin can do:
 
 **A) The multi-server command bridge** (`lib/pluginBridge.js` + `routes/plugin.js`,
 `/admin/servers`) — each plugin instance *connects outward* to this website
@@ -220,12 +220,12 @@ different machines/hosts) and:
   relayed through the website so it works whether or not the servers share a
   Velocity proxy.
 
-Turn this on by setting **`MAKONGSTORE_SECRET`** in `.env` (any long random
+Turn this on by setting **`MAKONGCORE_SECRET`** in `.env` (any long random
 string) and the same value in every plugin's `config.yml` — that one shared
 secret is all that's needed; there's no per-server URL to configure on the
 website side since the plugins dial out to it.
 
-**B) The older player-verify API** (`lib/makongstore.js`) — a single plugin
+**B) The older player-verify API** (`lib/makongcore.js`) — a single plugin
 HTTP server the website calls into for live coins/rank/name-verify data and
 mini-game payouts. This is a separate, optional piece not required for (A):
 
@@ -237,8 +237,8 @@ mini-game payouts. This is a separate, optional piece not required for (A):
 | Mini-game payouts | Credited in game, keyed on the round id | Recorded in `data/gamestats.json` only |
 | Store delivery | `POST /purchase/deliver` (queues for offline players) | The command bridge above, or manual Telegram, as before |
 
-Set `MAKONGSTORE_URL` (that plugin server's address) alongside
-`MAKONGSTORE_SECRET` in `.env` to turn this on too — same shared secret, sent
+Set `MAKONGCORE_URL` (that plugin server's address) alongside
+`MAKONGCORE_SECRET` in `.env` to turn this on too — same shared secret, sent
 as a header on every request, must match the plugin's `config.yml` exactly.
 The website server prints which mode(s) it started in. If it isn't on
 localhost or a private network, put the plugin's port behind a tunnel/VPN,
@@ -305,7 +305,7 @@ opening a port. Short version of the two things people get wrong:
   Node server that needs raw TCP/UDP (Minecraft status pings), a filesystem and a
   long-running process. Cloudflare *Tunnel* is the Cloudflare product that fits.
 * Run it on the same machine as Minecraft if you can, and the player-verify
-  MakongStore plugin (section 7B) then sits on `127.0.0.1` and never touches
+  MakongCore plugin (section 7B) then sits on `127.0.0.1` and never touches
   the internet. The multi-server command bridge (7A) doesn't need this at all
   — plugins connect outward to the website's public URL, so backend servers
   can live on entirely different machines/hosts.
@@ -326,7 +326,7 @@ MakongWeb/
   data/proofs/            Uploaded payment screenshots (git-ignored, never served publicly)
   lib/store.js            Tiny JSON-file data layer
   lib/rankings.js         Tiny JSON-file data layer for the ranking page
-  lib/makongstore.js      Client for the MakongStore plugin's player-verify API (section 7B)
+  lib/makongcore.js      Client for the MakongCore plugin's player-verify API (section 7B)
   lib/pluginBridge.js     Multi-server command/ping bridge the plugins connect to (section 7A)
   lib/tebex.js            Client for Tebex's Headless API (optional card/wallet checkout)
   deploy/                 systemd unit, Cloudflare Tunnel config, update script
@@ -334,7 +334,7 @@ MakongWeb/
   lib/minecraft.js        Java+Bedrock status ping
   lib/commandTemplate.js  Turns "lp user {player} parent add vip" into a real command
   routes/api.js           Public JSON API (config, status, items, rankings, checkout, proof upload)
-  routes/plugin.js        MakongStore plugin bridge API (connect/poll/ack/ping) - see lib/pluginBridge.js
+  routes/plugin.js        MakongCore plugin bridge API (connect/poll/ack/ping) - see lib/pluginBridge.js
   routes/account.js       The player account cookie used by the store
   routes/admin.js         Password-protected admin panel (item CRUD, rankings CRUD, image upload, servers)
   telegram/bot.js         Telegram bot: order review (Accept/Reject) + /additem etc.

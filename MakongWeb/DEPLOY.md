@@ -22,7 +22,7 @@ without opening a single port.
 
 ```
    players ──HTTPS──▶ Cloudflare ──tunnel──▶ your box ──▶ node server.js :3000
-                                                     └──▶ Minecraft + MakongStore (localhost)
+                                                     └──▶ Minecraft + MakongCore (localhost)
 ```
 
 Running it on the same box as Minecraft is worth doing on purpose if you're
@@ -78,10 +78,10 @@ SESSION_SECRET=...                 # node -e "console.log(require('crypto').rand
 TELEGRAM_BOT_TOKEN=...
 TELEGRAM_ADMIN_CHAT_ID=...
 
-# Once the MakongStore plugins are running (see ../MakongStore/README.md) -
+# Once the MakongCore plugins are running (see ../MakongCore/README.md) -
 # same secret in every plugin's config.yml. Turns on the Servers admin page,
 # live command delivery on Accept, and cross-server ping.
-MAKONGSTORE_SECRET=...
+MAKONGCORE_SECRET=...
 ```
 
 Check it starts:

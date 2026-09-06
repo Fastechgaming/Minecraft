@@ -7,7 +7,7 @@ const rankings = require("../lib/rankings");
 const { getServerStatus } = require("../lib/minecraft");
 const { normalizeServerName, isValidRawName } = require("../public/js/playername");
 const telegram = require("../telegram/bot");
-const makongstore = require("../lib/makongstore");
+const makongcore = require("../lib/makongcore");
 const tebex = require("../lib/tebex");
 const { current: currentAccount, STORE_SCOPE, getRankLadder } = require("./account");
 
@@ -51,10 +51,10 @@ router.get("/config", (req, res) => {
     socials: cfg.socials,
     supportTelegram: process.env.TELEGRAM_SUPPORT_USERNAME || "",
     // Informational only — the store works either way (see routes/account.js
-    // and lib/makongstore.js). True once MAKONGSTORE_URL/SECRET are set,
+    // and lib/makongcore.js). True once MAKONGCORE_URL/SECRET are set,
     // which switches name verification, coins and rank from the local
     // ledger to the live Minecraft server.
-    makongstoreEnabled: makongstore.enabled(),
+    makongcoreEnabled: makongcore.enabled(),
     // True once TEBEX_WEBSTORE_TOKEN is set - shows a "Pay via Tebex" option
     // on /checkout for items with a tebexPackageId, alongside KHQR.
     tebexHeadlessEnabled: tebex.enabled(),
@@ -105,9 +105,9 @@ router.get("/order/:id", (req, res) => {
 // back its id; the customer is then sent to /checkout to pay + upload proof.
 router.post("/checkout", async (req, res) => {
   try {
-    // No `makongstore.enabled()` gate here on purpose: everything below
+    // No `makongcore.enabled()` gate here on purpose: everything below
     // (currentAccount, getRankLadder, store.findItem/saveOrder) already has
-    // its own plugin-absent fallback — see lib/makongstore.js's own comment
+    // its own plugin-absent fallback — see lib/makongcore.js's own comment
     // ("nothing breaks while the plugin isn't installed"). Without the plugin
     // the typed name is simply accepted as-is and delivery falls back to a
     // manual Telegram-approved command, exactly as documented.

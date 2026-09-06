@@ -389,7 +389,7 @@ async function announceAccepted(order, { label = "✅ *Accepted*" } = {}) {
     manualCommand: command,
   });
 
-  // If this order's gamemode server is connected via a MakongStore plugin
+  // If this order's gamemode server is connected via a MakongCore plugin
   // right now, queue the command(s) for it to run automatically instead of
   // only ever showing them for copy-paste. A multi-line command (an upgrade's
   // remove+add) is split so each line reaches the plugin as its own console

@@ -1,6 +1,6 @@
-// API the MakongStore plugins (Paper + Velocity) connect to - see
+// API the MakongCore plugins (Paper + Velocity) connect to - see
 // lib/pluginBridge.js for the protocol/architecture notes and
-// ../../MakongStore/README.md for the plugin side.
+// ../../MakongCore/README.md for the plugin side.
 const express = require("express");
 const pluginBridge = require("../lib/pluginBridge");
 
@@ -8,10 +8,10 @@ const router = express.Router();
 
 function auth(req, res, next) {
   if (!pluginBridge.enabled()) {
-    return res.status(503).json({ error: "MakongStore bridge is not configured (MAKONGSTORE_SECRET unset)." });
+    return res.status(503).json({ error: "MakongCore bridge is not configured (MAKONGCORE_SECRET unset)." });
   }
   const secret = req.get("X-Makong-Secret") || "";
-  if (secret !== process.env.MAKONGSTORE_SECRET) {
+  if (secret !== process.env.MAKONGCORE_SECRET) {
     return res.status(401).json({ error: "Bad or missing X-Makong-Secret." });
   }
   next();

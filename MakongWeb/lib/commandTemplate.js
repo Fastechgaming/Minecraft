@@ -1,6 +1,6 @@
 // Turns "crates give {player} common {quantity}" into a real console command.
 // Used to build the text shown for manual copy-paste in Telegram, and reused
-// as-is for commands sent automatically through the MakongStore plugin bridge
+// as-is for commands sent automatically through the MakongCore plugin bridge
 // (lib/pluginBridge.js) once a server is connected.
 function buildCommand(template, { player, itemName, orderId, quantity }) {
   return String(template)

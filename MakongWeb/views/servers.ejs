@@ -19,9 +19,9 @@
   <main class="admin-main">
     <% if (!bridgeEnabled) { %>
       <p class="muted">
-        The MakongStore plugin bridge isn't turned on — set <code>MAKONGSTORE_SECRET</code>
-        in <code>.env</code> and restart the site, then point every MakongStore plugin's
-        <code>config.yml</code> at the same secret. See <code>../MakongStore/README.md</code>.
+        The MakongCore plugin bridge isn't turned on — set <code>MAKONGCORE_SECRET</code>
+        in <code>.env</code> and restart the site, then point every MakongCore plugin's
+        <code>config.yml</code> at the same secret. See <code>../MakongCore/README.md</code>.
       </p>
     <% } else { %>
       <section class="admin-section">
@@ -29,7 +29,7 @@
           <h2>Connected servers</h2>
         </div>
         <% if (!servers.length) { %>
-          <p class="muted">No MakongStore plugin has connected yet. This page auto-refreshes every 5 seconds.</p>
+          <p class="muted">No MakongCore plugin has connected yet. This page auto-refreshes every 5 seconds.</p>
         <% } else { %>
           <div class="admin-table-wrap">
             <table class="admin-table">

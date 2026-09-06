@@ -1,5 +1,5 @@
 // Tiny JSON-file "database" for the Ranking page - same pattern as lib/store.js.
-// There's no live stats feed from the Minecraft server (MakongStore doesn't
+// There's no live stats feed from the Minecraft server (MakongCore doesn't
 // track kills/deaths/star/points), so this is an admin-curated leaderboard:
 // you add/edit teams and players from /admin/rankings with their current
 // numbers, same way items are curated.

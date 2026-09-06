@@ -1,12 +1,12 @@
-// Multi-server bridge for the MakongStore plugins (Paper on each backend
-// server, Velocity on the proxy) - see ../../MakongStore/README.md.
+// Multi-server bridge for the MakongCore plugins (Paper on each backend
+// server, Velocity on the proxy) - see ../../MakongCore/README.md.
 //
-// Direction is the opposite of lib/makongstore.js: here the PLUGIN connects
+// Direction is the opposite of lib/makongcore.js: here the PLUGIN connects
 // outward to this website (POST /api/plugin/connect, then a repeating
 // GET /api/plugin/poll), so there is no per-server URL to configure and no
 // inbound port to open on the Minecraft side - it works the same whether a
 // backend server is on the same box or a different host entirely. Auth is
-// one shared secret (MAKONGSTORE_SECRET), checked by routes/plugin.js.
+// one shared secret (MAKONGCORE_SECRET), checked by routes/plugin.js.
 //
 // State here is in-memory only and resets on restart - a plugin just
 // reconnects and re-registers on its next poll, so nothing is lost beyond a
@@ -17,7 +17,7 @@ const { nanoid } = require("nanoid");
 const servers = new Map(); // serverId -> { kind, lastSeen, commands: [], pings: [], pongs: [] }
 
 function enabled() {
-  return Boolean(process.env.MAKONGSTORE_SECRET);
+  return Boolean(process.env.MAKONGCORE_SECRET);
 }
 
 function entry(serverId) {
