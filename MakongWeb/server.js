@@ -93,4 +93,8 @@ app.listen(PORT, HOST, () => {
     console.log("[pluginBridge] MAKONGCORE_SECRET not set — /api/plugin is disabled");
   }
   telegram.initBot();
+  // Telegram-alerts on a connected server dropping off the bridge (or
+  // MakongCore's own verify API going unreachable, tracked separately in
+  // lib/makongcore.js) - see lib/pluginBridge.js's startHealthCheck().
+  require("./lib/pluginBridge").startHealthCheck();
 });

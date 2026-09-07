@@ -367,27 +367,73 @@ function orderSummaryText(order) {
     .join("\n");
 }
 
+// Generic operational alert, distinct from the per-order messages above -
+// "something's wrong with the store or a server connection" rather than
+// "here's a new order". Same admin chat, plain text, no inline buttons.
+//
+// `key` dedupes repeats: a recurring problem (MakongCore staying down, a
+// broken route throwing on every request) pings once per cooldown window
+// instead of once per request. Omit `key` for a one-off that should always
+// send (e.g. a state-change "back online" message - those are already rare
+// by construction, so nothing to de-dupe). Never throws - if Telegram
+// itself isn't configured or reachable, there is nowhere left to report
+// that failure to beyond the server console.
+const alertCooldowns = new Map(); // key -> last-sent timestamp
+const ALERT_COOLDOWN_MS = 10 * 60 * 1000;
+
+async function notifyAdmin(text, { key, cooldownMs = ALERT_COOLDOWN_MS } = {}) {
+  if (key) {
+    const last = alertCooldowns.get(key);
+    if (last && Date.now() - last < cooldownMs) return { ok: false, reason: "cooldown" };
+    alertCooldowns.set(key, Date.now());
+  }
+  console.warn(`[alert] ${text.replace(/\n/g, " ")}`);
+  if (!bot || !ADMIN_CHAT_ID) return { ok: false, reason: "Telegram bot is not configured." };
+  try {
+    await bot.sendMessage(ADMIN_CHAT_ID, text, { parse_mode: "Markdown" });
+    return { ok: true };
+  } catch (err) {
+    console.error("[alert] failed to send Telegram alert:", err.message);
+    return { ok: false, reason: err.message };
+  }
+}
+
 // Called by the website when a customer submits their payment screenshot.
 async function sendOrderForReview(order, proofPath) {
   if (!bot || !ADMIN_CHAT_ID) {
     return { ok: false, reason: "Telegram bot is not configured (token / admin chat id missing)." };
   }
+  const buttons = {
+    inline_keyboard: [
+      [
+        { text: "✅ Accept", callback_data: `ord:accept:${order.id}` },
+        { text: "❌ Reject", callback_data: `ord:reject:${order.id}` },
+      ],
+    ],
+  };
   try {
     await bot.sendPhoto(ADMIN_CHAT_ID, fs.createReadStream(proofPath), {
       caption: orderSummaryText(order),
       parse_mode: "Markdown",
-      reply_markup: {
-        inline_keyboard: [
-          [
-            { text: "✅ Accept", callback_data: `ord:accept:${order.id}` },
-            { text: "❌ Reject", callback_data: `ord:reject:${order.id}` },
-          ],
-        ],
-      },
+      reply_markup: buttons,
     });
     return { ok: true };
   } catch (err) {
-    return { ok: false, reason: err.message };
+    // The photo attach is what can fail on its own (a bad/huge file, a
+    // transient Telegram hiccup) even while the bot itself is fine - retry
+    // as a plain text message with the same Accept/Reject buttons, so the
+    // order is still actionable from Telegram even without the receipt
+    // image inline.
+    try {
+      await bot.sendMessage(
+        ADMIN_CHAT_ID,
+        `⚠️ _Payment screenshot failed to attach (${err.message}) — reviewing without it:_\n\n${orderSummaryText(order)}`,
+        { parse_mode: "Markdown", reply_markup: buttons }
+      );
+      return { ok: true, viaFallback: true };
+    } catch (err2) {
+      return { ok: false, reason: err2.message };
+    }
   }
 }
 
@@ -547,4 +593,4 @@ async function handleOrderDecision(query) {
   return announceAccepted(order);
 }
 
-module.exports = { initBot, sendOrderForReview, announceAccepted };
+module.exports = { initBot, sendOrderForReview, announceAccepted, notifyAdmin };

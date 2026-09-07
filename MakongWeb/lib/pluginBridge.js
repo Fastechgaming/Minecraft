@@ -160,6 +160,52 @@ function getLiveRankings() {
   };
 }
 
+// Periodic sweep that Telegram-alerts on a server dropping off (or coming
+// back to) the bridge, so a MakongCore plugin going down is something the
+// admin hears about instead of only discovering the next time a store order
+// silently falls back to manual delivery. Purely a transition detector: a
+// server whose very first observation this run is already offline (e.g. it
+// was down before the website itself last restarted - see the file-level
+// note above on this state being in-memory only) is not alerted on, since
+// there is no known-online moment to compare against yet.
+//
+// telegram/bot.js is require()'d lazily inside the interval rather than at
+// the top of this file - that module itself requires this one, and a
+// top-level require here would form a cycle that (depending on load order)
+// can hand back an incomplete, half-initialized export.
+const HEALTH_CHECK_INTERVAL_MS = 20_000;
+const onlineState = new Map(); // serverId -> last known online state we've alerted on
+let healthCheckTimer = null;
+
+function startHealthCheck() {
+  if (healthCheckTimer) return;
+  healthCheckTimer = setInterval(() => {
+    const now = Date.now();
+    const telegram = require("../telegram/bot");
+    for (const [serverId, e] of servers.entries()) {
+      const online = now - e.lastSeen < ONLINE_WINDOW_MS;
+      const known = onlineState.get(serverId);
+      if (known === undefined) {
+        onlineState.set(serverId, online);
+        continue;
+      }
+      if (known && !online) {
+        onlineState.set(serverId, false);
+        telegram
+          .notifyAdmin(
+            `🔴 *${serverId}* dropped off the website bridge — it stopped polling. Store orders for this gamemode will fall back to manual delivery until it reconnects.`,
+            { key: `server-offline-${serverId}`, cooldownMs: 0 }
+          )
+          .catch(() => {});
+      } else if (!known && online) {
+        onlineState.set(serverId, true);
+        telegram.notifyAdmin(`🟢 *${serverId}* is back online on the website bridge.`, { key: undefined }).catch(() => {});
+      }
+    }
+  }, HEALTH_CHECK_INTERVAL_MS);
+  healthCheckTimer.unref();
+}
+
 module.exports = {
   enabled,
   register,
@@ -175,4 +221,5 @@ module.exports = {
   drainPongs,
   reportRankings,
   getLiveRankings,
+  startHealthCheck,
 };

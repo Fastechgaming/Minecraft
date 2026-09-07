@@ -36,6 +36,16 @@ function enabled() {
   return Boolean(url && secret);
 }
 
+// Tracks whether the last attempt reached the plugin at all (independent of
+// whatever HTTP status it answered with), so a Telegram alert only fires on
+// the down/up transition rather than once per failed request - this URL is
+// hit on essentially every store/games page load, so without that it would
+// spam on every single request while the plugin stays down. Only relevant
+// once MAKONGCORE_URL/SECRET are actually set (see the early return below,
+// before this ever gets involved) - a site that never configured this
+// integration should never alert about it.
+let unreachable = false;
+
 async function request(method, path, payload) {
   const { url, secret } = config();
   if (!url || !secret) return { ok: false, linked: false, error: "MakongCore is not configured." };
@@ -51,6 +61,16 @@ async function request(method, path, payload) {
       body,
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
+    if (unreachable) {
+      unreachable = false;
+      // Lazy require - avoids a top-level circular require with
+      // telegram/bot.js (which doesn't currently require this module, but
+      // keeping the pattern consistent with lib/pluginBridge.js's own note
+      // means one fewer thing to get wrong if that ever changes).
+      require("../telegram/bot")
+        .notifyAdmin(`🟢 *MakongCore reachable again* — the website can reach the plugin's API at \`${url}\` again.`, { key: undefined })
+        .catch(() => {});
+    }
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       console.warn(`[makongcore] ${method} ${path} -> ${res.status} ${data.error || ""}`);
@@ -60,6 +80,15 @@ async function request(method, path, payload) {
   } catch (err) {
     // The server being down must never take the website down with it.
     console.warn(`[makongcore] ${method} ${path} failed: ${err.message}`);
+    if (!unreachable) {
+      unreachable = true;
+      require("../telegram/bot")
+        .notifyAdmin(
+          `🔴 *MakongCore unreachable* — the website couldn't reach the plugin's API at \`${url}\`.\n\nError: ${err.message}`,
+          { key: "makongcore-unreachable", cooldownMs: 0 }
+        )
+        .catch(() => {});
+    }
     return { ok: false, linked: false, error: "Could not reach the Minecraft server." };
   }
 }

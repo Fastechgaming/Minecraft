@@ -328,6 +328,7 @@ router.post("/checkout", async (req, res) => {
       return res.status(err.code === "NOT_SIGNED_IN" ? 401 : 400).json({ error: err.message, code: err.code });
     }
     console.error("[checkout] error:", err);
+    telegram.notifyAdmin(`🔥 *Store error* — /api/checkout threw: ${err.message}`, { key: "checkout-error", cooldownMs: 5 * 60 * 1000 }).catch(() => {});
     res.status(500).json({ error: err.message || "Failed to start checkout" });
   }
 });
@@ -375,6 +376,7 @@ router.post("/cart/checkout", async (req, res) => {
       return res.status(err.code === "NOT_SIGNED_IN" ? 401 : 400).json({ error: err.message, code: err.code });
     }
     console.error("[cart checkout] error:", err);
+    telegram.notifyAdmin(`🔥 *Store error* — /api/cart/checkout threw: ${err.message}`, { key: "cart-checkout-error", cooldownMs: 5 * 60 * 1000 }).catch(() => {});
     res.status(500).json({ error: err.message || "Failed to start checkout" });
   }
 });
@@ -419,6 +421,14 @@ router.get("/checkout/:id/pay-tebex", async (req, res) => {
     console.error("[tebex] pay-tebex failed:", reason);
     res.redirect(`/checkout?order=${encodeURIComponent(req.params.id)}&tebexError=1`);
   };
+  // Same as fail(), plus a Telegram alert - reserved for reasons that mean
+  // something is actually broken (Tebex misconfigured, its API failing, a
+  // catalog gap) rather than routine navigation (a stale order link, an
+  // order already decided) that isn't worth paging anyone about.
+  const failOperational = (reason) => {
+    telegram.notifyAdmin(`🔥 *Tebex checkout error* — ${reason}`, { key: "tebex-pay-error", cooldownMs: 5 * 60 * 1000 }).catch(() => {});
+    fail(reason);
+  };
 
   if (!tebex.enabled()) return fail("Tebex is not configured");
 
@@ -434,7 +444,7 @@ router.get("/checkout/:id/pay-tebex", async (req, res) => {
   const resolved = [];
   for (const line of lines) {
     const item = store.findItem(line.itemId);
-    if (!item || !item.tebexPackageId) return fail(`Item has no linked Tebex package: ${line.itemId}`);
+    if (!item || !item.tebexPackageId) return failOperational(`Item has no linked Tebex package: ${line.itemId}`);
     resolved.push({ item, quantity: line.quantity || 1 });
   }
 
@@ -447,16 +457,16 @@ router.get("/checkout/:id/pay-tebex", async (req, res) => {
     cancelUrl,
     custom: { orderId: order.id },
   });
-  if (!basketResult.ok) return fail(basketResult.reason);
+  if (!basketResult.ok) return failOperational(basketResult.reason);
 
   const basketIdent = basketResult.basket.ident;
   let checkoutUrl = null;
   for (const { item, quantity } of resolved) {
     const packageResult = await tebex.addPackage(basketIdent, item.tebexPackageId, quantity);
-    if (!packageResult.ok) return fail(packageResult.reason);
+    if (!packageResult.ok) return failOperational(packageResult.reason);
     checkoutUrl = (packageResult.basket.links && packageResult.basket.links.checkout) || checkoutUrl;
   }
-  if (!checkoutUrl) return fail("Tebex did not return a checkout link");
+  if (!checkoutUrl) return failOperational("Tebex did not return a checkout link");
 
   store.updateOrder(order.id, { tebexBasketIdent: basketIdent });
   res.redirect(checkoutUrl);
@@ -480,7 +490,11 @@ router.post("/checkout/:id/verify-tebex", async (req, res) => {
   }
 
   const basketResult = await tebex.getBasket(order.tebexBasketIdent);
-  if (!basketResult.ok) return res.status(502).json({ error: basketResult.reason });
+  if (!basketResult.ok) {
+    console.error("[tebex] verify-tebex failed:", basketResult.reason);
+    telegram.notifyAdmin(`🔥 *Tebex verify error* — ${basketResult.reason}`, { key: "tebex-verify-error", cooldownMs: 5 * 60 * 1000 }).catch(() => {});
+    return res.status(502).json({ error: basketResult.reason });
+  }
 
   if (!basketResult.basket.complete) {
     return res.json({ ok: true, status: "not_paid" });
