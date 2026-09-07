@@ -858,9 +858,13 @@ a.feature-card.linked .feature-title { color: var(--link-accent); }
 }
 
 /* Cart toggle - floats bottom-right over the page (fixed to the viewport,
-   not the store-controls bar it used to sit in), same stone-button
-   language as the rest of the store chrome. Store icon + "Cart" label +
-   a small badge for the item count. */
+   not the store-controls bar it used to sit in). Given the bold gold
+   "call to action" treatment (same gradient as Buy Now / Checkout)
+   instead of the muted stone-button look, specifically so it stands out
+   against the page rather than blending in as another piece of chrome -
+   this is the button that gets you to checkout. Gently pulses with a
+   glowing ring while the cart actually has something in it.
+   Store icon + "Cart" label + a badge for the item count. */
 .cart-toggle {
   position: fixed;
   right: 1.25rem;
@@ -868,41 +872,53 @@ a.feature-card.linked .feature-title { color: var(--link-accent); }
   z-index: 60;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  background: var(--stone-surface);
+  gap: 0.55rem;
+  background: linear-gradient(180deg, var(--gold-light), var(--gold));
   border: 3px solid var(--stone-darkest);
   border-radius: 999px;
-  padding: 0.6rem 1.15rem 0.6rem 0.65rem;
+  padding: 0.75rem 1.4rem 0.75rem 0.8rem;
   cursor: pointer;
-  box-shadow: var(--stone-bevel), 0 4px 0 var(--stone-darkest), 0 8px 16px rgba(42, 22, 8, 0.3);
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.4), 0 5px 0 var(--stone-darkest), 0 10px 20px rgba(42, 22, 8, 0.4);
   transition: transform 0.18s cubic-bezier(.34,1.56,.64,1), box-shadow 0.15s;
 }
 .cart-toggle[hidden] { display: none; }
-.cart-toggle:hover { transform: scale(1.05); }
-.cart-toggle:active { transform: translateY(3px); box-shadow: var(--stone-bevel), 0 1px 0 var(--stone-darkest); }
-.cart-icon { width: 26px; height: 26px; object-fit: contain; flex-shrink: 0; }
-.cart-label { font-weight: 800; color: var(--brown-dark); font-size: 0.95rem; }
+.cart-toggle:hover { transform: scale(1.08); }
+.cart-toggle:active { transform: translateY(3px); box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.4), 0 1px 0 var(--stone-darkest); }
+.cart-toggle:has(.cart-badge:not([hidden])) { animation: cart-toggle-pulse 2s ease-in-out infinite; }
+@keyframes cart-toggle-pulse {
+  0%, 100% { box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.4), 0 5px 0 var(--stone-darkest), 0 10px 20px rgba(42, 22, 8, 0.4), 0 0 0 0 rgba(157, 255, 87, 0.55); }
+  50% { box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.4), 0 5px 0 var(--stone-darkest), 0 10px 20px rgba(42, 22, 8, 0.4), 0 0 0 10px rgba(157, 255, 87, 0); }
+}
+.cart-icon { width: 30px; height: 30px; object-fit: contain; flex-shrink: 0; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.25)); }
+.cart-label {
+  font-family: "Minecraft", "Baloo 2", sans-serif;
+  font-weight: 800;
+  color: var(--brown-darkest);
+  font-size: 1.05rem;
+  letter-spacing: 0.02em;
+}
 .cart-badge {
   position: absolute;
-  top: -8px;
-  right: -8px;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 5px;
+  top: -10px;
+  right: -10px;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
   border-radius: 999px;
   background: var(--terracotta);
   color: #fff;
   font-family: "Minecraft", "Baloo 2", sans-serif;
-  font-size: 0.7rem;
+  font-size: 0.78rem;
   font-weight: 800;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid var(--stone-darkest);
+  border: 3px solid var(--stone-darkest);
+  box-shadow: 0 2px 6px rgba(42, 22, 8, 0.4);
 }
 .cart-badge[hidden] { display: none; }
 @media (max-width: 620px) {
-  .cart-toggle { right: 1rem; bottom: 1rem; padding: 0.55rem 1rem 0.55rem 0.55rem; }
+  .cart-toggle { right: 1rem; bottom: 1rem; padding: 0.65rem 1.15rem 0.65rem 0.7rem; }
 }
 
 /* Cart modal rows - same "receipt" feel as the checkout summary. */
