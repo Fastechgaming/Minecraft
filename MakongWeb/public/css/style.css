@@ -858,13 +858,11 @@ a.feature-card.linked .feature-title { color: var(--link-accent); }
 }
 
 /* Cart toggle - floats bottom-right over the page (fixed to the viewport,
-   not the store-controls bar it used to sit in). Given the bold gold
-   "call to action" treatment (same gradient as Buy Now / Checkout)
-   instead of the muted stone-button look, specifically so it stands out
-   against the page rather than blending in as another piece of chrome -
-   this is the button that gets you to checkout. Gently pulses with a
-   glowing ring while the cart actually has something in it.
-   Store icon + "Cart" label + a badge for the item count. */
+   not the store-controls bar it used to sit in). Solid yellow rather than
+   the site's --gold (which actually reads as pale lime, see Buy Now) -
+   picked specifically so this button doesn't blend in as another piece
+   of chrome. Gently pulses with a glowing ring while the cart actually
+   has something in it. Store icon + "Cart" label + item-count badge. */
 .cart-toggle {
   position: fixed;
   right: 1.25rem;
@@ -873,27 +871,27 @@ a.feature-card.linked .feature-title { color: var(--link-accent); }
   display: flex;
   align-items: center;
   gap: 0.55rem;
-  background: linear-gradient(180deg, var(--gold-light), var(--gold));
+  background: linear-gradient(180deg, #ffe066, #ffc107);
   border: 3px solid var(--stone-darkest);
   border-radius: 999px;
   padding: 0.75rem 1.4rem 0.75rem 0.8rem;
   cursor: pointer;
-  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.4), 0 5px 0 var(--stone-darkest), 0 10px 20px rgba(42, 22, 8, 0.4);
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.55), 0 5px 0 #b8860b, 0 10px 20px rgba(42, 22, 8, 0.4);
   transition: transform 0.18s cubic-bezier(.34,1.56,.64,1), box-shadow 0.15s;
 }
 .cart-toggle[hidden] { display: none; }
 .cart-toggle:hover { transform: scale(1.08); }
-.cart-toggle:active { transform: translateY(3px); box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.4), 0 1px 0 var(--stone-darkest); }
+.cart-toggle:active { transform: translateY(3px); box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.55), 0 1px 0 #b8860b; }
 .cart-toggle:has(.cart-badge:not([hidden])) { animation: cart-toggle-pulse 2s ease-in-out infinite; }
 @keyframes cart-toggle-pulse {
-  0%, 100% { box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.4), 0 5px 0 var(--stone-darkest), 0 10px 20px rgba(42, 22, 8, 0.4), 0 0 0 0 rgba(157, 255, 87, 0.55); }
-  50% { box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.4), 0 5px 0 var(--stone-darkest), 0 10px 20px rgba(42, 22, 8, 0.4), 0 0 0 10px rgba(157, 255, 87, 0); }
+  0%, 100% { box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.55), 0 5px 0 #b8860b, 0 10px 20px rgba(42, 22, 8, 0.4), 0 0 0 0 rgba(255, 193, 7, 0.6); }
+  50% { box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.55), 0 5px 0 #b8860b, 0 10px 20px rgba(42, 22, 8, 0.4), 0 0 0 10px rgba(255, 193, 7, 0); }
 }
 .cart-icon { width: 30px; height: 30px; object-fit: contain; flex-shrink: 0; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.25)); }
 .cart-label {
   font-family: "Minecraft", "Baloo 2", sans-serif;
   font-weight: 800;
-  color: var(--brown-darkest);
+  color: #4a3300;
   font-size: 1.05rem;
   letter-spacing: 0.02em;
 }
@@ -2506,8 +2504,31 @@ html[lang="zh"] .board-mini-title { text-transform: none; letter-spacing: 0; }
   color: var(--terracotta);
   margin-bottom: 0.9rem;
 }
+/* All three actions (Confirm / Add to Cart / Cancel) sized identically so
+   they read as one uniform button stack, not a primary button with two
+   afterthoughts hanging off it. Only size/shape is unified here - each
+   keeps its own color treatment (gold confirm, stone add-to-cart,
+   outlined cancel) so Confirm still reads as the primary action. */
 .confirm-actions { display: flex; flex-direction: column; gap: 0.5rem; align-items: center; }
-.confirm-actions .continue-btn { max-width: 260px; }
+.confirm-actions .continue-btn,
+.confirm-actions .change-name-btn,
+.confirm-actions .back-link {
+  width: 100%;
+  max-width: 260px;
+  box-sizing: border-box;
+  padding: 0.85rem;
+  font-size: 1.05rem;
+  border-radius: 12px;
+  text-align: center;
+}
+.confirm-actions .change-name-btn { border-width: 3px; }
+.confirm-actions .back-link {
+  border: 3px solid var(--stone-darkest);
+  background: transparent;
+  color: var(--brown-dark);
+  font-family: "Minecraft", "Baloo 2", sans-serif;
+  font-weight: 800;
+}
 
 /* =========================================================
    Block Breaker + Diamond Rush textures
