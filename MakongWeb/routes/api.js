@@ -4,6 +4,7 @@ const multer = require("multer");
 const { nanoid } = require("nanoid");
 const store = require("../lib/store");
 const rankings = require("../lib/rankings");
+const coupons = require("../lib/coupons");
 const { getServerStatus } = require("../lib/minecraft");
 const { normalizeServerName, isValidRawName } = require("../public/js/playername");
 const telegram = require("../telegram/bot");
@@ -82,21 +83,24 @@ router.get("/rankings", (req, res) => {
   res.json({ ...rankings.getRankings(), live: false });
 });
 
-// Public view of an order - used by /checkout and /success.
-// Deliberately omits the delivery command and the stored proof filename.
-router.get("/order/:id", (req, res) => {
-  const order = store.findOrder(req.params.id);
-  if (!order) return res.status(404).json({ error: "Order not found" });
+// Public, safe subset of an order - used by /checkout and /success, and by
+// the coupon routes below to return the updated order after a change.
+// Deliberately omits the delivery command and the stored proof filename. A
+// coupon can only ever be honored on the KHQR path (Tebex packages have no
+// price override - see lib/tebex.js), so tebexAvailable is forced false
+// once one is applied rather than letting the customer pay full price on
+// Tebex after being shown a discounted total.
+function publicOrder(order) {
+  const couponInfo = order.coupon ? { code: order.coupon.code, discount: order.coupon.discount } : null;
 
-  // A cart order (order.items present) - see /cart/checkout above. Tebex is
-  // only offered when EVERY line has a linked package, since one basket has
-  // to cover the whole cart or none of it.
   if (order.items) {
-    const tebexAvailable = order.items.every((line) => {
-      const item = store.findItem(line.itemId);
-      return Boolean(item && item.tebexPackageId);
-    });
-    return res.json({
+    const tebexAvailable =
+      !order.coupon &&
+      order.items.every((line) => {
+        const item = store.findItem(line.itemId);
+        return Boolean(item && item.tebexPackageId);
+      });
+    return {
       id: order.id,
       items: order.items.map((line) => ({
         itemId: line.itemId,
@@ -109,23 +113,27 @@ router.get("/order/:id", (req, res) => {
         upgrade: line.upgrade || null,
       })),
       amount: order.amount,
+      originalAmount: order.originalAmount || null,
+      coupon: couponInfo,
       currency: order.currency,
       playerName: order.playerName,
       edition: order.edition,
       status: order.status,
       createdAt: order.createdAt,
       tebexAvailable,
-    });
+    };
   }
 
   const item = store.findItem(order.itemId);
-  res.json({
+  return {
     id: order.id,
     itemId: order.itemId,
     itemName: order.itemName,
     itemImage: order.itemImage,
     itemDesc: order.itemDesc,
     amount: order.amount,
+    originalAmount: order.originalAmount || null,
+    coupon: couponInfo,
     currency: order.currency,
     playerName: order.playerName,
     edition: order.edition,
@@ -135,8 +143,59 @@ router.get("/order/:id", (req, res) => {
     createdAt: order.createdAt,
     // Only true when this item has a tebexPackageId configured - lets
     // /checkout decide whether to show the "Pay via Tebex" button at all.
-    tebexAvailable: Boolean(item && item.tebexPackageId),
+    tebexAvailable: !order.coupon && Boolean(item && item.tebexPackageId),
+  };
+}
+
+router.get("/order/:id", (req, res) => {
+  const order = store.findOrder(req.params.id);
+  if (!order) return res.status(404).json({ error: "Order not found" });
+  res.json(publicOrder(order));
+});
+
+// Applies (or swaps) a coupon code on an order that hasn't been paid yet.
+// Always evaluated against the order's original pre-discount amount, so
+// re-applying a different code never compounds off an already-discounted
+// total; swapping releases the old code's redemption first.
+router.post("/order/:id/coupon", (req, res) => {
+  const order = store.findOrder(req.params.id);
+  if (!order) return res.status(404).json({ error: "Order not found" });
+  if (order.status !== "awaiting_payment") {
+    return res.status(400).json({ error: "This order has already been submitted." });
+  }
+
+  const baseAmount = order.originalAmount != null ? order.originalAmount : order.amount;
+  const result = coupons.evaluate((req.body || {}).code, baseAmount);
+  if (!result.ok) return res.status(400).json({ error: result.error });
+
+  if (order.coupon) coupons.releaseRedemption(order.coupon.id);
+  coupons.recordRedemption(result.coupon.id);
+
+  const updated = store.updateOrder(order.id, {
+    originalAmount: baseAmount,
+    amount: result.finalAmount,
+    coupon: { id: result.coupon.id, code: result.coupon.code, type: result.coupon.type, value: result.coupon.value, discount: result.discount },
   });
+
+  res.json(publicOrder(updated));
+});
+
+router.post("/order/:id/coupon/remove", (req, res) => {
+  const order = store.findOrder(req.params.id);
+  if (!order) return res.status(404).json({ error: "Order not found" });
+  if (order.status !== "awaiting_payment") {
+    return res.status(400).json({ error: "This order has already been submitted." });
+  }
+  if (!order.coupon) return res.status(400).json({ error: "No coupon is applied." });
+
+  coupons.releaseRedemption(order.coupon.id);
+  const updated = store.updateOrder(order.id, {
+    amount: order.originalAmount != null ? order.originalAmount : order.amount,
+    originalAmount: undefined,
+    coupon: undefined,
+  });
+
+  res.json(publicOrder(updated));
 });
 
 const MAX_KEY_QTY = 20;
@@ -366,6 +425,10 @@ router.get("/checkout/:id/pay-tebex", async (req, res) => {
   const order = store.findOrder(req.params.id);
   if (!order) return fail("Order not found");
   if (order.status !== "awaiting_payment") return fail(`Order already ${order.status}`);
+  // A coupon can only be honored on the KHQR path - Tebex packages have no
+  // price override (see lib/tebex.js), so a discounted order can't be sent
+  // there without silently charging full price.
+  if (order.coupon) return fail("This order has a coupon applied — pay with KHQR to use it");
 
   const lines = order.items || [{ itemId: order.itemId, quantity: order.quantity || 1 }];
   const resolved = [];

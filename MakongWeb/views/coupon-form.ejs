@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= coupon ? "Edit" : "Add" %> Coupon · Admin</title>
+  <link rel="stylesheet" href="/css/admin.css" />
+</head>
+<body class="admin-body">
+  <header class="admin-header">
+    <h1><%= coupon ? "Edit coupon" : "Add coupon" %></h1>
+    <a class="btn-ghost" href="/admin/coupons">Back to list</a>
+  </header>
+
+  <main class="admin-main">
+    <form class="admin-form" method="POST" action="<%= coupon ? '/admin/coupons/' + coupon.id : '/admin/coupons' %>">
+      <label>Code
+        <input type="text" name="code" value="<%= coupon ? coupon.code : '' %>" placeholder="WELCOME10" required style="text-transform:uppercase;" />
+        <small style="font-weight:400; color:#7a7060;">What the customer types at checkout. Not case-sensitive.</small>
+      </label>
+
+      <label>Discount type
+        <select name="type" id="coupon-type" required>
+          <option value="percent" <%= (!coupon || coupon.type === "percent") ? "selected" : "" %>>Percent off</option>
+          <option value="fixed" <%= (coupon && coupon.type === "fixed") ? "selected" : "" %>>Fixed amount off (USD)</option>
+        </select>
+      </label>
+
+      <label>Value
+        <input type="number" step="0.01" min="0" name="value" value="<%= coupon ? coupon.value : '' %>" required />
+        <small style="font-weight:400; color:#7a7060;">Either a percent (e.g. 10 for 10% off) or a dollar amount (e.g. 5 for $5 off), depending on the type above.</small>
+      </label>
+
+      <label>Minimum order amount (optional)
+        <input type="number" step="0.01" min="0" name="minAmount" value="<%= coupon && coupon.minAmount != null ? coupon.minAmount : '' %>" placeholder="No minimum" />
+      </label>
+
+      <label>Max uses (optional)
+        <input type="number" step="1" min="1" name="maxUses" value="<%= coupon && coupon.maxUses != null ? coupon.maxUses : '' %>" placeholder="Unlimited" />
+        <small style="font-weight:400; color:#7a7060;">Currently used: <%= coupon ? (coupon.usedCount || 0) : 0 %>.</small>
+      </label>
+
+      <label>Expires (optional)
+        <input type="date" name="expiresAt" value="<%= coupon && coupon.expiresAt ? new Date(coupon.expiresAt).toISOString().slice(0,10) : '' %>" />
+      </label>
+
+      <label style="flex-direction:row; align-items:center; gap:8px;">
+        <input type="checkbox" name="active" style="width:auto;" <%= (!coupon || coupon.active) ? "checked" : "" %> />
+        Active
+      </label>
+
+      <button class="btn" type="submit"><%= coupon ? "Save changes" : "Add coupon" %></button>
+    </form>
+  </main>
+</body>
+</html>

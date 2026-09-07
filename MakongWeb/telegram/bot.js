@@ -322,6 +322,11 @@ function lineText(line) {
 }
 
 function orderSummaryText(order) {
+  // *Total*/*Amount* is always order.amount - already the coupon-discounted
+  // figure when one is applied, so this line alone is what the admin should
+  // expect to see land in the bank account. The coupon line just explains why.
+  const couponLine = order.coupon ? `*Coupon:* \`${order.coupon.code}\` (−$${Number(order.coupon.discount).toFixed(2)})` : "";
+
   if (order.items) {
     const gamemodeNames = [...new Set(order.items.map((i) => gamemodeName(i.gamemode)))].join(", ");
     return [
@@ -331,6 +336,7 @@ function orderSummaryText(order) {
       "*Items:*",
       ...order.items.map(lineText),
       "",
+      couponLine,
       `*Total:* $${Number(order.amount).toFixed(2)} ${order.currency}`,
       `*In-server name:* \`${order.playerName}\``,
       `*Edition:* ${order.edition === "bedrock" ? "Bedrock" : "Java"}`,
@@ -349,6 +355,7 @@ function orderSummaryText(order) {
     order.upgrade ? `*Upgrade:* ${order.upgrade.fromRankId} → ${order.upgrade.toRankId}` : "",
     order.duration ? `*Duration:* ${order.duration === "permanent" ? "Permanent" : "1 Month"}` : "",
     order.quantity > 1 ? `*Quantity:* ${order.quantity}` : "",
+    couponLine,
     `*Amount:* $${Number(order.amount).toFixed(2)} ${order.currency}`,
     `*In-server name:* \`${order.playerName}\``,
     `*Edition:* ${order.edition === "bedrock" ? "Bedrock" : "Java"}`,

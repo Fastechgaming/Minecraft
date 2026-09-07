@@ -20,6 +20,15 @@ function lineTagsHtml(line) {
   return tags.length ? `<span class="checkout-item-tags">${tags.join(" · ")}</span>` : "";
 }
 
+// A coupon on the order shows as a strikethrough original total plus a
+// discount row, before the final (already-discounted) total - same markup
+// for both order shapes below.
+function couponRowsHtml(order) {
+  if (!order.coupon) return "";
+  return `
+    <div><span>${escapeHtml(t("checkout.discount"))} (${escapeHtml(order.coupon.code)})</span><strong>−${escapeHtml(formatPrice(order.coupon.discount))}</strong></div>`;
+}
+
 // A cart order (order.items present) shows one row per item plus the
 // combined total; a single-item order keeps its original one-item layout.
 function checkoutSummaryMarkup(order) {
@@ -45,6 +54,7 @@ function checkoutSummaryMarkup(order) {
       <div class="checkout-rows">
         <div><span>${escapeHtml(t("checkout.inServerName"))}</span><strong>${escapeHtml(order.playerName)}</strong></div>
         <div><span>${escapeHtml(t("checkout.edition"))}</span><strong>${escapeHtml(t(order.edition === "bedrock" ? "buy.bedrock" : "buy.java"))}</strong></div>
+        ${couponRowsHtml(order)}
         <div><span>${escapeHtml(t("checkout.total"))}</span><strong class="price">${escapeHtml(formatPrice(order.amount))}</strong></div>
       </div>
     </div>`;
@@ -69,10 +79,79 @@ function checkoutSummaryMarkup(order) {
               ? `<div><span>${escapeHtml(t("store.quantity"))}</span><strong>×${order.quantity}</strong></div>`
               : ""
           }
+          ${couponRowsHtml(order)}
           <div><span>${escapeHtml(t("checkout.total"))}</span><strong class="price">${escapeHtml(formatPrice(order.amount))}</strong></div>
         </div>
       </div>
     </div>`;
+}
+
+// The coupon step: an input+apply while none is applied, or a small
+// "applied" line with a Remove link once one is. Only shown while the
+// order is still awaiting payment (checked by the caller).
+function couponStepMarkup(order) {
+  if (order.coupon) {
+    return `
+    <div class="checkout-step coupon-step">
+      <p class="coupon-applied-line">
+        ${escapeHtml(t("checkout.couponApplied", { code: order.coupon.code }))}
+        <button type="button" class="link-btn" id="coupon-remove-btn">${escapeHtml(t("checkout.couponRemove"))}</button>
+      </p>
+      <p class="checkout-hint">${escapeHtml(t("checkout.couponTebexNote"))}</p>
+    </div>`;
+  }
+  return `
+    <div class="checkout-step coupon-step">
+      <h3>${escapeHtml(t("checkout.couponTitle"))}</h3>
+      <div class="coupon-input-row">
+        <input type="text" id="coupon-input" placeholder="${escapeHtml(t("checkout.couponPlaceholder"))}" autocomplete="off" />
+        <button type="button" class="change-name-btn" id="coupon-apply-btn">${escapeHtml(t("checkout.couponApply"))}</button>
+      </div>
+    </div>`;
+}
+
+function wireCouponStep() {
+  const applyBtn = document.getElementById("coupon-apply-btn");
+  const removeBtn = document.getElementById("coupon-remove-btn");
+
+  if (applyBtn) {
+    const input = document.getElementById("coupon-input");
+    const apply = async () => {
+      const code = input.value.trim();
+      if (!code) return;
+      applyBtn.disabled = true;
+      applyBtn.textContent = t("checkout.couponApplying");
+      try {
+        await fetchJSON(`/api/order/${encodeURIComponent(orderId)}/coupon`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code }),
+        });
+        await loadCheckout();
+      } catch (err) {
+        showToast(err.message);
+        applyBtn.disabled = false;
+        applyBtn.textContent = t("checkout.couponApply");
+      }
+    };
+    applyBtn.addEventListener("click", apply);
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") apply();
+    });
+  }
+
+  if (removeBtn) {
+    removeBtn.addEventListener("click", async () => {
+      removeBtn.disabled = true;
+      try {
+        await fetchJSON(`/api/order/${encodeURIComponent(orderId)}/coupon/remove`, { method: "POST" });
+        await loadCheckout();
+      } catch (err) {
+        showToast(err.message);
+        removeBtn.disabled = false;
+      }
+    });
+  }
 }
 
 async function loadCheckout() {
@@ -110,6 +189,8 @@ async function loadCheckout() {
   const khqrSrc = cfg.khqrImage || "/images/site/khqr.png";
   content.innerHTML = `
     ${checkoutSummaryMarkup(order)}
+
+    ${couponStepMarkup(order)}
 
     ${
       cfg.tebexHeadlessEnabled && order.tebexAvailable
@@ -155,6 +236,7 @@ async function loadCheckout() {
   `;
 
   wireFileDrop();
+  wireCouponStep();
   document.getElementById("submit-btn").addEventListener("click", submitProof);
 }
 

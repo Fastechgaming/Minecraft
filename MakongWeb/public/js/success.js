@@ -56,9 +56,14 @@ function render() {
         : ""
     }`;
 
+  const couponRow = successOrder.coupon
+    ? `<div><span>${escapeHtml(t("checkout.discount"))} (${escapeHtml(successOrder.coupon.code)})</span><strong>−${escapeHtml(formatPrice(successOrder.coupon.discount))}</strong></div>`
+    : "";
+
   receipt.innerHTML = `
     ${itemRow}
     <div><span>${escapeHtml(t("checkout.inServerName"))}</span><strong>${escapeHtml(successOrder.playerName)}</strong></div>
+    ${couponRow}
     <div><span>${escapeHtml(t("success.amount"))}</span><strong>${escapeHtml(formatPrice(successOrder.amount))}</strong></div>
     <div><span>${escapeHtml(t("success.orderId"))}</span><strong>${escapeHtml(successOrder.id)}</strong></div>
   `;
