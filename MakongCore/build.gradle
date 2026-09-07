@@ -3,7 +3,7 @@ plugins {
 }
 
 group = 'com.angkor'
-version = '1.2.19'
+version = '1.2.20'
 
 description = 'Simple, fast, Java + Bedrock compatible team plugin for Paper/Purpur 1.21.x'
 

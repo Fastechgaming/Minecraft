@@ -22,6 +22,9 @@ commands:
 permissions:
   mateam.use:
     default: true
+  mateam.admin:
+    description: Access /mateam (/makongcore) administrative commands
+    default: op
   makongcore.admin:
-    description: Access MakongCore administrative commands
+    description: Access /matier's admin subcommands (stats/set/add/remove/reset/resetall/reload)
     default: op

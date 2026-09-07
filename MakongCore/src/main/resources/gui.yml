@@ -7,7 +7,11 @@
 # INFO: Slots are zero-based (0-53 for a 54-slot inventory).
 # INFO: Lore supports MiniMessage and the dynamic placeholders
 #       {team}, {tag}, {members}, {max}, {points}, {kills},
-#       {deaths}, {kdr}, {stars}, {page}, {pages}, {target}.
+#       {deaths}, {kdr}, {stars}, {page}, {pages}, {target},
+#       {status}, {status_info}, {description}, {color}, {role},
+#       {joined}, {playtime}, {rank}, {metric}, {value}.
+#       Not every placeholder is available on every screen - see
+#       DOCUMENTATION.md's GUI section for which ones apply where.
 # INFO: Run /mateam reload after editing this file.
 # ================================================================
 

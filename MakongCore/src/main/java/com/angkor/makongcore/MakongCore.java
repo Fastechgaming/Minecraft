@@ -153,7 +153,7 @@ public final class MakongCore extends JavaPlugin {
         if (getServer().getPluginManager().getPlugin("PlaceholderAPI") == null) return;
         if (teamPlaceholders != null) teamPlaceholders.unregister();
         if (matierPlaceholders != null) matierPlaceholders.unregister();
-        teamPlaceholders = new TeamPlaceholders(teams);
+        teamPlaceholders = new TeamPlaceholders(teams, teamConfig);
         matierPlaceholders = new MaTierPlaceholders(matier);
         teamPlaceholders.register();
         matierPlaceholders.register();

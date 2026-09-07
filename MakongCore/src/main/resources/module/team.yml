@@ -82,3 +82,8 @@ team:
     max_tag_length: 5
     min_name_length: 3
     max_name_length: 15
+  # INFO: PlaceholderAPI display (see MakongCore's README "PlaceholderAPI"
+  # INFO: section). Supports MiniMessage color tags.
+  placeholders:
+    # INFO: What %team_tag% shows for a player who isn't in any team.
+    no_team: "<gray>No Team</gray>"

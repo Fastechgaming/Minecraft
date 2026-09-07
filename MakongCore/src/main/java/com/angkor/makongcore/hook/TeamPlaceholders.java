@@ -1,5 +1,6 @@
 package com.angkor.makongcore.hook;
 
+import com.angkor.makongcore.config.ModuleConfig;
 import com.angkor.makongcore.model.Team;
 import com.angkor.makongcore.service.TeamService;
 import com.angkor.makongcore.util.Text;
@@ -33,9 +34,15 @@ public final class TeamPlaceholders extends PlaceholderExpansion {
             Map.entry("magenta", "#C74EBD"), Map.entry("pink", "#F38BAA"));
 
     private final TeamService teams;
+    // Kept as the ModuleConfig wrapper (not a resolved FileConfiguration or
+    // String) so a reload - team.yml's own via ModuleConfig#reload(), or a
+    // /mateam reload team - is picked up on the very next placeholder
+    // request without needing to re-register this expansion.
+    private final ModuleConfig teamConfig;
 
-    public TeamPlaceholders(TeamService teams) {
+    public TeamPlaceholders(TeamService teams, ModuleConfig teamConfig) {
         this.teams = teams;
+        this.teamConfig = teamConfig;
     }
 
     @Override public @NotNull String getIdentifier() { return "team"; }
@@ -47,12 +54,20 @@ public final class TeamPlaceholders extends PlaceholderExpansion {
     public String onRequest(OfflinePlayer player, @NotNull String params) {
         if (player == null) return "";
         Team t = teams.byPlayer(player.getUniqueId());
-        if (t == null) return "";
         return switch (params.toLowerCase(Locale.ROOT)) {
-            case "tag" -> coloredTag(t);
-            case "star", "stars" -> String.valueOf(t.stars());
+            case "tag" -> t == null ? noTeamText() : coloredTag(t);
+            case "star", "stars" -> String.valueOf(t == null ? 0 : t.stars());
             default -> null;
         };
+    }
+
+    // Configurable via team.placeholders.no_team in module/team.yml, so
+    // server owners can pick what shows in place of %team_tag% for a
+    // player who isn't in any team (e.g. "<gray>No Team</gray>", or blank
+    // to keep the old behavior).
+    private String noTeamText() {
+        String raw = teamConfig.get().getString("team.placeholders.no_team", "<gray>No Team</gray>");
+        return LegacyComponentSerializer.legacySection().serialize(Text.mm(raw));
     }
 
     private String coloredTag(Team t) {

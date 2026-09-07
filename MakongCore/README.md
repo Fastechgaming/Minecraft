@@ -32,8 +32,8 @@ Optional - only registered if [PlaceholderAPI](https://www.spigotmc.org/resource
 
 | Placeholder | Shows |
 |---|---|
-| `%team_tag%` | The viewed player's team tag, colored in the team's own chosen color (empty if they're not in a team). |
-| `%team_star%` | Their team's current Stars. |
+| `%team_tag%` | The viewed player's team tag, colored in the team's own chosen color, or `team.placeholders.no_team` from `module/team.yml` (default `No Team`) if they're not in a team. |
+| `%team_star%` | Their team's current Stars, or `0` if they're not in a team. |
 | `%matier%` | Their current MaTier tier (`M9`-`M1`). |
 | `%matier_star%` | Their current MaTier Stars. |
 
@@ -139,3 +139,8 @@ MaTier:
 
 ## 1.2.19 changes
 - `config.yml`, `messages.yml`, `gui.yml` and every `module/*.yml` now auto-add any key you're missing (a newer version's default that your existing file predates) on startup and `/mateam reload`, instead of only ever writing the whole file once on first install. New `ConfigUpdater` splices missing keys back into their original position relative to your existing keys - anchored right before whichever of their original neighbors you still have - comments and all, and never touches a key, value, or comment you already have. It works on the file's raw text rather than through Bukkit's own YAML loader specifically so it doesn't strip your comments the way re-saving a `YamlConfiguration` normally would.
+
+## 1.2.20 changes
+- `%team_tag%` no longer just goes blank for a player with no team - it now shows the new `team.placeholders.no_team` setting in `module/team.yml` (default `<gray>No Team</gray>`), read live so a reload picks up a change without restarting.
+- Fixed `/mateam` (`/makongcore`)'s admin commands checking a permission (`mateam.admin`) that `plugin.yml` never actually declared - a permissions plugin granting the one permission `plugin.yml` did document, `makongcore.admin`, wouldn't have covered them (an operator was unaffected either way, since ops pass any undeclared permission check by default). Both are now declared, each covering what it actually gates: `mateam.admin` for `/mateam`, `makongcore.admin` for `/matier`'s admin subcommands.
+- Added `MakongCore/DOCUMENTATION.md` - a single-file reference covering every command, permission, config file/key, message, GUI item and placeholder, meant to be read start to finish rather than searched.
