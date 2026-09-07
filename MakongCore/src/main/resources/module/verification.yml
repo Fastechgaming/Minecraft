@@ -9,8 +9,19 @@ discord:
     id: ""
     required: true
     required_role_id: ""
-    minimum_account_age_days: 180
-    minimum_membership_days: 7
+    # INFO: A Discord account may verify if it satisfies AT LEAST ONE of
+    # INFO: these tiers - each tier needs BOTH its account-age AND its
+    # INFO: guild-membership-age minimum met (both in days; 0 means "no
+    # INFO: minimum"). Add, remove, or edit tiers freely; at least one
+    # INFO: tier is required or nobody will ever pass.
+    # INFO: Shipped defaults: (a) a 6-month-old account that's been in the
+    # INFO: guild for a month, or (b) a 1-year-old account regardless of
+    # INFO: how recently it joined.
+    eligibility_tiers:
+      - minimum_account_age_days: 180
+        minimum_membership_days: 30
+      - minimum_account_age_days: 365
+        minimum_membership_days: 0
   verification:
     channel_id: ""
     panel_message_id: ""

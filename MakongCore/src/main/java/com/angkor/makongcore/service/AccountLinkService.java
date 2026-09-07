@@ -83,7 +83,34 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
     @Override public void onModalInteraction(ModalInteractionEvent e){if(!e.getModalId().equals("makong:verify"))return;String code=e.getValue("code")==null?"":e.getValue("code").getAsString().trim();if(!CODE.matcher(code).matches()){e.reply("❌ Invalid code.").setEphemeral(true).queue();return;} verifyDiscord(e,code);}
     private void verifyDiscord(ModalInteractionEvent e,String code){Pending x=pending.get(code);if(x==null||x.expiresAt<System.currentTimeMillis()){e.reply("❌ Code expired or not found. Join the server again for a new code.").setEphemeral(true).queue();return;}if(!discordAllowed(e.getUser(),e.getMember(),e.getGuild(),false)){e.reply("❌ Your Discord account does not meet the server/account-age requirements.").setEphemeral(true).queue();return;}db.findByDiscord(e.getUser().getId()).thenAccept(existing->{if(existing!=null&&!existing.uuid().equals(x.uuid)){e.reply("❌ This Discord account is already linked to another Minecraft account.").setEphemeral(true).queue();return;}completeDiscord(e,x,existing);});}
     private void completeDiscord(ModalInteractionEvent e,Pending x,Database.AccountLink existing){String telegram=existing==null?null:existing.telegramChatId();db.linkAccount(x.uuid,x.name(),e.getUser().getId(),telegram,x.accountType).thenRun(()->{pending.remove(x.code);playerCodes.remove(x.uuid);frozen.remove(x.uuid);Bukkit.getScheduler().runTask(plugin,()->release(x.uuid));Guild g=e.getGuild();String roleKey=x.accountType.equals("cracked")?"roles.crack":x.accountType.equals("bedrock")?"roles.bedrock":"roles.java";String roleId=cfg.s("discord."+roleKey,"");if(g!=null&&!roleId.isBlank()){Role role=g.getRoleById(roleId);if(role!=null)g.addRoleToMember(e.getUser(),role).queue();}e.reply("✅ Successfully connected to **"+x.name()+"**.").setEphemeral(true).queue();});}
-    private boolean discordAllowed(User u,Member m,Guild g,boolean staff){long minAge=cfg.l("discord.guild.minimum_account_age_days",180),minMember=cfg.l("discord.guild.minimum_membership_days",7);if(g==null||m==null)return false;String guildId=cfg.s("discord.guild.id","");boolean guildRequired=cfg.b("discord.guild.required",true);if(guildRequired&&!guildId.isBlank()&&!g.getId().equals(guildId))return false;if(Duration.between(u.getTimeCreated().toInstant(),Instant.now()).toDays()<minAge)return false;if(m.getTimeJoined()==null||Duration.between(m.getTimeJoined().toInstant(),Instant.now()).toDays()<minMember)return false;String req=cfg.s(staff?"discord.commands.staff_role_id":"discord.guild.required_role_id","");return req.isBlank()||m.getRoles().stream().anyMatch(r->r.getId().equals(req));}
+    private boolean discordAllowed(User u,Member m,Guild g,boolean staff){
+        if(g==null||m==null)return false;
+        String guildId=cfg.s("discord.guild.id","");
+        boolean guildRequired=cfg.b("discord.guild.required",true);
+        if(guildRequired&&!guildId.isBlank()&&!g.getId().equals(guildId))return false;
+        long accountAgeDays=Duration.between(u.getTimeCreated().toInstant(),Instant.now()).toDays();
+        long membershipDays=m.getTimeJoined()==null?-1:Duration.between(m.getTimeJoined().toInstant(),Instant.now()).toDays();
+        if(!eligible(accountAgeDays,membershipDays))return false;
+        String req=cfg.s(staff?"discord.commands.staff_role_id":"discord.guild.required_role_id","");
+        return req.isBlank()||m.getRoles().stream().anyMatch(r->r.getId().equals(req));
+    }
+
+    // A Discord account qualifies to verify if it satisfies AT LEAST ONE
+    // configured tier - each tier needs BOTH its account-age AND its
+    // guild-membership-age minimum met (see discord.guild.eligibility_tiers
+    // in module/verification.yml, e.g. "6-month-old account + 1 month in
+    // the guild" OR "1-year-old account, any membership length"). Discord
+    // doesn't expose phone-verification status to bots at all - there's no
+    // "verified phone number" signal available here, by design on Discord's
+    // side, not a limitation of this plugin.
+    private boolean eligible(long accountAgeDays,long membershipDays){
+        if(membershipDays<0)return false;
+        List<long[]> tiers=cfg.tiers("discord.guild.eligibility_tiers");
+        for(long[] tier:tiers){
+            if(accountAgeDays>=tier[0]&&membershipDays>=tier[1])return true;
+        }
+        return false;
+    }
     @Override public void onSlashCommandInteraction(SlashCommandInteractionEvent e){if(!e.isFromGuild()){e.reply("Guild only.").setEphemeral(true).queue();return;}if(e.getName().equals("ban")||e.getName().equals("unban")){if(!cfg.b("discord.commands."+e.getName()+".enabled",true)){e.reply("❌ This Discord command is disabled.").setEphemeral(true).queue();return;}if(!discordAllowed(e.getUser(),e.getMember(),e.getGuild(),true)){e.reply("❌ You do not meet the Discord guild/role requirements.").setEphemeral(true).queue();return;}String target=e.getOption("name").getAsString(),duration=normalizeDuration(e.getOption("duration")==null?"":e.getOption("duration").getAsString()),reason=e.getOption("reason")==null?"":e.getOption("reason").getAsString();String mcName=target;db.findByDiscord(e.getUser().getId()).thenAccept(staff->{if(staff==null){e.reply("❌ Your Discord account is not linked to Minecraft.").setEphemeral(true).queue();return;}String cmd=e.getName().equals("ban")?"ban":"unban";String args=cmd+" "+target+" --sender="+staff.name()+" --sender-uuid="+staff.uuid()+(cmd.equals("ban")?" "+duration+" "+reason:" "+reason);Bukkit.getScheduler().runTask(plugin,()->Bukkit.dispatchCommand(Bukkit.getConsoleSender(),args));e.reply("✅ Executed `/"+args+"` as **"+staff.name()+"**.").setEphemeral(true).queue();});}}
     private String normalizeDuration(String duration){
         String d=duration==null?"":duration.trim().toLowerCase(Locale.ROOT);
@@ -153,5 +180,23 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
     private void verifyTelegram(String token,String chat,String code){Pending x=pending.get(code);if(x==null||x.discordOnly||x.expiresAt<System.currentTimeMillis()){telegramSend(token,chat,"❌ Code expired or not found. Join the server again.");return;}db.findByTelegram(chat).thenAccept(existing->{if(existing!=null&&!existing.uuid().equals(x.uuid)){telegramSend(token,chat,"❌ This Telegram account is already linked.");return;}db.linkAccount(x.uuid,x.name(),existing==null?null:existing.discordId(),chat,x.accountType).thenRun(()->{pending.remove(code);playerCodes.remove(x.uuid);frozen.remove(x.uuid);Bukkit.getScheduler().runTask(plugin,()->release(x.uuid));telegramSend(token,chat,"✅ Successfully connected to account "+x.name());});});}
     private void telegramSend(String token,String chat,String text){try{String q=java.net.URLEncoder.encode(text,java.nio.charset.StandardCharsets.UTF_8);HttpRequest r=HttpRequest.newBuilder(URI.create("https://api.telegram.org/bot"+token+"/sendMessage?chat_id="+chat+"&text="+q)).GET().build();http.sendAsync(r,HttpResponse.BodyHandlers.discarding());}catch(Exception ignored){}}
     private record Pending(UUID uuid,String name,String code,long expiresAt,String accountType,boolean discordOnly){}
-    private static final class FileConfigurationBridge{private final org.bukkit.configuration.file.FileConfiguration c;FileConfigurationBridge(org.bukkit.configuration.file.FileConfiguration c){this.c=c;}String s(String p,String d){return c.getString(p,d);}boolean b(String p,boolean d){return c.getBoolean(p,d);}long l(String p,long d){return c.getLong(p,d);}}
+    private static final class FileConfigurationBridge{
+        private final org.bukkit.configuration.file.FileConfiguration c;
+        FileConfigurationBridge(org.bukkit.configuration.file.FileConfiguration c){this.c=c;}
+        String s(String p,String d){return c.getString(p,d);}
+        boolean b(String p,boolean d){return c.getBoolean(p,d);}
+        long l(String p,long d){return c.getLong(p,d);}
+        // Each map entry is {minimum_account_age_days, minimum_membership_days}
+        // in that order. Missing/non-numeric fields default to 0 (no minimum)
+        // rather than failing the whole tier.
+        List<long[]> tiers(String p){
+            List<long[]> out=new ArrayList<>();
+            for(java.util.Map<?,?> m:c.getMapList(p)){
+                long age=m.get("minimum_account_age_days") instanceof Number n?n.longValue():0L;
+                long member=m.get("minimum_membership_days") instanceof Number n?n.longValue():0L;
+                out.add(new long[]{age,member});
+            }
+            return out;
+        }
+    }
 }

@@ -280,6 +280,13 @@ counting down from a fixed number of seconds instead of to a wall-clock time.
 Covers Discord linking, Telegram linking, and premium/cracked detection -
 renamed from `module/discord.yml` in 1.2.16 since it was never Discord-only.
 
+**⚠ Note:** Discord does not expose whether an account has a verified
+phone number to bots, under any scope - not even via OAuth. It's the one
+account-security signal Discord treats as fully private to the account
+owner (unlike account age, guild join date, roles, badges, or MFA-enabled
+status, all of which are visible). There is no config key for it here
+because there is no way to check it.
+
 | Key | Default | Notes |
 |---|---|---|
 | `discord.enabled` | `false` | |
@@ -288,8 +295,8 @@ renamed from `module/discord.yml` in 1.2.16 since it was never Discord-only.
 | `discord.guild.id` | `""` | |
 | `discord.guild.required` | `true` | Require guild membership to verify. |
 | `discord.guild.required_role_id` | `""` | |
-| `discord.guild.minimum_account_age_days` | `180` | |
-| `discord.guild.minimum_membership_days` | `7` | |
+| `discord.guild.eligibility_tiers` | 2 tiers (see below) | *(added 1.2.21)* A list of `{minimum_account_age_days, minimum_membership_days}` pairs - an account qualifies if it meets **at least one** tier's **both** minimums. Shipped defaults: (180-day-old account, 30-day membership) OR (365-day-old account, any membership length). Add/remove/edit tiers freely - at least one tier must exist or nobody can ever verify. |
+| `discord.guild.minimum_account_age_days` / `minimum_membership_days` | `180` / `7` | **Dead as of 1.2.21** - superseded by `eligibility_tiers` above. Still present (and untouched) in an upgraded file, but no longer read by any code. |
 | `discord.verification.channel_id` / `panel_message_id` | `""` / `""` | |
 | `discord.roles.crack` / `java` / `bedrock` | `""` each | Roles assigned by account type. |
 | `discord.commands.staff_role_id` | `""` | |
