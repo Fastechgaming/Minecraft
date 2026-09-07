@@ -135,6 +135,7 @@ async function loadLadder() {
 async function showStore() {
   gate.hidden = true;
   body.hidden = false;
+  document.getElementById("cart-toggle").hidden = false;
   renderProfile();
   renderGamemodeTabs();
   await loadLadder();

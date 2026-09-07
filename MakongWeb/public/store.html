@@ -129,10 +129,6 @@ try { if (localStorage.getItem("makong-theme") === "light") document.documentEle
               <ul class="gamemode-menu" id="gamemode-menu" role="menu"></ul>
             </div>
             <div class="store-tabs" id="store-tabs"></div>
-            <button type="button" class="cart-toggle" id="cart-toggle" aria-label="Cart">
-              <span class="cart-icon" aria-hidden="true">🛒</span>
-              <span class="cart-badge" id="cart-badge" hidden>0</span>
-            </button>
           </div>
           <div class="item-grid" id="item-grid"></div>
         </div>
@@ -143,6 +139,13 @@ try { if (localStorage.getItem("makong-theme") === "light") document.documentEle
   <footer class="site-footer">
     <p id="footer-copy" data-i18n="footer.copy"></p>
   </footer>
+
+  <!-- Floating cart button - only shown once signed in (see store.js showStore()) -->
+  <button type="button" class="cart-toggle" id="cart-toggle" aria-label="Cart" hidden>
+    <img class="cart-icon" src="/images/site/icon-store-nav.png" alt="" />
+    <span class="cart-label" data-i18n="store.cart">Cart</span>
+    <span class="cart-badge" id="cart-badge" hidden>0</span>
+  </button>
 
   <!-- Region select: Cambodia stays on-site (KHQR), Global goes to Tebex -->
   <div class="modal-overlay" id="region-modal">
