@@ -857,6 +857,91 @@ a.feature-card.linked .feature-title { color: var(--link-accent); }
   .store-controls .store-tabs { justify-content: center; }
 }
 
+/* Cart toggle - same stone-button language as the gamemode/tab controls it
+   sits next to, with a small badge for the item count. */
+.cart-toggle {
+  position: relative;
+  flex-shrink: 0;
+  background: var(--stone-surface);
+  border: 3px solid var(--stone-darkest);
+  border-radius: 999px;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: var(--stone-bevel), 0 4px 0 var(--stone-darkest), 0 7px 12px rgba(42, 22, 8, 0.22);
+  transition: transform 0.18s cubic-bezier(.34,1.56,.64,1), box-shadow 0.15s;
+}
+.cart-toggle:hover { transform: scale(1.06); }
+.cart-toggle:active { transform: translateY(3px); box-shadow: var(--stone-bevel), 0 1px 0 var(--stone-darkest); }
+.cart-icon { font-size: 1.3rem; line-height: 1; }
+.cart-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--terracotta);
+  color: #fff;
+  font-family: "Minecraft", "Baloo 2", sans-serif;
+  font-size: 0.7rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--stone-darkest);
+}
+
+/* Cart modal rows - same "receipt" feel as the checkout summary. */
+.cart-rows { display: flex; flex-direction: column; gap: 0.7rem; margin-bottom: 1rem; max-height: 50vh; overflow-y: auto; }
+.cart-row {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding-bottom: 0.7rem;
+  border-bottom: 1px dashed var(--stone-dark);
+}
+.cart-row:last-child { border-bottom: none; padding-bottom: 0; }
+.cart-row-img {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 2px solid var(--stone-darkest);
+  background: var(--cream-dark);
+}
+.cart-row-body { flex: 1; min-width: 0; }
+.cart-row-name { font-weight: 800; color: var(--ink); font-size: 0.92rem; }
+.cart-row-tags { color: var(--ink-soft); font-size: 0.78rem; font-weight: 600; }
+.cart-row-price { color: var(--terracotta); font-family: "Minecraft", "Baloo 2", sans-serif; font-weight: 800; white-space: nowrap; }
+.cart-row-remove {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: var(--ink-soft);
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.2rem 0.4rem;
+}
+.cart-row-remove:hover { color: var(--terracotta); }
+.cart-total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 0.8rem;
+  border-top: 2px dashed var(--stone-dark);
+  margin-bottom: 1rem;
+  font-weight: 800;
+  color: var(--ink);
+}
+.cart-total-row strong { color: var(--terracotta); font-family: "Minecraft", "Baloo 2", sans-serif; font-size: 1.2rem; }
+
 /* Gamemode picker - a custom dropdown (same pattern as the language
    switcher) instead of a native <select>, so the closed button can read
    "Gamemode: BoxPvP" while the open list just shows "BoxPvP", "SMP", etc. */
@@ -1291,6 +1376,17 @@ a.continue-btn { display: block; box-sizing: border-box; text-align: center; tex
 }
 .checkout-rows strong { color: var(--ink); }
 .checkout-rows .price { color: var(--terracotta); font-family: "Minecraft", "Baloo 2", sans-serif; font-size: 1.1rem; }
+
+/* Cart order summary - one row per item above the same .checkout-rows total. */
+.checkout-summary-multi { flex-direction: column; align-items: stretch; }
+.checkout-summary-multi h3 { margin: 0 0 0.6rem; }
+.checkout-cart-rows { display: flex; flex-direction: column; gap: 0.6rem; margin-bottom: 0.9rem; }
+.checkout-cart-row { display: flex; align-items: center; gap: 0.7rem; }
+.checkout-item-img.small { width: 48px; height: 48px; border-radius: 8px; }
+.checkout-cart-row-body { flex: 1; min-width: 0; }
+.checkout-cart-row-name { font-weight: 800; color: var(--ink); font-size: 0.9rem; }
+.checkout-item-tags { color: var(--ink-soft); font-size: 0.78rem; font-weight: 600; }
+.checkout-cart-row-price { color: var(--terracotta); font-family: "Minecraft", "Baloo 2", sans-serif; font-weight: 800; white-space: nowrap; }
 
 .checkout-step { padding: 1.25rem 0 0; }
 .checkout-step h3 { margin: 0 0 0.3rem; font-size: 1.1rem; }

@@ -129,6 +129,10 @@ try { if (localStorage.getItem("makong-theme") === "light") document.documentEle
               <ul class="gamemode-menu" id="gamemode-menu" role="menu"></ul>
             </div>
             <div class="store-tabs" id="store-tabs"></div>
+            <button type="button" class="cart-toggle" id="cart-toggle" aria-label="Cart">
+              <span class="cart-icon" aria-hidden="true">🛒</span>
+              <span class="cart-badge" id="cart-badge" hidden>0</span>
+            </button>
           </div>
           <div class="item-grid" id="item-grid"></div>
         </div>
@@ -178,6 +182,15 @@ try { if (localStorage.getItem("makong-theme") === "light") document.documentEle
     </div>
   </div>
 
+  <!-- Cart -->
+  <div class="modal-overlay" id="cart-modal">
+    <div class="modal-box wide">
+      <button class="modal-close" id="cart-modal-close">&times;</button>
+      <h3 data-i18n="store.cartTitle">Your Cart</h3>
+      <div id="cart-modal-body"></div>
+    </div>
+  </div>
+
   <!-- Change-name modal -->
   <div class="modal-overlay" id="name-modal">
     <div class="modal-box">
@@ -208,6 +221,7 @@ try { if (localStorage.getItem("makong-theme") === "light") document.documentEle
   <script src="/js/i18n.js"></script>
   <script src="/js/account.js"></script>
   <script src="/js/main.js"></script>
+  <script src="/js/cart.js"></script>
   <script src="/js/store.js"></script>
 </body>
 </html>

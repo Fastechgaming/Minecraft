@@ -87,6 +87,37 @@ router.get("/rankings", (req, res) => {
 router.get("/order/:id", (req, res) => {
   const order = store.findOrder(req.params.id);
   if (!order) return res.status(404).json({ error: "Order not found" });
+
+  // A cart order (order.items present) - see /cart/checkout above. Tebex is
+  // only offered when EVERY line has a linked package, since one basket has
+  // to cover the whole cart or none of it.
+  if (order.items) {
+    const tebexAvailable = order.items.every((line) => {
+      const item = store.findItem(line.itemId);
+      return Boolean(item && item.tebexPackageId);
+    });
+    return res.json({
+      id: order.id,
+      items: order.items.map((line) => ({
+        itemId: line.itemId,
+        itemName: line.itemName,
+        itemImage: line.itemImage,
+        itemDesc: line.itemDesc,
+        amount: line.amount,
+        duration: line.duration || null,
+        quantity: line.quantity || 1,
+        upgrade: line.upgrade || null,
+      })),
+      amount: order.amount,
+      currency: order.currency,
+      playerName: order.playerName,
+      edition: order.edition,
+      status: order.status,
+      createdAt: order.createdAt,
+      tebexAvailable,
+    });
+  }
+
   const item = store.findItem(order.itemId);
   res.json({
     id: order.id,
@@ -108,92 +139,125 @@ router.get("/order/:id", (req, res) => {
   });
 });
 
+const MAX_KEY_QTY = 20;
+const MAX_CART_LINES = 20;
+
+// Thrown by resolveLine()/resolveBuyer() for a problem with the request
+// itself (bad item id, item no longer for sale, not signed in) - callers
+// turn this into a 400/401; anything else bubbles up as a 500 the same way
+// an unexpected error always has.
+class CheckoutError extends Error {
+  constructor(message, code) {
+    super(message);
+    this.code = code;
+  }
+}
+
+// Prices and validates one line (an item + the options that affect its
+// price - quantity, duration, an upgrade trade-in) into the shape saved on
+// an order. Shared by the single-item /checkout below and the multi-item
+// /cart/checkout, so a cart line is priced by exactly the same rules a
+// direct purchase always has been - never trusts anything the browser computed.
+async function resolveLine({ itemId, upgradeFromRankId, duration, quantity: rawQuantity }, ladderCache) {
+  if (!itemId) throw new CheckoutError("itemId is required");
+  const item = store.findItem(itemId);
+  if (!item) throw new CheckoutError("Item not found");
+  if (item.comingSoon) throw new CheckoutError(`${item.name} isn't available for purchase yet.`);
+
+  let amount = item.price;
+  let upgrade = null;
+  const isRankItem = store.getItems().ranks.some((i) => i.id === item.id);
+
+  // Keys can be bought in bulk - never trust the client's quantity or the
+  // total it computed, just the count, clamped to a sane range and
+  // multiplied against the catalogue price. Meaningless for ranks/other.
+  const quantity = item.category === "keys" ? Math.min(MAX_KEY_QTY, Math.max(1, Math.round(Number(rawQuantity)) || 1)) : 1;
+  amount = Math.round(amount * quantity * 100) / 100;
+
+  // Ranks are sold for 1 month or permanently - never trust the client's
+  // price, recompute from the catalogue. Permanent defaults to 3x the
+  // monthly price unless the admin set an explicit permanentPrice.
+  // Meaningless for a trade-in upgrade (that path prices its own ladder
+  // step below), so it's resolved first and simply overridden there.
+  const rankDuration = isRankItem && duration === "permanent" ? "permanent" : isRankItem ? "monthly" : null;
+  if (rankDuration === "permanent") amount = store.permanentPriceFor(item);
+
+  if (upgradeFromRankId && isRankItem) {
+    if (!ladderCache.has(item.gamemode)) ladderCache.set(item.gamemode, await getRankLadder(item.gamemode));
+    const { ranks } = ladderCache.get(item.gamemode);
+    const toRank = ranks.find((r) => r.itemId === item.id || `rank-${r.id}` === item.id);
+    const fromRank = ranks.find((r) => r.id === upgradeFromRankId);
+    if (toRank && fromRank && fromRank.weight < toRank.weight) {
+      amount = Math.max(0, Math.round((toRank.priceUsd - fromRank.priceUsd) * 100) / 100);
+      upgrade = {
+        fromRankId: fromRank.id,
+        fromGroup: fromRank.group || fromRank.id,
+        toRankId: toRank.id,
+        toGroup: toRank.group || toRank.id,
+      };
+    }
+    // An invalid/stale from-rank falls through to a plain full-price
+    // purchase rather than failing outright - the player still gets what
+    // they asked to buy, just without the discount they no longer qualify for.
+  }
+
+  return {
+    itemId: item.id,
+    itemName: item.name,
+    itemImage: item.image,
+    itemDesc: item.shortDesc || "",
+    gamemode: item.gamemode || null,
+    amount,
+    currency: item.currency || "USD",
+    upgrade, // null for a plain purchase; {fromRankId, fromGroup, toRankId, toGroup} for an upgrade
+    duration: upgrade ? null : rankDuration, // "monthly" | "permanent" for a plain rank buy, null otherwise
+    quantity, // 1 for ranks/other; the bought count for keys
+  };
+}
+
+// Verifies the signed-in account and returns its resolved edition + delivery
+// name - shared by both checkout routes below.
+function resolveBuyer(req) {
+  // No `makongcore.enabled()` gate here on purpose: everything below
+  // (currentAccount, getRankLadder, store.findItem/saveOrder) already has
+  // its own plugin-absent fallback — see lib/makongcore.js's own comment
+  // ("nothing breaks while the plugin isn't installed"). Without the plugin
+  // the typed name is simply accepted as-is and delivery falls back to a
+  // manual Telegram-approved command, exactly as documented.
+  // The buyer is whoever is signed in — the store makes you verify a name
+  // before it will show you a Buy button, so there is nothing to type here.
+  const account = currentAccount(req, STORE_SCOPE);
+  if (!account) throw new CheckoutError("Verify your Minecraft name before buying.", "NOT_SIGNED_IN");
+  const edition = account.edition === "bedrock" ? "bedrock" : "java";
+  if (!isValidRawName(account.player, edition)) {
+    throw new CheckoutError("Your saved name is no longer valid — please verify it again.");
+  }
+  return { account, edition, finalName: normalizeServerName(account.player, edition) };
+}
+
 // Step 1 of checkout: player name + edition. Creates a pending order and hands
 // back its id; the customer is then sent to /checkout to pay + upload proof.
 router.post("/checkout", async (req, res) => {
   try {
-    // No `makongcore.enabled()` gate here on purpose: everything below
-    // (currentAccount, getRankLadder, store.findItem/saveOrder) already has
-    // its own plugin-absent fallback — see lib/makongcore.js's own comment
-    // ("nothing breaks while the plugin isn't installed"). Without the plugin
-    // the typed name is simply accepted as-is and delivery falls back to a
-    // manual Telegram-approved command, exactly as documented.
-    // The buyer is whoever is signed in — the store makes you verify a name
-    // before it will show you a Buy button, so there is nothing to type here.
-    const account = currentAccount(req, STORE_SCOPE);
-    if (!account) {
-      return res.status(401).json({ error: "Verify your Minecraft name before buying.", code: "NOT_SIGNED_IN" });
-    }
-
-    const { itemId, upgradeFromRankId, duration, quantity: rawQuantity } = req.body || {};
-    if (!itemId) return res.status(400).json({ error: "itemId is required" });
-
-    const item = store.findItem(itemId);
-    if (!item) return res.status(404).json({ error: "Item not found" });
-    if (item.comingSoon) return res.status(400).json({ error: "This item isn't available for purchase yet." });
-
-    const edition = account.edition === "bedrock" ? "bedrock" : "java";
-    if (!isValidRawName(account.player, edition)) {
-      return res.status(400).json({ error: "Your saved name is no longer valid — please verify it again." });
-    }
-    const finalName = normalizeServerName(account.player, edition);
-
-    // An upgrade trades one held rank in for a pricier one, charged only the
-    // difference. Never trust the browser's price (or its claim of what the
-    // player holds) - recompute both from the server's own ladder, the same
-    // one the plugin itself re-checks at delivery time via expectedFromRankId.
-    let amount = item.price;
-    let upgrade = null;
-    const isRankItem = store.getItems().ranks.some((i) => i.id === item.id);
-
-    // Keys can be bought in bulk - never trust the client's quantity or the
-    // total it computed, just the count, clamped to a sane range and
-    // multiplied against the catalogue price. Meaningless for ranks/other.
-    const MAX_KEY_QTY = 20;
-    const quantity = item.category === "keys" ? Math.min(MAX_KEY_QTY, Math.max(1, Math.round(Number(rawQuantity)) || 1)) : 1;
-    amount = Math.round(amount * quantity * 100) / 100;
-
-    // Ranks are sold for 1 month or permanently - never trust the client's
-    // price, recompute from the catalogue. Permanent defaults to 3x the
-    // monthly price unless the admin set an explicit permanentPrice.
-    // Meaningless for a trade-in upgrade (that path prices its own ladder
-    // step below), so it's resolved first and simply overridden there.
-    const rankDuration = isRankItem && duration === "permanent" ? "permanent" : isRankItem ? "monthly" : null;
-    if (rankDuration === "permanent") amount = store.permanentPriceFor(item);
-
-    if (upgradeFromRankId && isRankItem) {
-      const { ranks } = await getRankLadder(item.gamemode);
-      const toRank = ranks.find((r) => r.itemId === item.id || `rank-${r.id}` === item.id);
-      const fromRank = ranks.find((r) => r.id === upgradeFromRankId);
-      if (toRank && fromRank && fromRank.weight < toRank.weight) {
-        amount = Math.max(0, Math.round((toRank.priceUsd - fromRank.priceUsd) * 100) / 100);
-        upgrade = {
-          fromRankId: fromRank.id,
-          fromGroup: fromRank.group || fromRank.id,
-          toRankId: toRank.id,
-          toGroup: toRank.group || toRank.id,
-        };
-      }
-      // An invalid/stale from-rank falls through to a plain full-price
-      // purchase rather than failing outright - the player still gets what
-      // they asked to buy, just without the discount they no longer qualify for.
-    }
+    const { itemId, upgradeFromRankId, duration, quantity } = req.body || {};
+    const buyer = resolveBuyer(req);
+    const line = await resolveLine({ itemId, upgradeFromRankId, duration, quantity }, new Map());
 
     const order = {
       id: nanoid(10),
-      itemId: item.id,
-      itemName: item.name,
-      itemImage: item.image,
-      itemDesc: item.shortDesc || "",
-      gamemode: item.gamemode || null,
-      amount,
-      currency: item.currency || "USD",
-      playerName: finalName,
-      playerUuid: account.uuid || null,
-      edition,
-      upgrade, // null for a plain purchase; {fromRankId, fromGroup, toRankId, toGroup} for an upgrade
-      duration: upgrade ? null : rankDuration, // "monthly" | "permanent" for a plain rank buy, null otherwise
-      quantity, // 1 for ranks/other; the bought count for keys
+      itemId: line.itemId,
+      itemName: line.itemName,
+      itemImage: line.itemImage,
+      itemDesc: line.itemDesc,
+      gamemode: line.gamemode,
+      amount: line.amount,
+      currency: line.currency,
+      playerName: buyer.finalName,
+      playerUuid: buyer.account.uuid || null,
+      edition: buyer.edition,
+      upgrade: line.upgrade,
+      duration: line.duration,
+      quantity: line.quantity,
       status: "awaiting_payment",
       createdAt: Date.now(),
     };
@@ -201,7 +265,57 @@ router.post("/checkout", async (req, res) => {
 
     res.json({ orderId: order.id });
   } catch (err) {
+    if (err instanceof CheckoutError) {
+      return res.status(err.code === "NOT_SIGNED_IN" ? 401 : 400).json({ error: err.message, code: err.code });
+    }
     console.error("[checkout] error:", err);
+    res.status(500).json({ error: err.message || "Failed to start checkout" });
+  }
+});
+
+// Cart checkout: same rules as /checkout above, just applied to every line
+// in the cart and totalled into one order - one KHQR payment (or one Tebex
+// basket, if every line has a tebexPackageId) covers the whole cart.
+router.post("/cart/checkout", async (req, res) => {
+  try {
+    const buyer = resolveBuyer(req);
+
+    const { lines: rawLines } = req.body || {};
+    if (!Array.isArray(rawLines) || rawLines.length === 0) {
+      return res.status(400).json({ error: "Your cart is empty." });
+    }
+    if (rawLines.length > MAX_CART_LINES) {
+      return res.status(400).json({ error: `A cart can hold at most ${MAX_CART_LINES} items.` });
+    }
+
+    const ladderCache = new Map();
+    const items = [];
+    for (const raw of rawLines) {
+      items.push(await resolveLine(raw || {}, ladderCache));
+    }
+
+    const amount = Math.round(items.reduce((sum, i) => sum + i.amount, 0) * 100) / 100;
+    const currency = items[0].currency;
+
+    const order = {
+      id: nanoid(10),
+      items,
+      amount,
+      currency,
+      playerName: buyer.finalName,
+      playerUuid: buyer.account.uuid || null,
+      edition: buyer.edition,
+      status: "awaiting_payment",
+      createdAt: Date.now(),
+    };
+    store.saveOrder(order);
+
+    res.json({ orderId: order.id });
+  } catch (err) {
+    if (err instanceof CheckoutError) {
+      return res.status(err.code === "NOT_SIGNED_IN" ? 401 : 400).json({ error: err.message, code: err.code });
+    }
+    console.error("[cart checkout] error:", err);
     res.status(500).json({ error: err.message || "Failed to start checkout" });
   }
 });
@@ -236,8 +350,9 @@ router.post("/order/:id/proof", (req, res, next) => {
   });
 });
 
-// Kicks off "Pay via Tebex": create a basket for this order's item, add the
-// matching Tebex package, and send the customer straight to Tebex's own
+// Kicks off "Pay via Tebex": create a basket, add every line's matching
+// Tebex package to it (a cart order just adds more than one - Tebex baskets
+// are cart-shaped already), and send the customer straight to Tebex's own
 // checkout to pay by wallet/card. Never trusts anything back from that page
 // by itself - see verify-tebex below, which re-confirms server-to-server.
 router.get("/checkout/:id/pay-tebex", async (req, res) => {
@@ -252,8 +367,13 @@ router.get("/checkout/:id/pay-tebex", async (req, res) => {
   if (!order) return fail("Order not found");
   if (order.status !== "awaiting_payment") return fail(`Order already ${order.status}`);
 
-  const item = store.findItem(order.itemId);
-  if (!item || !item.tebexPackageId) return fail("Item has no linked Tebex package");
+  const lines = order.items || [{ itemId: order.itemId, quantity: order.quantity || 1 }];
+  const resolved = [];
+  for (const line of lines) {
+    const item = store.findItem(line.itemId);
+    if (!item || !item.tebexPackageId) return fail(`Item has no linked Tebex package: ${line.itemId}`);
+    resolved.push({ item, quantity: line.quantity || 1 });
+  }
 
   const origin = `${req.protocol}://${req.get("host")}`;
   const completeUrl = `${origin}/checkout?order=${order.id}&tebex=1`;
@@ -267,10 +387,12 @@ router.get("/checkout/:id/pay-tebex", async (req, res) => {
   if (!basketResult.ok) return fail(basketResult.reason);
 
   const basketIdent = basketResult.basket.ident;
-  const packageResult = await tebex.addPackage(basketIdent, item.tebexPackageId, order.quantity || 1);
-  if (!packageResult.ok) return fail(packageResult.reason);
-
-  const checkoutUrl = packageResult.basket.links && packageResult.basket.links.checkout;
+  let checkoutUrl = null;
+  for (const { item, quantity } of resolved) {
+    const packageResult = await tebex.addPackage(basketIdent, item.tebexPackageId, quantity);
+    if (!packageResult.ok) return fail(packageResult.reason);
+    checkoutUrl = (packageResult.basket.links && packageResult.basket.links.checkout) || checkoutUrl;
+  }
   if (!checkoutUrl) return fail("Tebex did not return a checkout link");
 
   store.updateOrder(order.id, { tebexBasketIdent: basketIdent });

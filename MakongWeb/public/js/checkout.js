@@ -12,6 +12,69 @@ function scanHintHtml(amount) {
   return t("checkout.scanHint").split("{amount}").map(escapeHtml).join(bold);
 }
 
+function lineTagsHtml(line) {
+  const tags = [];
+  if (line.upgrade) tags.push(escapeHtml(t("store.upRank")));
+  if (line.duration) tags.push(escapeHtml(t(line.duration === "permanent" ? "store.durationPermanent" : "store.duration1Month")));
+  if (line.quantity > 1) tags.push(`×${line.quantity}`);
+  return tags.length ? `<span class="checkout-item-tags">${tags.join(" · ")}</span>` : "";
+}
+
+// A cart order (order.items present) shows one row per item plus the
+// combined total; a single-item order keeps its original one-item layout.
+function checkoutSummaryMarkup(order) {
+  if (order.items) {
+    return `
+    <div class="checkout-summary checkout-summary-multi">
+      <h3>${escapeHtml(t("checkout.items"))}</h3>
+      <div class="checkout-cart-rows">
+        ${order.items
+          .map(
+            (line) => `
+          <div class="checkout-cart-row">
+            <img class="checkout-item-img small" src="${escapeHtml(line.itemImage || "")}" alt="${escapeHtml(line.itemName)}" onerror="this.style.display='none'" />
+            <div class="checkout-cart-row-body">
+              <div class="checkout-cart-row-name">${escapeHtml(line.itemName)}</div>
+              ${lineTagsHtml(line)}
+            </div>
+            <div class="checkout-cart-row-price">${escapeHtml(formatPrice(line.amount))}</div>
+          </div>`
+          )
+          .join("")}
+      </div>
+      <div class="checkout-rows">
+        <div><span>${escapeHtml(t("checkout.inServerName"))}</span><strong>${escapeHtml(order.playerName)}</strong></div>
+        <div><span>${escapeHtml(t("checkout.edition"))}</span><strong>${escapeHtml(t(order.edition === "bedrock" ? "buy.bedrock" : "buy.java"))}</strong></div>
+        <div><span>${escapeHtml(t("checkout.total"))}</span><strong class="price">${escapeHtml(formatPrice(order.amount))}</strong></div>
+      </div>
+    </div>`;
+  }
+
+  return `
+    <div class="checkout-summary">
+      <img class="checkout-item-img" src="${escapeHtml(order.itemImage || "")}" alt="${escapeHtml(order.itemName)}" onerror="this.style.display='none'" />
+      <div class="checkout-summary-text">
+        <h3>${escapeHtml(order.itemName)}</h3>
+        <p>${escapeHtml(order.itemDesc || "")}</p>
+        <div class="checkout-rows">
+          <div><span>${escapeHtml(t("checkout.inServerName"))}</span><strong>${escapeHtml(order.playerName)}</strong></div>
+          <div><span>${escapeHtml(t("checkout.edition"))}</span><strong>${escapeHtml(t(order.edition === "bedrock" ? "buy.bedrock" : "buy.java"))}</strong></div>
+          ${
+            order.duration
+              ? `<div><span>${escapeHtml(t("checkout.duration"))}</span><strong>${escapeHtml(t(order.duration === "permanent" ? "store.durationPermanent" : "store.duration1Month"))}</strong></div>`
+              : ""
+          }
+          ${
+            order.quantity > 1
+              ? `<div><span>${escapeHtml(t("store.quantity"))}</span><strong>×${order.quantity}</strong></div>`
+              : ""
+          }
+          <div><span>${escapeHtml(t("checkout.total"))}</span><strong class="price">${escapeHtml(formatPrice(order.amount))}</strong></div>
+        </div>
+      </div>
+    </div>`;
+}
+
 async function loadCheckout() {
   if (!orderId) {
     content.innerHTML = `<p class="empty-note">${escapeHtml(t("checkout.noOrder"))} <a href="/store">${escapeHtml(t("checkout.backToStore"))}</a>.</p>`;
@@ -46,28 +109,7 @@ async function loadCheckout() {
   const supportHandle = cfg.supportTelegram || "";
   const khqrSrc = cfg.khqrImage || "/images/site/khqr.png";
   content.innerHTML = `
-    <div class="checkout-summary">
-      <img class="checkout-item-img" src="${escapeHtml(order.itemImage || "")}" alt="${escapeHtml(order.itemName)}" onerror="this.style.display='none'" />
-      <div class="checkout-summary-text">
-        <h3>${escapeHtml(order.itemName)}</h3>
-        <p>${escapeHtml(order.itemDesc || "")}</p>
-        <div class="checkout-rows">
-          <div><span>${escapeHtml(t("checkout.inServerName"))}</span><strong>${escapeHtml(order.playerName)}</strong></div>
-          <div><span>${escapeHtml(t("checkout.edition"))}</span><strong>${escapeHtml(t(order.edition === "bedrock" ? "buy.bedrock" : "buy.java"))}</strong></div>
-          ${
-            order.duration
-              ? `<div><span>${escapeHtml(t("checkout.duration"))}</span><strong>${escapeHtml(t(order.duration === "permanent" ? "store.durationPermanent" : "store.duration1Month"))}</strong></div>`
-              : ""
-          }
-          ${
-            order.quantity > 1
-              ? `<div><span>${escapeHtml(t("store.quantity"))}</span><strong>×${order.quantity}</strong></div>`
-              : ""
-          }
-          <div><span>${escapeHtml(t("checkout.total"))}</span><strong class="price">${escapeHtml(formatPrice(order.amount))}</strong></div>
-        </div>
-      </div>
-    </div>
+    ${checkoutSummaryMarkup(order)}
 
     ${
       cfg.tebexHeadlessEnabled && order.tebexAvailable
