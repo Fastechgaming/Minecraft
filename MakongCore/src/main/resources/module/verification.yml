@@ -25,15 +25,6 @@ discord:
   verification:
     channel_id: ""
     panel_message_id: ""
-    # INFO: The embed posted in the verification channel, and the button
-    # INFO: underneath it. Use \n in title/description for a line break.
-    # INFO: color is a hex RGB string (e.g. "#5865F2"); leave blank for
-    # INFO: Discord's default embed color.
-    embed:
-      title: "Makong Minecraft Verification"
-      description: "Link your Minecraft account to Discord.\n\nClick **Verify Code** and enter the 6-digit code shown in Minecraft."
-      color: ""
-      button_label: "Verify Code"
   roles:
     crack: ""
     java: ""
