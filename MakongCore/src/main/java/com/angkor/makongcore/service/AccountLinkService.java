@@ -190,7 +190,20 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
     // a silent, permanent lockout. Requiring verification only makes sense
     // when there's actually a way to complete it.
     private boolean linkingAvailable(){return cfg.b("discord.enabled",false)||cfg.b("telegram.enabled",false);}
-    public void onJoin(Player p){db.getAccountLink(p.getUniqueId()).thenAccept(link->{if(link!=null)return;String external=externalAccountType.remove(p.getUniqueId());if(external!=null){if(external.equals("bedrock"))return;boolean required=linkingAvailable()&&cfg.b("linking.required_for_cracked",true)&&external.equals("cracked");if(required)Bukkit.getScheduler().runTask(plugin,()->freezeAndCode(p,external));return;}boolean bedrock=floodgate!=null&&floodgate.isBedrock(p.getUniqueId());if(bedrock)return;CompletableFuture.supplyAsync(()->detectPremium(p.getName())).thenAccept(premium->{boolean isPremium=Boolean.TRUE.equals(premium);boolean unknown=premium==null;String type=(isPremium||unknown&&!cfg.b("linking.premium_detection.unknown_as_cracked",true))?"java":"cracked";boolean required=linkingAvailable()&&cfg.b("linking.required_for_cracked",true)&&type.equals("cracked");if(required)Bukkit.getScheduler().runTask(plugin,()->freezeAndCode(p,type));});});}
+    public void onJoin(Player p){UUID uuid=p.getUniqueId();db.getAccountLink(uuid).thenCombine(db.isBypassed(uuid),(link,bypassed)->{if(link!=null||bypassed)return null;String external=externalAccountType.remove(uuid);if(external!=null){if(external.equals("bedrock"))return null;boolean required=linkingAvailable()&&cfg.b("linking.required_for_cracked",true)&&external.equals("cracked");if(required)Bukkit.getScheduler().runTask(plugin,()->freezeAndCode(p,external));return null;}boolean bedrock=floodgate!=null&&floodgate.isBedrock(uuid);if(bedrock)return null;CompletableFuture.supplyAsync(()->detectPremium(p.getName())).thenAccept(premium->{boolean isPremium=Boolean.TRUE.equals(premium);boolean unknown=premium==null;String type=(isPremium||unknown&&!cfg.b("linking.premium_detection.unknown_as_cracked",true))?"java":"cracked";boolean required=linkingAvailable()&&cfg.b("linking.required_for_cracked",true)&&type.equals("cracked");if(required)Bukkit.getScheduler().runTask(plugin,()->freezeAndCode(p,type));});return null;});}
+
+    // /malink reset <player> - wipes their persisted Discord/Telegram link
+    // so they're treated as never-linked. If they're online right now,
+    // re-runs onJoin()'s detection/freeze immediately (same as if they'd
+    // just connected) instead of waiting for their next actual join.
+    public void resetLink(UUID uuid,Player online){db.deleteAccountLink(uuid).thenRun(()->{if(online!=null&&online.isOnline())Bukkit.getScheduler().runTask(plugin,()->onJoin(online));});}
+    // /makongcore reset verification|all - unlinks every player at once.
+    public CompletableFuture<Void> resetAllLinks(){return db.deleteAllAccountLinks();}
+    // /malink bypass|unbypass|bypasslist - see Database's bypass methods'
+    // javadoc for what this does and doesn't affect.
+    public CompletableFuture<Void> addBypass(UUID uuid,String name){return db.addBypass(uuid,name);}
+    public CompletableFuture<Boolean> removeBypass(UUID uuid){return db.removeBypass(uuid);}
+    public CompletableFuture<List<Database.BypassEntry>> listBypass(){return db.listBypass();}
 
     // From MakongVelocity's "makong:accounttype" plugin message - see the
     // externalAccountType field javadoc above. The channel's payload also

@@ -60,4 +60,7 @@ public final class MaTierService implements Listener {
     public String msg(String path){return c.getString(path,path);}
     public FileConfiguration config(){return c;}
     public void setStars(UUID u,String name,long stars){Database.PlayerStar old=players.getOrDefault(u,new Database.PlayerStar(u,name,0,0));players.put(u,new Database.PlayerStar(u,name,Math.max(0,stars),old.lastSeen(),old.inactivityPenaltyDays()));db.upsertPlayerStars(u,name,Math.max(0,stars));}
+    // /makongcore reset matier - full wipe (Stars AND every season's
+    // tier-history record), unlike /matier resetall which only zeroes Stars.
+    public java.util.concurrent.CompletableFuture<Void> wipeAll(){players.clear();return db.wipeMatier();}
 }

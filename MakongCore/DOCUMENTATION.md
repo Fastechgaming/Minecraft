@@ -105,6 +105,30 @@ identical either way you reach them - nothing is duplicated).
 | `/makongcore autorestart <seconds\|stop>` | Broadcasts a countdown and restarts this server once it elapses, or (`stop`) cancels a pending one. Normally triggered remotely by MakongVelocity's `/mc ar`/`/mc autorestart`, not typed by hand. |
 | `/makongcore team\|disband\|forcejoin\|forceleave\|addpoints\|setpoints\|addstars\|setstars ...` | Same as the identically-named `/mateam` subcommands above. |
 | `/makongcore matier <...>` | Same as the identically-named `/matier` admin subcommand below (e.g. `/makongcore matier set <player> <amount>`). |
+| `/makongcore malink <...>` | Same as the identically-named `/malink` subcommand below (e.g. `/makongcore malink bypass <player>`). |
+| `/makongcore reset <mateam\|matier\|verification\|all> confirm` | **Irreversible.** Wipes that module's persisted data entirely - see the table below. The `confirm` argument is required; running it without one just prints a warning of exactly what would be destroyed and does nothing. |
+
+`/makongcore reset`'s scopes:
+
+| Scope | What gets destroyed |
+|---|---|
+| `mateam` | **Every team, period** - not just points/Stars. Deletes every row in `teams`, `team_members`, `team_allies`. Equivalent to force-disbanding every team that exists. |
+| `matier` | **All MaTier data** - every player's Stars *and* every past season's tier/rank history (`matier_players` and `matier_history` both wiped). This is a bigger wipe than `/matier resetall`, which only zeroes Stars and leaves history intact. |
+| `verification` | **Every account link** - the entire `account_links` table. Every previously-verified player becomes unverified again and, if `linking.required_for_cracked` applies to them, gets frozen and re-coded the next time they join. Doesn't touch the bypass list (see `/malink` below) or in-progress verification codes. |
+| `all` | All three of the above, together. |
+
+### `/malink` - account-linking admin (also reachable via `/makongcore malink <...>`)
+
+Requires **`makongcore.admin`** (default: `op`) - the same node `/matier`'s
+admin subcommands and `/makongcore` itself use.
+
+| Usage | What it does |
+|---|---|
+| `/malink help` | Lists everything below. |
+| `/malink reset <player>` | Deletes that player's `account_links` row (single-player version of `/makongcore reset verification`). If they're online right now, immediately re-runs the same join-time detection/freeze logic `onJoin` would, instead of waiting for their next actual join. |
+| `/malink bypass <player>` | Adds them to the persisted bypass list (`link_bypass` table) - they can play without ever linking, regardless of `linking.required_for_cracked` or their detected account type. Independent of `account_links`: a bypassed player is never required to link whether or not they ever actually do. |
+| `/malink unbypass <player>` | Removes them from the bypass list. |
+| `/malink bypasslist` | Lists every currently-bypassed player. |
 
 ### `/matier`
 

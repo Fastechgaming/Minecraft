@@ -14,11 +14,14 @@ commands:
     usage: /mateam <help|team|disband|forcejoin|forceleave|addpoints|setpoints|addstars|setstars>
   makongcore:
     description: MakongCore global administration - all modules
-    usage: /makongcore <help|reload|info|list|ping|autorestart|matier ...|team|disband|forcejoin|forceleave|addpoints|setpoints|addstars|setstars>
+    usage: /makongcore <help|reload|info|list|ping|autorestart|reset|matier ...|malink ...|team|disband|forcejoin|forceleave|addpoints|setpoints|addstars|setstars>
     aliases: [macore]
   matier:
     description: Player MaTier profile and leaderboard
     usage: /matier [top|stats|set|add|remove|reset|resetall|reload]
+  malink:
+    description: Account-linking admin commands
+    usage: /malink <help|reset|bypass|unbypass|bypasslist>
   link:
     description: Link your Minecraft account to Discord
     usage: /link
@@ -29,5 +32,5 @@ permissions:
     description: Access /mateam's team-administration commands
     default: op
   makongcore.admin:
-    description: Access /matier's admin subcommands, and /makongcore's (/macore's) global admin commands
+    description: Access /matier's and /malink's admin subcommands, and /makongcore's (/macore's) global admin commands
     default: op

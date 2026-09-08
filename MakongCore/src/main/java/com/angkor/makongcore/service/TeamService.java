@@ -33,6 +33,8 @@ return t;}
  public boolean addMember(Team t,UUID u,String name,TeamRole role){if(t==null||t.members().size()>=s.maxSize()||byPlayer(u)!=null)return false;t.addMember(new TeamMember(u,name,role,System.currentTimeMillis(),System.currentTimeMillis(),null));db.save(t);return true;}
  public boolean removeMember(Team t,UUID u){if(t==null||!t.hasMember(u))return false;t.removeMember(u);db.save(t);return true;}
  public CompletableFuture<Void> disband(Team t){if(t==null)return CompletableFuture.completedFuture(null);teams.remove(t.id());tags.remove(t.tag().toLowerCase(Locale.ROOT));names.remove(t.name().toLowerCase(Locale.ROOT));return db.delete(t.id());}
+ // /makongcore reset mateam - deletes every team entirely, not just their points/Stars.
+ public CompletableFuture<Void> disbandAll(){teams.clear();tags.clear();names.clear();invites.clear();requests.clear();return db.deleteAllTeams();}
  public void invite(UUID player,UUID team,UUID inviter){invites.put(player,new Invite(team,inviter,System.currentTimeMillis()+s.inviteExpire()*1000));}
  public Invite invite(UUID player){Invite i=invites.get(player);if(i!=null&&i.expiresAt()<System.currentTimeMillis()){invites.remove(player);return null;}return i;}
  public void clearInvite(UUID p){invites.remove(p);}

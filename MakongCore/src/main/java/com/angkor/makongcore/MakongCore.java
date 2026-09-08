@@ -10,6 +10,7 @@ import com.angkor.makongcore.service.MaTierService;
 import com.angkor.makongcore.service.MaTierAuraService;
 import com.angkor.makongcore.service.AccountLinkService;
 import com.angkor.makongcore.command.MaTierCommand;
+import com.angkor.makongcore.command.MaLinkCommand;
 import com.angkor.makongcore.data.Database;
 import com.angkor.makongcore.gui.GuiManager;
 import com.angkor.makongcore.hook.FloodgateHook;
@@ -121,14 +122,6 @@ public final class MakongCore extends JavaPlugin {
         matierAura=new MaTierAuraService(this,matier);
         MaTierCommand mc=new MaTierCommand(this,matier);
         getCommand("matier").setExecutor(mc); getCommand("matier").setTabCompleter(mc);
-        AdminCommand ac=new AdminCommand(this,teams,tac,mc);
-        getCommand("makongcore").setExecutor(ac);getCommand("makongcore").setTabCompleter(ac);
-        getCommand("link").setExecutor((sender,command,label,args)->{if(!(sender instanceof org.bukkit.entity.Player p)){sender.sendMessage("Players only.");return true;}accountLinks.optionalLink(p);return true;});
-        getServer().getPluginManager().registerEvents(matier,this);
-        
-        getServer().getPluginManager().registerEvents(new GuiListener(this,teams,gui),this);
-        getServer().getPluginManager().registerEvents(new ChatListener(this,teams),this);
-        matierAura.start();
         accountLinks=new AccountLinkService(this,database,floodgate,verificationConfig.get());
         getServer().getPluginManager().registerEvents(accountLinks,this);
         // Lets the optional MakongVelocity companion (see ../MakongVelocity)
@@ -136,6 +129,16 @@ public final class MakongCore extends JavaPlugin {
         // player straight to this server on join, skipping this service's
         // own best-effort Mojang API guess entirely when it's available.
         getServer().getMessenger().registerIncomingPluginChannel(this,"makong:accounttype",accountLinks);
+        MaLinkCommand mlc=new MaLinkCommand(this,accountLinks);
+        getCommand("malink").setExecutor(mlc); getCommand("malink").setTabCompleter(mlc);
+        AdminCommand ac=new AdminCommand(this,teams,tac,mc,matier,accountLinks,mlc);
+        getCommand("makongcore").setExecutor(ac);getCommand("makongcore").setTabCompleter(ac);
+        getCommand("link").setExecutor((sender,command,label,args)->{if(!(sender instanceof org.bukkit.entity.Player p)){sender.sendMessage("Players only.");return true;}accountLinks.optionalLink(p);return true;});
+        getServer().getPluginManager().registerEvents(matier,this);
+
+        getServer().getPluginManager().registerEvents(new GuiListener(this,teams,gui),this);
+        getServer().getPluginManager().registerEvents(new ChatListener(this,teams),this);
+        matierAura.start();
         accountLinks.start();
         weeklyRewards=new WeeklyRewardService(this,teams); weeklyRewards.start();
         teamStats=new TeamStatsListener(this,teams); getServer().getPluginManager().registerEvents(teamStats,this); teamStats.start();
