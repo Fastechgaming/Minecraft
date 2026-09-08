@@ -160,4 +160,9 @@ MaTier:
 ## 1.2.22 changes
 - The team settings GUI's `tag`/`description`/`status`/`color` buttons moved back one slot each (11/13/15/17 → 10/12/14/16). Only applies to a fresh install - an existing `gui.yml` needs those four `items.settings.*.slot` values edited by hand, since the self-healing config only adds missing keys and never changes one you already have.
 - The interactive team-creation chat flow (`/team create` with no arguments) now asks for the team name before the tag, not the tag before the name - matches how a player actually thinks about it. The direct one-line `/team create <tag> <name>` command is unchanged.
+
+## 1.2.23 changes
 - Team PvP is now actually enforced - previously `team.pvp` was purely cosmetic (persisted and shown in the GUI, but no combat listener ever read it). With PvP **off** (the default for a new team), teammates can no longer damage each other at all, direct or via projectile (arrows, tridents, thrown potions); with it **on**, they can. This only ever governs damage between two members of the *same* team - damage to or from anyone outside the team is untouched either way. Toggling it from the team GUI's PvP button is now restricted to the team owner (previously any member could flip it).
+
+## 1.2.24 changes
+- Fixed a `zip file closed` error logged during a plugin disable/reload (server restart, or `/makongcore reload verification`) whenever the Discord bot's WebSocket connection happened to be tearing down at the same time. `AccountLinkService.stop()` called `jda.shutdownNow()` and returned immediately without waiting for JDA's background threads to actually finish - if Paper then closed the plugin's classloader before they did, the next class one of them needed to lazy-load threw that error instead of shutting down cleanly. `stop()` now blocks (up to 5s) on `jda.awaitShutdown()` first.
