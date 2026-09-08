@@ -1594,6 +1594,9 @@ a.continue-btn { display: block; box-sizing: border-box; text-align: center; tex
 .games-gate .preview-name { display: block; margin-top: 0.35rem; }
 .games-disclaimer { margin-top: 0.9rem; font-size: 0.8rem; opacity: 0.85; }
 
+.verify-panel { max-width: 460px; margin: 0 auto; text-align: center; }
+.verify-panel h3 { margin: 0.2rem 0 0.4rem; font-size: 1.35rem; }
+
 .player-bar {
   display: flex;
   align-items: center;

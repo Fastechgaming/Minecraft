@@ -43,6 +43,10 @@ router.get("/config", (req, res) => {
     logo: cfg.logo,
     logoIcon: cfg.logoIcon || cfg.logo,
     discordLink: cfg.discordLink,
+    // The Telegram bot players message a 6-digit account-verification code
+    // to (see MakongCore's module/verification.yml telegram.username) - used
+    // by /verify to link straight to it.
+    telegramBotUsername: cfg.telegramBotUsername || "",
     khqrImage: cfg.khqrImage,
     tebexUrl: cfg.tebexUrl,
     javaIp: cfg.javaIp,

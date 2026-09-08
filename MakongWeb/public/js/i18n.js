@@ -24,9 +24,18 @@ const I18n = (() => {
       "nav.home": "Home",
       "nav.store": "Store",
       "nav.ranking": "Ranking",
+      "nav.verify": "Verify",
       "nav.menu": "Menu",
       "nav.language": "Language",
       "footer.copy": "© {year} Makong Network · Asia Minecraft Server 🌏",
+
+      /* ---- verify ---- */
+      "verify.subtitle": "ACCOUNT VERIFICATION",
+      "verify.title": "Verify your account",
+      "verify.hint": "Got a 6-digit code in-game? Choose where to send it.",
+      "verify.discordDesc": "Verify in our server",
+      "verify.telegramDesc": "Message our bot",
+      "verify.notConfigured": "This verification method isn't set up yet — try the other one.",
 
       /* ---- home ---- */
       "home.discord": "Discord",
@@ -351,9 +360,18 @@ const I18n = (() => {
       "nav.home": "ទំព័រដើម",
       "nav.store": "ហាង",
       "nav.ranking": "ចំណាត់ថ្នាក់",
+      "nav.verify": "ផ្ទៀងផ្ទាត់",
       "nav.menu": "ម៉ឺនុយ",
       "nav.language": "ភាសា",
       "footer.copy": "© {year} Makong Network · Minecraft Server អាស៊ី 🌏",
+
+      /* ---- verify ---- */
+      "verify.subtitle": "ការផ្ទៀងផ្ទាត់គណនី",
+      "verify.title": "ផ្ទៀងផ្ទាត់គណនីរបស់អ្នក",
+      "verify.hint": "បានទទួលកូដ 6 ខ្ទង់នៅក្នុងហ្គេមមែនទេ? ជ្រើសរើសកន្លែងផ្ញើវា។",
+      "verify.discordDesc": "ផ្ទៀងផ្ទាត់នៅក្នុង Server របស់យើង",
+      "verify.telegramDesc": "ផ្ញើសារទៅ Bot របស់យើង",
+      "verify.notConfigured": "វិធីផ្ទៀងផ្ទាត់នេះមិនទាន់រៀបចំនៅឡើយទេ — សូមសាកល្បងវិធីមួយទៀត។",
 
       /* ---- home ---- */
       "home.discord": "Discord",
@@ -676,9 +694,18 @@ const I18n = (() => {
       "nav.home": "首页",
       "nav.store": "商店",
       "nav.ranking": "排行榜",
+      "nav.verify": "验证",
       "nav.menu": "菜单",
       "nav.language": "语言",
       "footer.copy": "© {year} Makong Network · 亚洲 Minecraft 服务器 🌏",
+
+      /* ---- verify ---- */
+      "verify.subtitle": "账号验证",
+      "verify.title": "验证您的账号",
+      "verify.hint": "在游戏中收到了 6 位验证码？选择发送到哪里。",
+      "verify.discordDesc": "在我们的服务器中验证",
+      "verify.telegramDesc": "私信我们的机器人",
+      "verify.notConfigured": "此验证方式尚未设置 — 请尝试另一种方式。",
 
       /* ---- home ---- */
       "home.discord": "Discord",
@@ -1001,9 +1028,18 @@ const I18n = (() => {
       "nav.home": "Trang chủ",
       "nav.store": "Cửa hàng",
       "nav.ranking": "Bảng xếp hạng",
+      "nav.verify": "Xác minh",
       "nav.menu": "Menu",
       "nav.language": "Ngôn ngữ",
       "footer.copy": "© {year} Makong Network · Máy chủ Minecraft Châu Á 🌏",
+
+      /* ---- verify ---- */
+      "verify.subtitle": "XÁC MINH TÀI KHOẢN",
+      "verify.title": "Xác minh tài khoản của bạn",
+      "verify.hint": "Nhận được mã 6 số trong game? Chọn nơi để gửi mã.",
+      "verify.discordDesc": "Xác minh trong server của chúng tôi",
+      "verify.telegramDesc": "Nhắn tin cho bot của chúng tôi",
+      "verify.notConfigured": "Phương thức xác minh này chưa được thiết lập — hãy thử phương thức còn lại.",
 
       /* ---- home ---- */
       "home.discord": "Discord",
