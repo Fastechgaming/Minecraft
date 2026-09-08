@@ -52,6 +52,9 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
     // Velocity, or Velocity without nLogin/this forwarding disabled) - nothing
     // here changes in that case.
     private final Map<UUID,String> externalAccountType=new ConcurrentHashMap<>();
+    // Last time each player successfully ran /verify - gates
+    // linking.request_cooldown_seconds in displayOptionalCode() below.
+    private final Map<UUID,Long> lastVerifyRequest=new ConcurrentHashMap<>();
     private final HttpClient http=HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
     private JDA jda; private ScheduledExecutorService telegram; private org.bukkit.scheduler.BukkitTask reminderTask;
     private static final Pattern CODE=Pattern.compile("^\\d{6}$");
@@ -285,8 +288,50 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
         }catch(java.io.IOException ignored){}
     }
     private Boolean detectPremium(String name){if(Bukkit.getOnlineMode())return true;if(!cfg.b("linking.premium_detection.enabled",true))return false;try{HttpRequest r=HttpRequest.newBuilder(URI.create("https://api.mojang.com/users/profiles/minecraft/"+java.net.URLEncoder.encode(name,java.nio.charset.StandardCharsets.UTF_8))).timeout(Duration.ofSeconds(4)).GET().build();HttpResponse<String> x=http.send(r,HttpResponse.BodyHandlers.ofString());if(x.statusCode()==200)return true;if(x.statusCode()==204||x.statusCode()==404)return false;return null;}catch(Exception e){return null;}}
-    public void optionalLink(Player p){if(!cfg.b("discord.enabled",false)){p.sendMessage("§cDiscord linking is currently disabled.");return;}db.getAccountLink(p.getUniqueId()).thenAccept(l->{if(l!=null&&l.discordId()!=null&&!l.discordId().isBlank()){p.sendMessage("§aYour Discord account is already linked.");return;}String type=(floodgate!=null&&floodgate.isBedrock(p.getUniqueId()))?"bedrock":"java";Bukkit.getScheduler().runTask(plugin,()->displayOptionalCode(p,type));});}
-    private void displayOptionalCode(Player p,String type){if(!p.isOnline())return;pending.values().removeIf(v->v.uuid.equals(p.getUniqueId()));String code=String.format("%06d",ThreadLocalRandom.current().nextInt(1000000));long expiry=System.currentTimeMillis()+cfg.l("linking.code_expire_minutes",10)*60000L;Pending x=new Pending(p.getUniqueId(),p.getName(),code,expiry,type,true);pending.put(code,x);db.putPending(code,p.getUniqueId(),p.getName(),expiry,type,true);playerCodes.put(p.getUniqueId(),code);p.sendTitle(code,"Send this code to Discord to link",10,80,10);p.sendActionBar("§bDiscord: "+cfg.s("discord.invite","discord.gg/makong"));p.sendMessage("§aOptional Discord linking code: §e"+code+" §7(expires in 10 minutes)");plugin.getServer().getScheduler().runTaskLater(plugin,()->{if(code.equals(playerCodes.get(p.getUniqueId())))playerCodes.remove(p.getUniqueId());},200L);}
+    // linkingAvailable() (Discord OR Telegram), not discord.enabled alone -
+    // a Telegram-only server used to tell every player /verify was
+    // "disabled" even though Telegram linking was actually available.
+    public void optionalLink(Player p){if(!linkingAvailable()){p.sendMessage("§cLinking is currently disabled.");return;}db.getAccountLink(p.getUniqueId()).thenAccept(l->{if(l!=null&&((l.discordId()!=null&&!l.discordId().isBlank())||(l.telegramChatId()!=null&&!l.telegramChatId().isBlank()))){p.sendMessage("§aYour account is already linked.");return;}String type=(floodgate!=null&&floodgate.isBedrock(p.getUniqueId()))?"bedrock":"java";Bukkit.getScheduler().runTask(plugin,()->displayOptionalCode(p,type));});}
+    // /verify's own cooldown: within linking.request_cooldown_seconds of the
+    // last request, re-shows the SAME still-valid code instead of rolling a
+    // new one (and doesn't touch its expiry) - only once the cooldown has
+    // elapsed does running /verify again generate a genuinely fresh code
+    // with a fresh linking.code_expire_minutes window.
+    private void displayOptionalCode(Player p,String type){
+        if(!p.isOnline())return;
+        UUID u=p.getUniqueId();
+        long cooldownMs=Math.max(0,cfg.l("linking.request_cooldown_seconds",60))*1000L;
+        Long last=lastVerifyRequest.get(u);
+        Pending existing=pending.values().stream().filter(v->v.uuid.equals(u)).findFirst().orElse(null);
+        if(existing!=null&&last!=null&&System.currentTimeMillis()-last<cooldownMs){
+            sendVerifyPrompt(p,existing.code);
+            return;
+        }
+        pending.values().removeIf(v->v.uuid.equals(u));
+        String code=String.format("%06d",ThreadLocalRandom.current().nextInt(1000000));
+        long expiry=System.currentTimeMillis()+cfg.l("linking.code_expire_minutes",10)*60000L;
+        Pending x=new Pending(u,p.getName(),code,expiry,type,true);
+        pending.put(code,x);
+        db.putPending(code,u,p.getName(),expiry,type,true);
+        playerCodes.put(u,code);
+        lastVerifyRequest.put(u,System.currentTimeMillis());
+        sendVerifyPrompt(p,code);
+        plugin.getServer().getScheduler().runTaskLater(plugin,()->{if(code.equals(playerCodes.get(u)))playerCodes.remove(u);},200L);
+    }
+    // The /verify title/subtitle/action bar/chat message - all configurable
+    // in module/verification.yml's linking.verify_command.*, same
+    // {code}/{discord}/{telegram}/&-color convention as sendReminder()'s
+    // required-verification nag (reuses the same placeholders() helper).
+    private void sendVerifyPrompt(Player p,String code){
+        long minutes=cfg.l("linking.code_expire_minutes",10);
+        String title=placeholders(cfg.s("linking.verify_command.title","{code}"),code);
+        String subtitle=placeholders(cfg.s("linking.verify_command.subtitle","Send this code to Discord/Telegram to link"),code);
+        String actionbar=placeholders(cfg.s("linking.verify_command.actionbar","&bDiscord: {discord} &7| &bTelegram: {telegram}"),code);
+        String message=placeholders(cfg.s("linking.verify_command.message","&aOptional linking code: &e{code} &7(expires in {expires_minutes}m)"),code).replace("{expires_minutes}",String.valueOf(minutes));
+        p.sendTitle(title,subtitle,10,80,10);
+        p.sendActionBar(actionbar);
+        p.sendMessage(message);
+    }
     private void freezeAndCode(Player p,String type){freezeAndCode(p,type,true);}
     private void freezeAndCode(Player p,String type,boolean blocking){if(!p.isOnline())return;pending.values().removeIf(v->v.uuid.equals(p.getUniqueId()));String code=String.format("%06d",ThreadLocalRandom.current().nextInt(1000000));long expiry=System.currentTimeMillis()+cfg.l("linking.code_expire_minutes",10)*60000L;Pending x=new Pending(p.getUniqueId(),p.getName(),code,expiry,type,false);pending.put(code,x);db.putPending(code,p.getUniqueId(),p.getName(),expiry,type,false);playerCodes.put(p.getUniqueId(),code);sendReminder(p,code);if(blocking){frozen.add(p.getUniqueId());p.setWalkSpeed(0f);}}
     private void release(UUID u){frozen.remove(u);Player p=Bukkit.getPlayer(u);if(p!=null){p.setWalkSpeed(0.2f);p.setFlying(false);p.sendTitle("§aVerified","§7You may now play.",5,30,10);}}

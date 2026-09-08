@@ -96,7 +96,7 @@ router.post("/rankings", (req, res) => {
   res.json({ ok: true });
 });
 
-// A connected plugin (currently just MakongVelocity's /mc autorestart)
+// A connected plugin (currently just MakongVelocity's /mcvlc autorestart)
 // queuing a console command on ANOTHER connected server - same command
 // queue the admin panel's /admin/servers already uses, just a second
 // caller. No extra authorization boundary beyond the shared secret every

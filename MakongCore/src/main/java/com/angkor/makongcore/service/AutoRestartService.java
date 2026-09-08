@@ -32,7 +32,7 @@ public final class AutoRestartService {
 
     // A one-off restart outside the configured schedule - used by
     // /makongcore autorestart <seconds> (see AdminCommand), itself normally
-    // triggered by the MakongVelocity companion's /mc autorestart relayed
+    // triggered by the MakongVelocity companion's /mcvlc autorestart relayed
     // through the website bridge. Reuses the same interval-broadcast
     // messages and "normal" restartCommands the scheduled path uses, just
     // counting down from `seconds` instead of down to a wall-clock target.
@@ -66,7 +66,7 @@ public final class AutoRestartService {
 
     // Cancels a pending triggerAdHocRestart() before it fires - used by
     // /makongcore autorestart stop (see AdminCommand), itself normally triggered
-    // by MakongVelocity's /mc ar stop relayed through the website bridge.
+    // by MakongVelocity's /mcvlc ar stop relayed through the website bridge.
     // Only touches the ad-hoc countdown; the configured settings.restarts
     // schedule is untouched. Returns false if nothing was pending.
     public boolean cancelAdHocRestart(){

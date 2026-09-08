@@ -40,7 +40,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *    connects to, so MakongCore's account linking trusts it instead of
  *    guessing via a Mojang API lookup.
  * 2. Connects to the Makong Network website bridge (same protocol MakongCore
- *    itself uses) purely to relay /mc autorestart <seconds> to every
+ *    itself uses) purely to relay /mcvlc autorestart <seconds> to every
  *    connected backend at once.
  * 3. Periodic network-wide announcements (store/Discord plugs, etc.) - see
  *    AnnouncementService and announcements.yml.
@@ -55,7 +55,7 @@ public final class MakongVelocity {
     private final Path dataDirectory;
     private final Map<UUID, String> pendingAccountTypes = new ConcurrentHashMap<>();
     // Command senders currently waiting on a pong from a given target server
-    // id, so /mc ping can report back to whoever asked - mirrors
+    // id, so /mcvlc ping can report back to whoever asked - mirrors
     // MakongCore's WebsiteBridgeService#ping on the Paper side exactly.
     private final Map<String, Set<CommandSource>> pendingPings = new ConcurrentHashMap<>();
 
@@ -85,8 +85,14 @@ public final class MakongVelocity {
         }
 
         server.getChannelRegistrar().register(ACCOUNT_TYPE_CHANNEL);
+        // Deliberately its own, collision-free name - "mc"/"makongcore"/
+        // "macore" all belong to the Paper MakongCore plugin's own commands
+        // (see MakongCore's AdminCommand). Velocity command registrations
+        // intercept a player's input before it ever reaches the backend
+        // server, so aliasing this to any of those names would have
+        // silently swallowed the real /makongcore command on every backend.
         server.getCommandManager().register(
-                server.getCommandManager().metaBuilder("mc").aliases("makongcore", "macore").build(),
+                server.getCommandManager().metaBuilder("mcvlc").build(),
                 new MakongCommand(this));
 
         if (config.websiteEnabled()) startWebsiteBridge();
@@ -186,23 +192,23 @@ public final class MakongVelocity {
         return servers.stream().filter(s -> !"velocity".equals(s.kind)).toList();
     }
 
-    // /mc clients otherwise reads knownServers as of the last scheduled poll
+    // /mcvlc clients otherwise reads knownServers as of the last scheduled poll
     // tick, which can be up to website.poll_interval_seconds stale - a
     // backend that just started or just died wouldn't show up correctly
     // yet. Running a poll cycle immediately (blocking, so call this off the
     // command thread) gets knownBackends() as fresh as this proxy can make
-    // it before /mc clients computes its list.
+    // it before /mcvlc clients computes its list.
     void refreshKnownServersNow() {
         if (bridgeEnabled()) pollOnce();
     }
 
-    /** Used by /mc ping <server-id>. */
+    /** Used by /mcvlc ping <server-id>. */
     void ping(String target, CommandSource sender) {
         pendingPings.computeIfAbsent(target, k -> ConcurrentHashMap.newKeySet()).add(sender);
         server.getScheduler().buildTask(this, () -> bridge.ping(target)).schedule();
     }
 
-    /** Used by /mc clients - purely local proxy state, no website bridge involved. */
+    /** Used by /mcvlc clients - purely local proxy state, no website bridge involved. */
     ProxyServer proxyServer() {
         return server;
     }

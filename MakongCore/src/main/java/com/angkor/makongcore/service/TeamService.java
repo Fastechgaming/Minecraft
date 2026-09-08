@@ -6,7 +6,7 @@ public final class TeamService {
  public record Invite(UUID team,UUID inviter,long expiresAt){} public record Request(UUID team,UUID player,long expiresAt){}
  private final Database db; private volatile Settings s; private final Map<UUID,Team> teams=new ConcurrentHashMap<>(); private final Map<String,UUID> tags=new ConcurrentHashMap<>(),names=new ConcurrentHashMap<>(); private final Map<UUID,Invite> invites=new ConcurrentHashMap<>(); private final Map<UUID,Request> requests=new ConcurrentHashMap<>();
  public TeamService(Database db,Settings s){this.db=db;this.s=s;}
- // Lets /makongcore reload team (and /mc reload team, relayed from MakongVelocity)
+ // Lets /makongcore reload team (and /mcvlc reload team, relayed from MakongVelocity)
  // pick up new limits/PvP/chat settings without the full reload's database
  // reconnect and team-data reload - team membership is untouched.
  public void updateSettings(Settings s){this.s=s;}

@@ -76,6 +76,14 @@ linking:
   required_for_cracked: true
   code_length: 6
   code_expire_minutes: 10
+  # INFO: /verify's own cooldown - running it again within this many seconds
+  # INFO: of the last request just re-shows the SAME still-valid code
+  # INFO: (doesn't touch its expiry, doesn't roll a new one). Once the
+  # INFO: cooldown has elapsed, running /verify again generates a genuinely
+  # INFO: new code with a fresh code_expire_minutes window. Doesn't apply to
+  # INFO: the required-verification freeze (that's a one-time code per
+  # INFO: freeze, not repeatable on demand).
+  request_cooldown_seconds: 60
   one_minecraft_per_discord: true
   one_discord_per_minecraft: true
   one_minecraft_per_telegram: true
@@ -98,3 +106,12 @@ linking:
     subtitle: "Send this code to Discord/Telegram to play"
     actionbar: "&bDiscord: {discord} &7| &bTelegram: {telegram}"
     message: "&cYou must link your account to continue. &7Code: &e{code}"
+  # INFO: Shown when a player runs /verify (or its /link alias) by choice -
+  # INFO: not frozen/required, just asking for a code. Same {code}/{discord}/
+  # INFO: {telegram}/&-color convention as reminder above, plus
+  # INFO: {expires_minutes} (= code_expire_minutes above).
+  verify_command:
+    title: "{code}"
+    subtitle: "Send this code to Discord/Telegram to link"
+    actionbar: "&bDiscord: {discord} &7| &bTelegram: {telegram}"
+    message: "&aOptional linking code: &e{code} &7(expires in {expires_minutes}m)"

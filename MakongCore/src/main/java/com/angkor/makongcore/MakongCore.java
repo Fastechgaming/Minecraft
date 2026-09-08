@@ -200,7 +200,7 @@ public final class MakongCore extends JavaPlugin {
     private static final java.util.Set<String> LIGHTWEIGHT_MODULES = java.util.Set.of("team", "autorestart");
     private static final java.util.Set<String> KNOWN_MODULES = java.util.Set.of("team", "autorestart", "matier", "verification", "gui");
 
-    /** Used by /makongcore reload &lt;module&gt; (see AdminCommand) - and so, relayed, by MakongVelocity's /mc reload &lt;module&gt;. */
+    /** Used by /makongcore reload &lt;module&gt; (see AdminCommand) - and so, relayed, by MakongVelocity's /mcvlc reload &lt;module&gt;. */
     public void reloadModule(String module, CommandSender sender) {
         if(!Bukkit.isPrimaryThread()){Bukkit.getScheduler().runTask(this,()->reloadModule(module,sender));return;}
         String m = module.toLowerCase(java.util.Locale.ROOT);

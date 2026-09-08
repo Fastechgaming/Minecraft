@@ -45,7 +45,7 @@ website:
   server_id: ""
   # INFO: How often (in seconds) to check the website for new commands/pings
   # INFO: and report this server's Team/MaTier Star standings. Lower is more
-  # INFO: responsive (e.g. /mc clients on the Velocity companion detects a
+  # INFO: responsive (e.g. /mcvlc clients on the Velocity companion detects a
   # INFO: reconnect sooner) at the cost of a bit more background traffic;
   # INFO: there's little reason to go below 2.
   poll_interval_seconds: 3

@@ -102,7 +102,7 @@ identical either way you reach them - nothing is duplicated).
 | `/makongcore info` | Team count, member count, Floodgate status, Website Bridge status. |
 | `/makongcore list` | Lists every team (tag, name, member count). |
 | `/makongcore ping <server-id>` | Pings another server through the Website Bridge. Requires the bridge to be configured (see [§15](#15-website-bridge--velocity-companion)). |
-| `/makongcore autorestart <seconds\|stop>` | Broadcasts a countdown and restarts this server once it elapses, or (`stop`) cancels a pending one. Normally triggered remotely by MakongVelocity's `/mc ar`/`/mc autorestart`, not typed by hand. |
+| `/makongcore autorestart <seconds\|stop>` | Broadcasts a countdown and restarts this server once it elapses, or (`stop`) cancels a pending one. Normally triggered remotely by MakongVelocity's `/mcvlc ar`/`/mcvlc autorestart`, not typed by hand. |
 | `/makongcore team\|disband\|forcejoin\|forceleave\|addpoints\|setpoints\|addstars\|setstars ...` | Same as the identically-named `/mateam` subcommands above. |
 | `/makongcore matier <...>` | Same as the identically-named `/matier` admin subcommand below (e.g. `/makongcore matier set <player> <amount>`). |
 | `/makongcore malink <...>` | Same as the identically-named `/malink` subcommand below (e.g. `/makongcore malink bypass <player>`). |
@@ -151,9 +151,14 @@ itself requires, see [§3](#3-permissions).
 
 ### `/verify` (alias `/link`)
 
-No permission node. Starts optional Discord linking for the player who runs
-it (`AccountLinkService#optionalLink`) - see [§9](#9-moduleverificationyml).
-Renamed from `/link` (added next release); `/link` still works as an alias.
+No permission node. Starts optional Discord/Telegram linking for the player
+who runs it (`AccountLinkService#optionalLink`) - see
+[§9](#9-moduleverificationyml). Renamed from `/link` (added next release);
+`/link` still works as an alias. Its title/subtitle/action bar/chat message
+are configurable (`linking.verify_command.*`), and it has its own cooldown
+(`linking.request_cooldown_seconds`, default 60s) - running it again within
+that window re-shows the same still-valid code rather than generating a new
+one.
 
 ---
 
@@ -357,12 +362,14 @@ because there is no way to check it.
 | `linking.required_for_cracked` | `true` | Only actually enforced when at least one of `discord.enabled`/`telegram.enabled` is true - see 1.2.15's changelog entry for the lockout bug this guards against. Set `false` yourself to make linking optional even with a bot enabled. |
 | `linking.code_length` | `6` | |
 | `linking.code_expire_minutes` | `10` | |
+| `linking.request_cooldown_seconds` | `60` | *(added next release)* `/verify`'s own cooldown - running it again within this many seconds of the last request just re-shows the same still-valid code (expiry untouched) instead of rolling a new one. Only matters for `/verify`'s on-demand codes, not the required-verification freeze (a one-time code per freeze, not repeatable on demand). |
 | `linking.one_minecraft_per_discord` / `one_discord_per_minecraft` | `true` / `true` | |
 | `linking.one_minecraft_per_telegram` / `one_telegram_per_minecraft` | `true` / `true` | |
 | `linking.premium_detection.enabled` | `true` | Falls back to a Mojang username lookup when MakongVelocity/nLogin forwarding isn't available - best-effort only, see the file's own comment. |
 | `linking.premium_detection.unknown_as_cracked` | `true` | |
 | `linking.reminder.interval_seconds` | `3` | *(added next release)* How often a frozen player's title/subtitle/action bar/chat message repeats - also the scheduler's own tick rate (`AccountLinkService#start()`), so this is the only place that interval is configured. |
 | `linking.reminder.title` / `subtitle` / `actionbar` / `message` | see file | *(added next release)* The frozen-player nag, sent once immediately on freeze and then repeated every `interval_seconds` - a title/action bar fades on its own after a few seconds, so without repeating it it would only ever show once. Supports `{code}`, `{discord}` (= `discord.invite`), `{telegram}` (= `"@" + telegram.username`), and `&`-style color codes. |
+| `linking.verify_command.title` / `subtitle` / `actionbar` / `message` | see file | *(added next release)* Shown when a player runs `/verify` (or `/link`) by choice - not frozen/required. Same `{code}`/`{discord}`/`{telegram}`/`&`-color support as `reminder.*` above, plus `{expires_minutes}` (= `code_expire_minutes`). |
 
 ### 9.1 Multiple servers sharing one Discord bot
 
@@ -479,7 +486,7 @@ Optional - only registered if PlaceholderAPI is installed (see
   before registering anything.
 - **MakongVelocity** (separate plugin, this repo's `../MakongVelocity`):
   forwards nLogin's premium/cracked/Bedrock classification to this server
-  over a plugin message, and relays `/mc autorestart`/`/mc ar`/`/mc reload`
+  over a plugin message, and relays `/mcvlc autorestart`/`/mcvlc ar`/`/mcvlc reload`
   network-wide through the Website Bridge. See that project's own README.
 - **Makong Network website** (`../MakongWeb`): see [§15](#15-website-bridge--velocity-companion).
 
@@ -511,7 +518,7 @@ and matching `secret`:
   the public `/ranking` page (read-only - the website never writes back).
 - `/makongcore autorestart`/`/makongcore reload <module>` can be triggered
   network-wide from the [MakongVelocity](../MakongVelocity) proxy plugin's
-  `/mc ar`, `/mc autorestart`, and `/mc reload` commands.
+  `/mcvlc ar`, `/mcvlc autorestart`, and `/mcvlc reload` commands.
 
 See `../MakongVelocity/README.md` and `../MakongWeb/lib/pluginBridge.js` for
 the other two sides of this.

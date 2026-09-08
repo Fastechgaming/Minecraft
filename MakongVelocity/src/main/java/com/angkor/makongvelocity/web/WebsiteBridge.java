@@ -101,7 +101,7 @@ public final class WebsiteBridge {
 
   /**
    * Sends a console command for `targetServerId` to run right now - used by
-   * /mc autorestart to fan a restart-warning-then-restart command out to
+   * /mcvlc autorestart to fan a restart-warning-then-restart command out to
    * every connected backend at once. Same trust model as everything else on
    * this bridge: whoever holds the shared secret can already do this via the
    * website's own admin panel, this is just a second caller of the identical
