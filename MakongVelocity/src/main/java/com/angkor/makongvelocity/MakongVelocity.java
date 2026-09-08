@@ -14,6 +14,7 @@ import com.velocitypowered.api.event.player.ServerConnectedEvent;
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
 import com.velocitypowered.api.event.proxy.ProxyShutdownEvent;
 import com.velocitypowered.api.command.CommandSource;
+import com.velocitypowered.api.command.SimpleCommand;
 import com.velocitypowered.api.plugin.Plugin;
 import com.velocitypowered.api.plugin.annotation.DataDirectory;
 import com.velocitypowered.api.proxy.Player;
@@ -96,7 +97,27 @@ public final class MakongVelocity {
                 new MakongCommand(this));
 
         if (config.websiteEnabled()) startWebsiteBridge();
-        if (config.announcementsEnabled()) announcements.start(dataDirectory);
+        if (config.announcementsEnabled()) {
+            announcements.start(dataDirectory);
+            registerAnnouncementCommands();
+        }
+    }
+
+    // One on-demand command per announcements.yml entry (e.g. /store, /discord)
+    // that instantly sends that entry's message/action-bar/sound to whoever ran
+    // it, on top of its existing periodic network-wide broadcast.
+    private void registerAnnouncementCommands() {
+        for (AnnouncementsConfig.Announcement a : announcements.announcements()) {
+            server.getCommandManager().register(
+                    server.getCommandManager().metaBuilder(a.id()).build(),
+                    (SimpleCommand) invocation -> {
+                        if (!(invocation.source() instanceof Player player)) {
+                            invocation.source().sendMessage(Component.text("Only players can use this command."));
+                            return;
+                        }
+                        announcements.sendTo(player, a);
+                    });
+        }
     }
 
     @Subscribe

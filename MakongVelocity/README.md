@@ -139,8 +139,12 @@ announcements:
 
 Add, remove, or rename entries under `announcements:` freely - `store` and
 `discord` are just labels, every entry works the same way and runs on its
-own independent repeating timer (its own `interval`, in seconds). A config
-change only takes effect after a proxy restart (there's no reload command).
+own independent repeating timer (its own `interval`, in seconds). Each
+entry's label also becomes an on-demand command any player can run
+(`/store`, `/discord`, ...) that instantly sends that entry's message,
+action bar and sound to just them, without waiting for its timer. A config
+change - including renaming an entry, which renames its command - only
+takes effect after a proxy restart (there's no reload command).
 
 Per entry:
 - `link` - optional. When set, clicking the broadcast message opens this

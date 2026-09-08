@@ -1,5 +1,6 @@
 package com.angkor.makongvelocity;
 
+import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.ProxyServer;
 import com.velocitypowered.api.scheduler.ScheduledTask;
 import net.kyori.adventure.key.Key;
@@ -26,6 +27,7 @@ final class AnnouncementService {
     private final ProxyServer server;
     private final Logger logger;
     private final List<ScheduledTask> tasks = new ArrayList<>();
+    private List<AnnouncementsConfig.Announcement> announcements = List.of();
 
     AnnouncementService(ProxyServer server, Logger logger) {
         this.server = server;
@@ -33,7 +35,6 @@ final class AnnouncementService {
     }
 
     void start(Path dataDirectory) {
-        List<AnnouncementsConfig.Announcement> announcements;
         try {
             announcements = AnnouncementsConfig.loadOrCreate(dataDirectory);
         } catch (Exception e) {
@@ -62,6 +63,21 @@ final class AnnouncementService {
     void stop() {
         tasks.forEach(ScheduledTask::cancel);
         tasks.clear();
+    }
+
+    /** Every loaded entry, e.g. to register an on-demand /store, /discord command per id. */
+    List<AnnouncementsConfig.Announcement> announcements() {
+        return announcements;
+    }
+
+    /** Sends one entry's message/action-bar/sound to a single player on demand (its /<id> command), instead of the whole network. */
+    void sendTo(Player player, AnnouncementsConfig.Announcement a) {
+        player.sendMessage(buildMessage(a));
+        if (!a.actionBar().isBlank()) {
+            player.sendActionBar(LegacyComponentSerializer.legacyAmpersand().deserialize(a.actionBar()));
+        }
+        Sound sound = buildSound(a.sound());
+        if (sound != null) player.playSound(sound);
     }
 
     private Component buildMessage(AnnouncementsConfig.Announcement a) {
