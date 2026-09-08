@@ -134,49 +134,6 @@ export const moderationModule: FeatureModule = {
     },
     {
       data: new SlashCommandBuilder()
-        .setName('ban')
-        .setDescription('Ban a member')
-        .addUserOption((o) => o.setName('user').setDescription('Member to ban').setRequired(true))
-        .addStringOption((o) => o.setName('reason').setDescription('Reason').setRequired(false))
-        .addIntegerOption((o) => o.setName('delete_days').setDescription('Delete recent messages (0-7 days)').setMinValue(0).setMaxValue(7)),
-      execute: async (interaction) => {
-        if (!(await requireStaff(interaction))) return;
-        const targetUser = interaction.options.getUser('user', true);
-        const reason = interaction.options.getString('reason') ?? undefined;
-        const deleteDays = interaction.options.getInteger('delete_days') ?? 0;
-        const member = await interaction.guild!.members.fetch(targetUser.id).catch(() => null);
-        if (member && !member.bannable) {
-          await interaction.reply({ content: "I can't ban that member.", ephemeral: true });
-          return;
-        }
-        await member?.send(`You were banned from **${interaction.guild!.name}**${reason ? `: ${reason}` : '.'}`).catch(() => undefined);
-        await interaction.guild!.members.ban(targetUser.id, { reason, deleteMessageSeconds: deleteDays * 86400 });
-        const c = await createCase(interaction.guildId!, 'ban', { id: targetUser.id, tag: targetUser.tag }, { id: interaction.user.id, tag: interaction.user.tag }, reason);
-        await interaction.reply(`🔨 Case #${c.caseNumber} — banned ${targetUser.tag}${reason ? `: ${reason}` : ''}.`);
-      }
-    },
-    {
-      data: new SlashCommandBuilder()
-        .setName('unban')
-        .setDescription('Unban a user by ID')
-        .addStringOption((o) => o.setName('user_id').setDescription('User ID').setRequired(true))
-        .addStringOption((o) => o.setName('reason').setDescription('Reason').setRequired(false)),
-      execute: async (interaction) => {
-        if (!(await requireStaff(interaction))) return;
-        const userId = interaction.options.getString('user_id', true);
-        const reason = interaction.options.getString('reason') ?? undefined;
-        const banned = await interaction.guild!.bans.fetch(userId).catch(() => null);
-        if (!banned) {
-          await interaction.reply({ content: 'That user is not banned.', ephemeral: true });
-          return;
-        }
-        await interaction.guild!.members.unban(userId, reason);
-        const c = await createCase(interaction.guildId!, 'unban', { id: userId, tag: banned.user.tag }, { id: interaction.user.id, tag: interaction.user.tag }, reason);
-        await interaction.reply(`✅ Case #${c.caseNumber} — unbanned ${banned.user.tag}.`);
-      }
-    },
-    {
-      data: new SlashCommandBuilder()
         .setName('case')
         .setDescription('Manage moderation cases')
         .addSubcommand((s) => s.setName('view').setDescription('View a case').addIntegerOption((o) => o.setName('id').setDescription('Case number').setRequired(true)))
