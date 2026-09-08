@@ -149,10 +149,11 @@ itself requires, see [§3](#3-permissions).
 | `/matier resetall` | `makongcore.admin` | Sets *every* player's Stars to 0. |
 | `/matier reload` | `makongcore.admin` | Runs the same full reload as `/makongcore reload` (not a MaTier-only reload). |
 
-### `/link`
+### `/verify` (alias `/link`)
 
 No permission node. Starts optional Discord linking for the player who runs
 it (`AccountLinkService#optionalLink`) - see [§9](#9-moduleverificationyml).
+Renamed from `/link` (added next release); `/link` still works as an alias.
 
 ---
 
@@ -336,8 +337,8 @@ because there is no way to check it.
 
 | Key | Default | Notes |
 |---|---|---|
-| `discord.enabled` | `false` | Controls whether linking is required/available and whether `/link` works on *this* server - independent of `discord.hub` below. Leave `true` on every server in a multi-server network sharing one bot, even non-hub ones. |
-| `discord.hub` | `true` | Whether *this* server opens its own live JDA connection to Discord. Only matters when multiple servers share the same `bot_token`: set `true` on exactly one (the "hub") and `false` on the rest, so only one process ever receives/acknowledges Discord interactions. Without this, every connected server gets every button click/modal submit at once and races the others to reply, producing `10062 Unknown interaction` / `40060 already acknowledged` errors. A player on a non-hub server still gets a code via `/link` and it's still recognized correctly when submitted through the hub - see [§9.1](#91-multiple-servers-sharing-one-discord-bot). On a single-server setup, leave this alone. |
+| `discord.enabled` | `false` | Controls whether linking is required/available and whether `/verify` works on *this* server - independent of `discord.hub` below. Leave `true` on every server in a multi-server network sharing one bot, even non-hub ones. |
+| `discord.hub` | `true` | Whether *this* server opens its own live JDA connection to Discord. Only matters when multiple servers share the same `bot_token`: set `true` on exactly one (the "hub") and `false` on the rest, so only one process ever receives/acknowledges Discord interactions. Without this, every connected server gets every button click/modal submit at once and races the others to reply, producing `10062 Unknown interaction` / `40060 already acknowledged` errors. A player on a non-hub server still gets a code via `/verify` and it's still recognized correctly when submitted through the hub - see [§9.1](#91-multiple-servers-sharing-one-discord-bot). On a single-server setup, leave this alone. |
 | `discord.bot_token` | `PUT_DISCORD_BOT_TOKEN_HERE` | Keep private - never commit a real token. |
 | `discord.invite` | `discord.gg/makong` | |
 | `discord.guild.id` | `""` | |
@@ -370,7 +371,7 @@ A network can run MakongCore on several backend servers pointed at the same
 both are handled:
 
 - **A player's pending code only exists in memory on whichever server
-  generated it** (wherever `/link` or the join-time freeze created it), but
+  generated it** (wherever `/verify` or the join-time freeze created it), but
   the Discord interaction that submits the code can land on a *different*
   server's connection (Discord dispatches to every connected session for
   the same token, not just one). `AccountLinkService#verifyDiscord`/
@@ -387,7 +388,7 @@ both are handled:
   (above) is the actual fix for that: set it `true` on exactly one server
   and `false` on the rest so only one process is ever connected to Discord
   in the first place, while `discord.enabled` stays `true` everywhere so
-  `/link` and the required-verification freeze keep working on every
+  `/verify` and the required-verification freeze keep working on every
   server regardless of which one holds the connection.
 
 ---

@@ -12,8 +12,8 @@ discord:
   # INFO: server (its config already carries a real channel_id/panel below)
   # INFO: and hub: false everywhere else. discord.enabled itself stays true
   # INFO: on every server regardless - it controls whether linking is
-  # INFO: required/available and whether /link works, not the connection;
-  # INFO: a player on a non-hub server still gets a code via /link, and it's
+  # INFO: required/available and whether /verify works, not the connection;
+  # INFO: a player on a non-hub server still gets a code via /verify, and it's
   # INFO: still recognized correctly when they submit it through the hub's
   # INFO: bot, via the shared database. On a single-server setup (the
   # INFO: default), leave this alone.

@@ -133,7 +133,7 @@ public final class MakongCore extends JavaPlugin {
         getCommand("malink").setExecutor(mlc); getCommand("malink").setTabCompleter(mlc);
         AdminCommand ac=new AdminCommand(this,teams,tac,mc,matier,accountLinks,mlc);
         getCommand("makongcore").setExecutor(ac);getCommand("makongcore").setTabCompleter(ac);
-        getCommand("link").setExecutor((sender,command,label,args)->{if(!(sender instanceof org.bukkit.entity.Player p)){sender.sendMessage("Players only.");return true;}accountLinks.optionalLink(p);return true;});
+        getCommand("verify").setExecutor((sender,command,label,args)->{if(!(sender instanceof org.bukkit.entity.Player p)){sender.sendMessage("Players only.");return true;}accountLinks.optionalLink(p);return true;});
         getServer().getPluginManager().registerEvents(matier,this);
 
         getServer().getPluginManager().registerEvents(new GuiListener(this,teams,gui),this);

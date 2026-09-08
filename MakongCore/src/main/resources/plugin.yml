@@ -22,9 +22,10 @@ commands:
   malink:
     description: Account-linking admin commands
     usage: /malink <help|status|reset|bypass|unbypass|bypasslist>
-  link:
+  verify:
     description: Link your Minecraft account to Discord
-    usage: /link
+    usage: /verify
+    aliases: [link]
 permissions:
   mateam.use:
     default: true

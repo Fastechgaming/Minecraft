@@ -64,7 +64,7 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
     // discord.hub gates only whether THIS server opens its own JDA
     // connection - discord.enabled (checked separately throughout this
     // class) keeps controlling whether linking is required/available and
-    // whether /link works, regardless of which server actually holds the
+    // whether /verify works, regardless of which server actually holds the
     // live connection. See module/verification.yml's discord.hub comment
     // for why: multiple servers all connecting the same bot_token race
     // each other to acknowledge every interaction.
@@ -304,7 +304,7 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
     @EventHandler public void invOpen(org.bukkit.event.inventory.InventoryOpenEvent e){if(e.getPlayer() instanceof Player p&&isFrozen(p.getUniqueId()))e.setCancelled(true);}
     @EventHandler public void damage(org.bukkit.event.entity.EntityDamageByEntityEvent e){if(e.getDamager() instanceof Player p&&isFrozen(p.getUniqueId()))e.setCancelled(true);}
     @EventHandler public void teleport(PlayerTeleportEvent e){if(isFrozen(e.getPlayer().getUniqueId()))e.setCancelled(true);}
-    @EventHandler public void command(PlayerCommandPreprocessEvent e){if(isFrozen(e.getPlayer().getUniqueId())&&!e.getMessage().toLowerCase(Locale.ROOT).startsWith("/link"))e.setCancelled(true);}
+    @EventHandler public void command(PlayerCommandPreprocessEvent e){String msg=e.getMessage().toLowerCase(Locale.ROOT);if(isFrozen(e.getPlayer().getUniqueId())&&!msg.startsWith("/verify")&&!msg.startsWith("/link"))e.setCancelled(true);}
     @EventHandler public void chat(AsyncPlayerChatEvent e){if(isFrozen(e.getPlayer().getUniqueId()))e.setCancelled(true);}
     private void startTelegram(){String token=cfg.s("telegram.bot_token","");if(token.isBlank()||token.startsWith("PUT_")){plugin.getLogger().warning("Telegram enabled but bot_token is not configured.");return;}telegram=Executors.newSingleThreadScheduledExecutor();telegram.scheduleWithFixedDelay(()->pollTelegram(token,0),0,1,TimeUnit.SECONDS);}
     private void pollTelegram(String token,int offset){try{
