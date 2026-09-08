@@ -336,7 +336,8 @@ because there is no way to check it.
 
 | Key | Default | Notes |
 |---|---|---|
-| `discord.enabled` | `false` | |
+| `discord.enabled` | `false` | Controls whether linking is required/available and whether `/link` works on *this* server - independent of `discord.hub` below. Leave `true` on every server in a multi-server network sharing one bot, even non-hub ones. |
+| `discord.hub` | `true` | Whether *this* server opens its own live JDA connection to Discord. Only matters when multiple servers share the same `bot_token`: set `true` on exactly one (the "hub") and `false` on the rest, so only one process ever receives/acknowledges Discord interactions. Without this, every connected server gets every button click/modal submit at once and races the others to reply, producing `10062 Unknown interaction` / `40060 already acknowledged` errors. A player on a non-hub server still gets a code via `/link` and it's still recognized correctly when submitted through the hub - see [§9.1](#91-multiple-servers-sharing-one-discord-bot). On a single-server setup, leave this alone. |
 | `discord.bot_token` | `PUT_DISCORD_BOT_TOKEN_HERE` | Keep private - never commit a real token. |
 | `discord.invite` | `discord.gg/makong` | |
 | `discord.guild.id` | `""` | |
@@ -360,6 +361,33 @@ because there is no way to check it.
 | `linking.premium_detection.unknown_as_cracked` | `true` | |
 | `linking.reminder.interval_seconds` | `3` | *(added next release)* How often a frozen player's title/subtitle/action bar/chat message repeats - also the scheduler's own tick rate (`AccountLinkService#start()`), so this is the only place that interval is configured. |
 | `linking.reminder.title` / `subtitle` / `actionbar` / `message` | see file | *(added next release)* The frozen-player nag, sent once immediately on freeze and then repeated every `interval_seconds` - a title/action bar fades on its own after a few seconds, so without repeating it it would only ever show once. Supports `{code}`, `{discord}` (= `discord.invite`), `{telegram}` (= `"@" + telegram.username`), and `&`-style color codes. |
+
+### 9.1 Multiple servers sharing one Discord bot
+
+A network can run MakongCore on several backend servers pointed at the same
+`discord.bot_token`. Two problems come from that if left unaddressed, and
+both are handled:
+
+- **A player's pending code only exists in memory on whichever server
+  generated it** (wherever `/link` or the join-time freeze created it), but
+  the Discord interaction that submits the code can land on a *different*
+  server's connection (Discord dispatches to every connected session for
+  the same token, not just one). `AccountLinkService#verifyDiscord`/
+  `verifyTelegram` fall back to a shared `pending_links` database table
+  when the code isn't recognized locally, so this resolves correctly no
+  matter which server's connection Discord picked - and `tickPending()`
+  re-checks `account_links` every reminder tick so a player frozen on one
+  server still gets released once verified through another.
+- **Every connected server still races every other one to *acknowledge*
+  the same interaction** - the fallback above makes the *outcome* correct,
+  but Discord's own "first reply wins, the rest get 10062/40060" behavior
+  is unaffected by it, so a multi-server network with everyone connected
+  keeps logging those errors even though verification is working. `discord.hub`
+  (above) is the actual fix for that: set it `true` on exactly one server
+  and `false` on the rest so only one process is ever connected to Discord
+  in the first place, while `discord.enabled` stays `true` everywhere so
+  `/link` and the required-verification freeze keep working on every
+  server regardless of which one holds the connection.
 
 ---
 

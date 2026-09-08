@@ -61,7 +61,14 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
     // Also governs how often a frozen player's reminder (title/subtitle/
     // action bar/chat message, see sendReminder()) repeats - see
     // linking.reminder.interval_seconds in module/verification.yml.
-    public void start(){long intervalTicks=Math.max(1,cfg.l("linking.reminder.interval_seconds",3))*20L;reminderTask=plugin.getServer().getScheduler().runTaskTimer(plugin,this::tickPending,intervalTicks,intervalTicks);if(!cfg.b("discord.enabled",false)&&!cfg.b("telegram.enabled",false))return; if(cfg.b("discord.enabled",false))startDiscord(); if(cfg.b("telegram.enabled",false))startTelegram();}
+    // discord.hub gates only whether THIS server opens its own JDA
+    // connection - discord.enabled (checked separately throughout this
+    // class) keeps controlling whether linking is required/available and
+    // whether /link works, regardless of which server actually holds the
+    // live connection. See module/verification.yml's discord.hub comment
+    // for why: multiple servers all connecting the same bot_token race
+    // each other to acknowledge every interaction.
+    public void start(){long intervalTicks=Math.max(1,cfg.l("linking.reminder.interval_seconds",3))*20L;reminderTask=plugin.getServer().getScheduler().runTaskTimer(plugin,this::tickPending,intervalTicks,intervalTicks);if(!cfg.b("discord.enabled",false)&&!cfg.b("telegram.enabled",false))return; if(cfg.b("discord.enabled",false)&&cfg.b("discord.hub",true))startDiscord(); if(cfg.b("telegram.enabled",false))startTelegram();}
     public void stop(){if(reminderTask!=null){reminderTask.cancel();reminderTask=null;}if(jda!=null){jda.shutdownNow();jda=null;}if(telegram!=null){telegram.shutdownNow();telegram=null;}}
     // A player can finish verifying via a DIFFERENT server's Discord/Telegram
     // connection than the one they're frozen on (see verifyDiscord/

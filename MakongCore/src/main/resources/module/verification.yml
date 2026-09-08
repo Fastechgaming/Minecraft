@@ -3,6 +3,21 @@
 # INFO: Keep bot tokens private. Never publish them or commit them to Git.
 discord:
   enabled: false
+  # INFO: If MULTIPLE servers share this same bot_token (a network with one
+  # INFO: bot for all servers), only ONE of them should actually open a
+  # INFO: connection to Discord - otherwise every connected server receives
+  # INFO: every button click/modal submit at once and races the others to
+  # INFO: reply, producing "10062 Unknown interaction" / "40060 already
+  # INFO: acknowledged" errors in the console. Set hub: true on exactly ONE
+  # INFO: server (its config already carries a real channel_id/panel below)
+  # INFO: and hub: false everywhere else. discord.enabled itself stays true
+  # INFO: on every server regardless - it controls whether linking is
+  # INFO: required/available and whether /link works, not the connection;
+  # INFO: a player on a non-hub server still gets a code via /link, and it's
+  # INFO: still recognized correctly when they submit it through the hub's
+  # INFO: bot, via the shared database. On a single-server setup (the
+  # INFO: default), leave this alone.
+  hub: true
   bot_token: "PUT_DISCORD_BOT_TOKEN_HERE"
   invite: "discord.gg/makong"
   guild:
