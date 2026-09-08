@@ -1,5 +1,6 @@
 plugins {
     id 'java'
+    id 'com.gradleup.shadow' version '9.6.1'
 }
 
 group = 'com.angkor'
@@ -38,25 +39,32 @@ tasks.withType(JavaCompile).configureEach {
 }
 
 /*
- * Build a self-contained plugin without the Shadow Gradle plugin.
- * This avoids an extra plugin-resolution step on Termux and keeps the
- * build compatible with recent Gradle versions.
+ * Build a self-contained plugin jar via the Shadow plugin. JDA is
+ * relocated to a MakongCore-private package - it's unrelocated bundling
+ * that caused a real classloading collision with AxRefund (also on this
+ * server), which separately loads JDA 5.2.2 via Paper's library loader.
+ * Bukkit/Paper's plugin classloaders share visibility across plugins for
+ * identically-named classes, so whichever JDA version loaded first
+ * server-wide silently won for both plugins - AxRefund's older 5.2.2
+ * classes ended up handling MakongCore's Discord interactions, and 5.2.2
+ * predates the Components V2 modal format MakongCore's code (compiled
+ * against JDA 6.5.0) produces, causing modal-submission parse failures.
+ * Relocating gives MakongCore's own copy a package name no other plugin
+ * can ever collide with.
  *
  * JDBC service files from H2/MySQL are intentionally excluded from the
  * dependency ZIPs and supplied once by MaTeam below.
  */
-tasks.named('jar', Jar).configure {
+tasks.named('shadowJar').configure {
     archiveClassifier = ''
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
-    from(configurations.runtimeClasspath.collect { file ->
-        zipTree(file).matching {
-            exclude 'META-INF/services/java.sql.Driver'
-            exclude 'META-INF/*.SF'
-            exclude 'META-INF/*.RSA'
-            exclude 'META-INF/*.DSA'
-        }
-    })
+    relocate 'net.dv8tion.jda', 'com.angkor.makongcore.libs.jda'
+
+    exclude 'META-INF/services/java.sql.Driver'
+    exclude 'META-INF/*.SF'
+    exclude 'META-INF/*.RSA'
+    exclude 'META-INF/*.DSA'
 
     manifest {
         attributes(
@@ -66,10 +74,14 @@ tasks.named('jar', Jar).configure {
     }
 }
 
+tasks.named('jar', Jar).configure {
+    enabled = false
+}
+
 processResources {
     filesMatching('plugin.yml') { expand(version: project.version) }
 }
 
 tasks.named('build') {
-    dependsOn(tasks.named('jar'))
+    dependsOn(tasks.named('shadowJar'))
 }
