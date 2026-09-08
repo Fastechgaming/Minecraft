@@ -11,7 +11,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public final class AutoRestartService {
-    private static final Pattern TYPE=Pattern.compile("^\\[(normal|time|proxy|proxydelay)(?::(\\d+))?\\]\\s*(.*)$",Pattern.CASE_INSENSITIVE);
+    private static final Pattern TYPE=Pattern.compile("^\\[(normal|time)(?::(\\d+))?\\]\\s*(.*)$",Pattern.CASE_INSENSITIVE);
     private final MakongCore plugin;
     private final FileConfiguration c;
     private BukkitTask task;
@@ -46,7 +46,7 @@ public final class AutoRestartService {
                     String day=ZonedDateTime.now().getDayOfWeek().name();
                     for(String raw:commands("settings.restartCommands")){
                         Parsed p=parseCommand(raw,day);
-                        if(p!=null&&p.type.equals("normal"))execute(p.command,false);
+                        if(p!=null&&p.type.equals("normal"))execute(p.command);
                     }
                     if(adHocTask!=null){adHocTask.cancel();adHocTask=null;}
                     return;
@@ -103,11 +103,8 @@ public final class AutoRestartService {
             Parsed p=parseCommand(raw,day); if(p==null)continue;
             if(p.type.equals("time")&&remaining<=p.seconds&&remaining>=1){
                 String key=raw+"@"+p.seconds;
-                if(executed.add(key))execute(p.command,false);
-            } else if((p.type.equals("proxy")||p.type.equals("proxydelay"))&&remaining<=p.seconds&&remaining>=1){
-                String key=raw+"@"+p.seconds;
-                if(executed.add(key))execute(p.command,p.type.equals("proxy"));
-            } else if(p.type.equals("normal")&&remaining<=0)execute(p.command,false);
+                if(executed.add(key))execute(p.command);
+            } else if(p.type.equals("normal")&&remaining<=0)execute(p.command);
         }
         announce(remaining);
     }
@@ -116,7 +113,7 @@ public final class AutoRestartService {
         String day=ZonedDateTime.ofInstant(Instant.ofEpochMilli(nextRestart),ZoneId.systemDefault()).getDayOfWeek().name();
         for(String raw:commands("settings.restartCommands")){
             Parsed p=parseCommand(raw,day); if(p==null)continue;
-            if(p.type.equals("normal")||(!p.type.equals("time")&&!p.type.equals("proxy")&&!p.type.equals("proxydelay")))execute(p.command,false);
+            if(p.type.equals("normal"))execute(p.command);
         }
         scheduleNext();
     }
@@ -127,11 +124,8 @@ public final class AutoRestartService {
             Parsed p=parseCommand(raw,ZonedDateTime.now().getDayOfWeek().name()); if(p==null)continue;
             if(p.type.equals("time")){
                 long delay=Math.max(1,p.seconds)*20L;
-                Bukkit.getScheduler().runTaskLater(plugin,()->execute(p.command,false),delay);
-            } else if(p.type.equals("proxy")||p.type.equals("proxydelay")){
-                long delay=p.type.equals("proxydelay")?Math.max(1,p.seconds):0;
-                Bukkit.getScheduler().runTaskLater(plugin,()->execute(p.command,p.type.equals("proxy")),delay*20L);
-            } else execute(p.command,false);
+                Bukkit.getScheduler().runTaskLater(plugin,()->execute(p.command),delay);
+            } else execute(p.command);
         }
     }
 
@@ -155,10 +149,13 @@ public final class AutoRestartService {
         return (seconds/3600)+c.getString("format.hours","h ");
     }
 
-    private void execute(String command,boolean proxy){
+    // Always dispatched to this server's own console, exactly as configured -
+    // in particular the literal command "restart" is never special-cased into
+    // some other shutdown mechanism. Whatever provides that command (a
+    // wrapper script, a hosting panel's restart hook, another plugin) is this
+    // server's own concern, not this plugin's.
+    private void execute(String command){
         if(command==null||command.isBlank())return;
-        // proxy/proxydelay entries are dispatched through the server console unless
-        // a proxy bridge plugin is installed. This keeps the module dependency-free.
         String cmd=command.trim();
         if(cmd.startsWith("/"))cmd=cmd.substring(1);
         Bukkit.dispatchCommand(Bukkit.getConsoleSender(),cmd);

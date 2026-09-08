@@ -5,8 +5,6 @@
 # INFO: Commands support:
 #       [normal] command
 #       [time:15] command = run 15 seconds before restart
-#       [proxy:5] command = proxy-type entry (dependency-free fallback runs as console)
-#       [proxydelay:30] command = delayed proxy-type entry
 # INFO: Day tags must be after the command type, for example:
 #       [time:10] [FRIDAY] command
 #       [FRIDAY] command
