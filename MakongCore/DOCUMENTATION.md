@@ -311,6 +311,8 @@ because there is no way to check it.
 | `linking.one_minecraft_per_telegram` / `one_telegram_per_minecraft` | `true` / `true` | |
 | `linking.premium_detection.enabled` | `true` | Falls back to a Mojang username lookup when MakongVelocity/nLogin forwarding isn't available - best-effort only, see the file's own comment. |
 | `linking.premium_detection.unknown_as_cracked` | `true` | |
+| `linking.reminder.interval_seconds` | `3` | *(added next release)* How often a frozen player's title/subtitle/action bar/chat message repeats - also the scheduler's own tick rate (`AccountLinkService#start()`), so this is the only place that interval is configured. |
+| `linking.reminder.title` / `subtitle` / `actionbar` / `message` | see file | *(added next release)* The frozen-player nag, sent once immediately on freeze and then repeated every `interval_seconds` - a title/action bar fades on its own after a few seconds, so without repeating it it would only ever show once. Supports `{code}`, `{discord}` (= `discord.invite`), `{telegram}` (= `"@" + telegram.username`), and `&`-style color codes. |
 
 ---
 

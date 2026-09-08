@@ -59,3 +59,17 @@ linking:
     enabled: true
     unknown_as_cracked: true
     # INFO: Mojang username lookup is best-effort on offline-mode servers; use an auth plugin for strict premium/cracked detection.
+  # INFO: While a player is frozen waiting to verify, this is re-sent on
+  # INFO: a repeat - title/subtitle/action bar/chat message, all of it -
+  # INFO: since a Minecraft title or action bar fades out on its own
+  # INFO: after a few seconds and would otherwise only ever be shown once,
+  # INFO: right when the player gets frozen.
+  # INFO: {code} / {discord} / {telegram} are replaced in any of the four
+  # INFO: lines below - {discord} is discord.invite above, {telegram} is
+  # INFO: "@" + telegram.username above.
+  reminder:
+    interval_seconds: 3
+    title: "{code}"
+    subtitle: "Send this code to Discord/Telegram to play"
+    actionbar: "&bDiscord: {discord} &7| &bTelegram: {telegram}"
+    message: "&cYou must link your account to continue. &7Code: &e{code}"

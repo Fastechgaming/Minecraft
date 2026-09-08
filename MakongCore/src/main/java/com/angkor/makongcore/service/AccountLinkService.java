@@ -58,9 +58,39 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
 
     public AccountLinkService(MakongCore p,Database d,FloodgateHook f,org.bukkit.configuration.file.FileConfiguration c){plugin=p;db=d;floodgate=f;cfg=new FileConfigurationBridge(c);}
 
-    public void start(){reminderTask=plugin.getServer().getScheduler().runTaskTimer(plugin,this::tickPending,100L,100L);if(!cfg.b("discord.enabled",false)&&!cfg.b("telegram.enabled",false))return; if(cfg.b("discord.enabled",false))startDiscord(); if(cfg.b("telegram.enabled",false))startTelegram();}
+    // Also governs how often a frozen player's reminder (title/subtitle/
+    // action bar/chat message, see sendReminder()) repeats - see
+    // linking.reminder.interval_seconds in module/verification.yml.
+    public void start(){long intervalTicks=Math.max(1,cfg.l("linking.reminder.interval_seconds",3))*20L;reminderTask=plugin.getServer().getScheduler().runTaskTimer(plugin,this::tickPending,intervalTicks,intervalTicks);if(!cfg.b("discord.enabled",false)&&!cfg.b("telegram.enabled",false))return; if(cfg.b("discord.enabled",false))startDiscord(); if(cfg.b("telegram.enabled",false))startTelegram();}
     public void stop(){if(reminderTask!=null){reminderTask.cancel();reminderTask=null;}if(jda!=null){jda.shutdownNow();jda=null;}if(telegram!=null){telegram.shutdownNow();telegram=null;}}
-    private void tickPending(){long now=System.currentTimeMillis();for(Pending x:new ArrayList<>(pending.values())){if(x.expiresAt<now){pending.remove(x.code);if(frozen.contains(x.uuid)){Player p=Bukkit.getPlayer(x.uuid);if(p!=null)freezeAndCode(p,x.accountType);}}}for(UUID u:new ArrayList<>(frozen)){Player p=Bukkit.getPlayer(u);if(p!=null&&playerCodes.get(u)!=null)p.sendMessage("§cYou are a cracked account. §7Link Discord or Telegram to continue. §eCode: "+playerCodes.get(u));}}
+    private void tickPending(){long now=System.currentTimeMillis();for(Pending x:new ArrayList<>(pending.values())){if(x.expiresAt<now){pending.remove(x.code);if(frozen.contains(x.uuid)){Player p=Bukkit.getPlayer(x.uuid);if(p!=null)freezeAndCode(p,x.accountType);}}}for(UUID u:new ArrayList<>(frozen)){Player p=Bukkit.getPlayer(u);String code=playerCodes.get(u);if(p!=null&&code!=null)sendReminder(p,code);}}
+
+    // {code}/{discord}/{telegram} substitution, then "&"-style color codes
+    // (easier to type in YAML than a literal section sign) translated to
+    // real ones - same convention most Bukkit plugin configs use.
+    private String placeholders(String s,String code){
+        String out=s.replace("{code}",code)
+            .replace("{discord}",cfg.s("discord.invite","discord.gg/makong"))
+            .replace("{telegram}","@"+cfg.s("telegram.username","makongmcbot"));
+        return org.bukkit.ChatColor.translateAlternateColorCodes('&',out);
+    }
+
+    // The full "you must verify" nag - title/subtitle/action bar/chat
+    // message, every line configurable in module/verification.yml's
+    // linking.reminder.*. Called once when a player is first frozen
+    // (freezeAndCode() below) and then repeated every tick of this
+    // service's scheduler (tickPending() above) for as long as they stay
+    // frozen - a title or action bar fades on its own after a few seconds,
+    // so without repeating it it would only ever be shown once.
+    private void sendReminder(Player p,String code){
+        String title=placeholders(cfg.s("linking.reminder.title","{code}"),code);
+        String subtitle=placeholders(cfg.s("linking.reminder.subtitle","Send this code to Discord/Telegram to play"),code);
+        String actionbar=placeholders(cfg.s("linking.reminder.actionbar","&bDiscord: {discord} &7| &bTelegram: {telegram}"),code);
+        String message=placeholders(cfg.s("linking.reminder.message","&cYou must link your account to continue. &7Code: &e{code}"),code);
+        p.sendTitle(title,subtitle,10,80,10);
+        p.sendActionBar(actionbar);
+        p.sendMessage(message);
+    }
     private void startDiscord(){String token=cfg.s("discord.bot_token","");if(token.isBlank()||token.startsWith("PUT_")){plugin.getLogger().warning("Discord enabled but bot_token is not configured.");return;}try{jda=JDABuilder.createDefault(token).addEventListeners(this).build();plugin.getLogger().info("Discord hook starting...");}catch(Exception e){plugin.getLogger().severe("Discord hook failed: "+e.getMessage());}}
     @Override public void onReady(ReadyEvent e){registerCommands();sendVerificationPanel();plugin.getLogger().info("Discord hook connected as "+e.getJDA().getSelfUser().getName()+".");}
     private void registerCommands(){if(jda==null)return; jda.updateCommands().addCommands(Commands.slash("ban","Ban a Minecraft player").addOption(OptionType.STRING,"name","Minecraft name",true).addOption(OptionType.STRING,"duration","Duration (choose a preset or type your own)",true,true).addOption(OptionType.STRING,"reason","Reason",true),Commands.slash("unban","Unban a Minecraft player").addOption(OptionType.STRING,"name","Minecraft name",true).addOption(OptionType.STRING,"reason","Reason",true)).queue();}
@@ -149,7 +179,7 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
     public void optionalLink(Player p){if(!cfg.b("discord.enabled",false)){p.sendMessage("§cDiscord linking is currently disabled.");return;}db.getAccountLink(p.getUniqueId()).thenAccept(l->{if(l!=null&&l.discordId()!=null&&!l.discordId().isBlank()){p.sendMessage("§aYour Discord account is already linked.");return;}String type=(floodgate!=null&&floodgate.isBedrock(p.getUniqueId()))?"bedrock":"java";Bukkit.getScheduler().runTask(plugin,()->displayOptionalCode(p,type));});}
     private void displayOptionalCode(Player p,String type){if(!p.isOnline())return;pending.values().removeIf(v->v.uuid.equals(p.getUniqueId()));String code=String.format("%06d",ThreadLocalRandom.current().nextInt(1000000));long expiry=System.currentTimeMillis()+cfg.l("linking.code_expire_minutes",10)*60000L;Pending x=new Pending(p.getUniqueId(),p.getName(),code,expiry,type,true);pending.put(code,x);playerCodes.put(p.getUniqueId(),code);p.sendTitle(code,"Send this code to Discord to link",10,80,10);p.sendActionBar("§bDiscord: "+cfg.s("discord.invite","discord.gg/makong"));p.sendMessage("§aOptional Discord linking code: §e"+code+" §7(expires in 10 minutes)");plugin.getServer().getScheduler().runTaskLater(plugin,()->{if(code.equals(playerCodes.get(p.getUniqueId())))playerCodes.remove(p.getUniqueId());},200L);}
     private void freezeAndCode(Player p,String type){freezeAndCode(p,type,true);}
-    private void freezeAndCode(Player p,String type,boolean blocking){if(!p.isOnline())return;pending.values().removeIf(v->v.uuid.equals(p.getUniqueId()));String code=String.format("%06d",ThreadLocalRandom.current().nextInt(1000000));long expiry=System.currentTimeMillis()+cfg.l("linking.code_expire_minutes",10)*60000L;Pending x=new Pending(p.getUniqueId(),p.getName(),code,expiry,type,false);pending.put(code,x);playerCodes.put(p.getUniqueId(),code);p.sendTitle(code,"Send this code to Discord/Telegram to play",10,80,10);p.sendActionBar("§bDiscord: "+cfg.s("discord.invite","discord.gg/makong")+" §7| §bTelegram: @"+cfg.s("telegram.username","makongmcbot"));p.sendMessage("§cYou must link your account to continue. §7Code: §e"+code);if(blocking){frozen.add(p.getUniqueId());p.setWalkSpeed(0f);}}
+    private void freezeAndCode(Player p,String type,boolean blocking){if(!p.isOnline())return;pending.values().removeIf(v->v.uuid.equals(p.getUniqueId()));String code=String.format("%06d",ThreadLocalRandom.current().nextInt(1000000));long expiry=System.currentTimeMillis()+cfg.l("linking.code_expire_minutes",10)*60000L;Pending x=new Pending(p.getUniqueId(),p.getName(),code,expiry,type,false);pending.put(code,x);playerCodes.put(p.getUniqueId(),code);sendReminder(p,code);if(blocking){frozen.add(p.getUniqueId());p.setWalkSpeed(0f);}}
     private void release(UUID u){frozen.remove(u);Player p=Bukkit.getPlayer(u);if(p!=null){p.setWalkSpeed(0.2f);p.setFlying(false);p.sendTitle("§aVerified","§7You may now play.",5,30,10);}}
     public boolean isFrozen(UUID u){return frozen.contains(u);}
     public String code(UUID u){return playerCodes.get(u);}
