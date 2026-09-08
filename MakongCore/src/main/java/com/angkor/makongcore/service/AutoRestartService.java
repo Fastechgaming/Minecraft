@@ -39,17 +39,25 @@ public final class AutoRestartService {
     public void triggerAdHocRestart(long seconds){
         long target=System.currentTimeMillis()+Math.max(0,seconds)*1000L;
         if(adHocTask!=null)adHocTask.cancel();
+        Set<String> fired=new HashSet<>();
         adHocTask=Bukkit.getScheduler().runTaskTimer(plugin,new Runnable(){
             @Override public void run(){
                 long remaining=(target-System.currentTimeMillis()+999)/1000;
+                String day=ZonedDateTime.now().getDayOfWeek().name();
                 if(remaining<=0){
-                    String day=ZonedDateTime.now().getDayOfWeek().name();
                     for(String raw:commands("settings.restartCommands")){
                         Parsed p=parseCommand(raw,day);
                         if(p!=null&&p.type.equals("normal"))execute(p.command);
                     }
                     if(adHocTask!=null){adHocTask.cancel();adHocTask=null;}
                     return;
+                }
+                for(String raw:commands("settings.restartCommands")){
+                    Parsed p=parseCommand(raw,day); if(p==null)continue;
+                    if(p.type.equals("time")&&remaining<=p.seconds&&remaining>=1){
+                        String key=raw+"@"+p.seconds;
+                        if(fired.add(key))execute(p.command);
+                    }
                 }
                 announce(remaining);
             }
