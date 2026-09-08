@@ -77,14 +77,24 @@ router.get("/items", (req, res) => {
   res.json({ ...store.getItems(), gamemodes: store.GAMEMODES });
 });
 
+// A 0-star team/player is meaningless on a public leaderboard (nobody's
+// "ranked" at 0) - drop them from what the Ranking page actually renders.
+// Admin-curated entries stay untouched in storage (/admin/rankings still
+// lists everything an admin entered, 0-star included, so they can edit it);
+// this only filters the public-facing response.
+function withStars(list) {
+  return (list || []).filter((entry) => Number(entry && entry.star) > 0);
+}
+
 // Prefers live Team/MaTier Star standings reported by the plugin (see
 // lib/pluginBridge.js) - falls back to the admin-curated JSON whenever no
 // server has reported fresh data (plugin bridge not configured, or every
 // connected server has gone stale/offline).
 router.get("/rankings", (req, res) => {
   const live = pluginBridge.getLiveRankings();
-  if (live) return res.json({ ...live, live: true });
-  res.json({ ...rankings.getRankings(), live: false });
+  if (live) return res.json({ teams: withStars(live.teams), players: withStars(live.players), live: true });
+  const curated = rankings.getRankings();
+  res.json({ teams: withStars(curated.teams), players: withStars(curated.players), live: false });
 });
 
 // Public, safe subset of an order - used by /checkout and /success, and by
