@@ -78,8 +78,11 @@ export async function evaluateForKnowledge(statement: string): Promise<Knowledge
     const result = await model.generateContent(
       'You are a filter deciding whether a Discord staff member\'s message contains reusable server knowledge worth ' +
         'saving to a FAQ/knowledge base — a rule, policy, price, schedule, how-to, or fact members might ask about ' +
-        'later. Be conservative: only save it if it clearly reads as durable, factual server information, not ' +
-        'opinion, banter, a one-off instruction to a specific person, or casual chat.\n\n' +
+        'later. This includes messages where staff tell you (the bot) to relay something to members, like "tell them ' +
+        'to link their device in #verify" — extract the underlying fact (e.g. device linking happens in #verify) as ' +
+        'the answer, ignoring the meta-instruction to relay it. Be conservative: only save it if it clearly reads as ' +
+        'durable, factual server information, not opinion, banter, a one-off instruction aimed at a single named ' +
+        'person about something unrelated to server facts, or casual chat.\n\n' +
         `Message: "${statement.replace(/"/g, "'").slice(0, 1000)}"\n\n` +
         'Respond with STRICT JSON only, no markdown: {"shouldSave": boolean, "question": "a natural question a ' +
         'member might ask that this answers, or empty string if shouldSave is false", "answer": "a clean, concise ' +

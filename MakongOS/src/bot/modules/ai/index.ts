@@ -41,7 +41,7 @@ async function maybeAutoLearn(message: import('discord.js').Message, settings: i
   const member = message.member;
   if (!member || !isStaff(member, settings)) return;
 
-  const text = message.content.trim();
+  const text = message.content.replace(/<@!?\d+>/g, '').trim();
   if (text.length < 20 || text.split(/\s+/).length < 4) return;
 
   const result = await evaluateForKnowledge(text);
@@ -170,13 +170,15 @@ export const aiModule: FeatureModule = {
       const mentioned = message.mentions.has(message.client.user!, { ignoreEveryone: true });
       const inConfiguredChannel = settings.aiChatChannelIds.includes(message.channelId);
 
-      if (mentioned || inConfiguredChannel) {
-        await respondInChannel(message, settings).catch(() => undefined);
-        return;
-      }
-
+      // Auto-learn runs independently of the reply flow below — a staff member
+      // directly telling the bot something (e.g. "@MakongOS tell them to verify
+      // in #verify") is a *stronger* signal to learn from, not a reason to skip it.
       if (settings.aiAutoLearnEnabled) {
         await maybeAutoLearn(message, settings).catch(() => undefined);
+      }
+
+      if (mentioned || inConfiguredChannel) {
+        await respondInChannel(message, settings).catch(() => undefined);
       }
     }
   },
