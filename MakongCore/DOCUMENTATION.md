@@ -239,8 +239,8 @@ never need to delete a config file to "pick up" a new option.
 | `team.defaults.description` | `a new team!` | Given to a newly created team. |
 | `team.invites.expire_seconds` | `3600` | |
 | `team.pvp.enabled` | `true` | Whether teams can toggle PvP at all. |
-| `team.pvp.default_status` | `false` | PvP state for a newly created team. |
-| `team.pvp.toggle_cooldown_seconds` | `300` | |
+| `team.pvp.default_status` | `false` | PvP state for a newly created team. When `false`, teammates cannot damage each other (friendly fire cancelled); when `true`, teammates can. Damage to/from anyone outside the team is never affected by this setting. Only the team owner can toggle it, from the team GUI's PvP button. |
+| `team.pvp.toggle_cooldown_seconds` | `300` | Not currently enforced. |
 | `team.allies.enabled` | `true` | |
 | `team.allies.max_allies` | `10` | |
 | `team.allies.allow_request_toggle` | `true` | |

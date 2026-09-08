@@ -138,6 +138,7 @@ public final class MakongCore extends JavaPlugin {
 
         getServer().getPluginManager().registerEvents(new GuiListener(this,teams,gui),this);
         getServer().getPluginManager().registerEvents(new ChatListener(this,teams),this);
+        getServer().getPluginManager().registerEvents(new com.angkor.makongcore.listener.TeamPvpListener(teams),this);
         matierAura.start();
         accountLinks.start();
         weeklyRewards=new WeeklyRewardService(this,teams); weeklyRewards.start();

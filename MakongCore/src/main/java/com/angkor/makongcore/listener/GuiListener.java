@@ -71,7 +71,7 @@ public final class GuiListener implements Listener {
         }
         final int infoSlot=gui.slot("items.team.info.slot",45), pvpSlot=gui.slot("items.team.pvp.slot",46), requestsSlot=gui.slot("items.team.requests.slot",47), alliesSlot=gui.slot("items.team.allies.slot",48), filterSlot=gui.slot("items.team.filter.slot",49), settingsSlot=gui.slot("items.team.settings.slot",50), browseSlot=gui.slot("items.team.browse.slot",51), topSlot=gui.slot("items.team.leaderboard.slot",52), leaveSlot=gui.slot("items.team.leave.slot",53);
         if(slot==infoSlot){gui.openTeamInfo(p,t,false);return;}
-        if(slot==pvpSlot){if(!ts.settings().pvpEnabled()){p.sendMessage(Text.mm("<red>Team PvP is disabled.</red>"));return;} t.setPvp(!t.pvp());ts.save(t);p.sendMessage(Text.mm("<green>Team PvP is now "+(t.pvp()?"<white>ON":"<white>OFF")+"</white>.</green>"));gui.openTeam(p,t,h.data()==null?"join_date":h.data());return;}
+        if(slot==pvpSlot){if(!ts.settings().pvpEnabled()){p.sendMessage(Text.mm("<red>Team PvP is disabled.</red>"));return;} TeamMember me=t.member(p.getUniqueId());if(me==null||me.role()!=TeamRole.OWNER){p.sendMessage(Text.mm("<red>Only the team owner can toggle PvP.</red>"));return;} t.setPvp(!t.pvp());ts.save(t);p.sendMessage(Text.mm("<green>Team PvP is now "+(t.pvp()?"<white>ON":"<white>OFF")+"</white>.</green>"));gui.openTeam(p,t,h.data()==null?"join_date":h.data());return;}
         if(slot==requestsSlot){TeamMember me=t.member(p.getUniqueId());if(me!=null&&me.role()!=TeamRole.MEMBER)gui.openJoinRequests(p,t);return;}
         if(slot==alliesSlot){if(ts.settings().alliesEnabled())gui.openAllies(p,t);else p.sendMessage(Text.mm("<red>Team allies are disabled.</red>"));return;}
         if(slot==filterSlot){
