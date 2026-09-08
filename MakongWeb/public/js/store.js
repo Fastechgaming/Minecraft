@@ -135,6 +135,7 @@ async function loadLadder() {
 async function showStore() {
   gate.hidden = true;
   body.hidden = false;
+  document.getElementById("cart-toggle").hidden = false;
   renderProfile();
   renderGamemodeTabs();
   await loadLadder();
@@ -663,6 +664,7 @@ function openConfirm(item, fromRankId) {
     <div class="confirm-price" id="confirm-price">${escapeHtml(formatPrice(priceFor()))}</div>
     <div class="confirm-actions">
       <button class="continue-btn" id="confirm-buy">${escapeHtml(t("store.confirm"))}</button>
+      <button class="change-name-btn" id="confirm-add-cart">${escapeHtml(t("store.addToCart"))}</button>
       <button class="back-link" id="cancel-buy">${escapeHtml(t("store.cancel"))}</button>
     </div>
   `;
@@ -706,6 +708,17 @@ function openConfirm(item, fromRankId) {
     });
   }
   document.getElementById("confirm-buy").addEventListener("click", startCheckout);
+  document.getElementById("confirm-add-cart").addEventListener("click", () => {
+    Cart.add({
+      itemId: item.id,
+      duration: fromEntry ? null : pendingDuration,
+      upgradeFromRankId: pendingUpgradeFrom || null,
+      quantity: pendingQuantity,
+      estimatedAmount: priceFor(),
+    });
+    showToast(t("store.addedToCart"));
+    closeBuyModal();
+  });
   document.getElementById("cancel-buy").addEventListener("click", closeBuyModal);
   buyModal.classList.add("open");
 }
@@ -733,6 +746,114 @@ async function startCheckout() {
     btn.textContent = t("store.confirm");
   }
 }
+
+/* ---------------- Cart ----------------
+   Add to Cart (in the confirm dialog above) queues a line locally; nothing
+   is created server-side until Checkout below, which posts every line to
+   /api/cart/checkout in one request - one order, one KHQR payment (or one
+   Tebex basket) for the whole cart. */
+const cartModal = document.getElementById("cart-modal");
+
+function renderCartBadge() {
+  const badge = document.getElementById("cart-badge");
+  const count = Cart.count();
+  badge.textContent = String(count);
+  badge.hidden = count === 0;
+}
+document.addEventListener("cart:change", renderCartBadge);
+
+function cartRowMarkup(line) {
+  const item = findItem(line.itemId);
+  const name = item ? item.name : line.itemId;
+  const image = item ? item.image : "";
+  const tags = [];
+  if (line.upgradeFromRankId) tags.push(t("store.upRank"));
+  if (line.duration) tags.push(t(line.duration === "permanent" ? "store.durationPermanent" : "store.duration1Month"));
+  if (line.quantity > 1) tags.push(`×${line.quantity}`);
+  const key = Cart.key(line);
+  return `
+    <div class="cart-row">
+      <img class="cart-row-img" src="${escapeHtml(image)}" alt="" onerror="this.style.display='none'" />
+      <div class="cart-row-body">
+        <div class="cart-row-name">${escapeHtml(name)}</div>
+        ${tags.length ? `<div class="cart-row-tags">${escapeHtml(tags.join(" · "))}</div>` : ""}
+      </div>
+      <div class="cart-row-price">${escapeHtml(formatPrice(line.estimatedAmount || 0))}</div>
+      <button type="button" class="cart-row-remove" data-cart-remove="${escapeHtml(key)}" aria-label="${escapeHtml(t("store.cartRemove"))}">&times;</button>
+    </div>`;
+}
+
+function renderCartModalBody() {
+  const body = document.getElementById("cart-modal-body");
+  const lines = Cart.get();
+  if (!lines.length) {
+    body.innerHTML = `<p class="empty-note">${escapeHtml(t("store.cartEmpty"))}</p>`;
+    return;
+  }
+  const total = lines.reduce((sum, l) => sum + (l.estimatedAmount || 0), 0);
+  body.innerHTML = `
+    <div class="cart-rows">${lines.map(cartRowMarkup).join("")}</div>
+    <div class="cart-total-row"><span>${escapeHtml(t("store.cartTotal"))}</span><strong>${escapeHtml(formatPrice(total))}</strong></div>
+    <div class="confirm-actions">
+      <button class="continue-btn" id="cart-checkout-btn">${escapeHtml(t("store.cartCheckout"))}</button>
+      <button class="back-link" id="cart-clear-btn">${escapeHtml(t("store.cartClear"))}</button>
+    </div>
+  `;
+  body.querySelectorAll("[data-cart-remove]").forEach((btn) =>
+    btn.addEventListener("click", () => {
+      Cart.remove(btn.dataset.cartRemove);
+      renderCartModalBody();
+    })
+  );
+  document.getElementById("cart-checkout-btn").addEventListener("click", startCartCheckout);
+  document.getElementById("cart-clear-btn").addEventListener("click", () => {
+    Cart.clear();
+    renderCartModalBody();
+  });
+}
+
+function openCartModal() {
+  renderCartModalBody();
+  cartModal.classList.add("open");
+}
+function closeCartModal() {
+  cartModal.classList.remove("open");
+}
+document.getElementById("cart-toggle").addEventListener("click", openCartModal);
+document.getElementById("cart-modal-close").addEventListener("click", closeCartModal);
+cartModal.addEventListener("click", (e) => {
+  if (e.target.id === "cart-modal") closeCartModal();
+});
+
+async function startCartCheckout() {
+  const lines = Cart.get();
+  if (!lines.length) return;
+  const btn = document.getElementById("cart-checkout-btn");
+  btn.disabled = true;
+  btn.textContent = t("buy.wait");
+  try {
+    const result = await fetchJSON("/api/cart/checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        lines: lines.map((l) => ({
+          itemId: l.itemId,
+          upgradeFromRankId: l.upgradeFromRankId || undefined,
+          duration: l.duration || undefined,
+          quantity: l.quantity,
+        })),
+      }),
+    });
+    Cart.clear();
+    window.location.href = `/checkout?order=${encodeURIComponent(result.orderId)}`;
+  } catch (err) {
+    showToast(err.message);
+    btn.disabled = false;
+    btn.textContent = t("store.cartCheckout");
+  }
+}
+
+renderCartBadge();
 
 /* ---------------- Change name ---------------- */
 const nameModal = document.getElementById("name-modal");
@@ -839,11 +960,14 @@ async function saveNewName() {
 document.addEventListener("keydown", (e) => {
   if (e.key !== "Escape") return;
   if (buyModal.classList.contains("open")) closeBuyModal();
+  else if (cartModal.classList.contains("open")) closeCartModal();
   else if (nameModal.classList.contains("open")) closeNameModal();
   else if (document.getElementById("info-modal").classList.contains("open")) closeInfoModal();
 });
 
 document.addEventListener("i18n:change", () => {
+  renderCartBadge();
+  if (cartModal.classList.contains("open")) renderCartModalBody();
   if (!account) return;
   renderProfile();
   renderTabs();
@@ -853,7 +977,7 @@ document.addEventListener("i18n:change", () => {
 });
 
 /* ---------------- Boot ---------------- */
-// The store works with or without the MakongStore plugin bridge (see
+// The store works with or without the MakongCore plugin bridge (see
 // routes/account.js `verify()`) — a missing plugin just means names are
 // accepted as typed and ranks/coins stay hidden (`account.linked === false`).
 // The "Unavailable" panel below is reserved for an actual outage: the items

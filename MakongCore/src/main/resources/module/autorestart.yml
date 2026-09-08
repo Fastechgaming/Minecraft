@@ -1,0 +1,62 @@
+# ================================================================
+# MakongCore AutoRestart module
+# ================================================================
+# INFO: Automatically restarts this server at configured times.
+# INFO: Commands support:
+#       [normal] command
+#       [time:15] command = run 15 seconds before restart
+# INFO: Day tags must be after the command type, for example:
+#       [time:10] [FRIDAY] command
+#       [FRIDAY] command
+# INFO: Restart schedule format: Daily;HH;MM or DAY;HH;MM.
+# ================================================================
+
+settings:
+  # INFO: Enable/disable the complete AutoRestart module.
+  enabled: true
+
+  # INFO: Commands executed before the restart.
+  restartCommands:
+    - '[time:10] plugman disable pvpmanager'
+    - '[time:2] whitelist on'
+    - '[time:1] minecraft:kick @a Server Restarting...'
+    - 'restart'
+
+  # INFO: Commands executed after this server starts.
+  commandsAfterReboot:
+    - '[time:3] mavote execute'
+    - '[time:8] whitelist off'
+
+  # INFO: Restart schedule.
+  # INFO: Add multiple entries to restart more than once per day.
+  restarts:
+    - 'Daily;05;00'
+
+  # INFO: Countdown values at which the interval message is broadcast.
+  messageAtIntervals:
+    - '30'
+    - '10'
+    - '5'
+    - '4'
+    - '3'
+    - '2'
+
+# INFO: Countdown message. {time} is replaced with the remaining time.
+messages:
+  interval: '<yellow>server restarting in <white>{time}</white>!</yellow>'
+  # INFO: Broadcast when an ad-hoc restart (/mateam autorestart <seconds>,
+  # INFO: or MakongVelocity's /mc ar now/stop relayed through the website
+  # INFO: bridge) is cancelled with /mateam autorestart stop before it fires.
+  cancelled: '<yellow>The scheduled restart has been cancelled.</yellow>'
+
+# INFO: Controls how remaining time is displayed.
+format:
+  seconds: 's'
+  second: 's'
+  minutes: 'm '
+  minute: 'm '
+  hours: 'h '
+  hour: 'h '
+  days: 'D '
+  day: 'D '
+  splitter: 'and '

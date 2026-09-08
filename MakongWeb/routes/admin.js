@@ -4,6 +4,7 @@ const path = require("path");
 const { nanoid } = require("nanoid");
 const store = require("../lib/store");
 const rankings = require("../lib/rankings");
+const coupons = require("../lib/coupons");
 const pluginBridge = require("../lib/pluginBridge");
 
 const router = express.Router();
@@ -80,7 +81,7 @@ router.post("/items", requireAuth, upload.single("imageFile"), (req, res, next) 
     // A rank item is matched to the Minecraft plugin's LuckPerms ladder (and
     // to the catalogue-derived fallback ladder when the plugin isn't
     // connected) by exact id: `rank-<gamemode>-<ladder id>` - see
-    // MakongStore's config.yml `ranks.ladder`. Ranks are per-gamemode
+    // MakongCore's config.yml `ranks.ladder`. Ranks are per-gamemode
     // (EcoSMP's VIP and BoxPvP's VIP are unrelated), so the gamemode is part
     // of the id, not just a random nanoid suffix - it has to be
     // `rank-<gamemode>-<slug>` with a trailing "rank" word stripped (name
@@ -180,7 +181,7 @@ router.get("/rankings/new", requireAuth, (req, res) => {
 
 router.post("/rankings", requireAuth, express.urlencoded({ extended: true }), (req, res, next) => {
   try {
-    const { category, name, icon, star, points, kills, deaths } = req.body;
+    const { category, name, icon, star } = req.body;
     if (!rankings.CATEGORIES.includes(category)) throw new Error("Invalid category");
     if (!name) throw new Error("Name is required");
 
@@ -189,9 +190,6 @@ router.post("/rankings", requireAuth, express.urlencoded({ extended: true }), (r
       name,
       icon: icon || "",
       star: Number(star) || 0,
-      points: Number(points) || 0,
-      kills: Number(kills) || 0,
-      deaths: Number(deaths) || 0,
     };
     rankings.upsertEntry(category, entry);
     res.redirect("/admin/rankings");
@@ -211,15 +209,12 @@ router.post("/rankings/:id", requireAuth, express.urlencoded({ extended: true })
     const found = rankings.findAny(req.params.id);
     if (!found) return res.status(404).send("Entry not found");
 
-    const { name, icon, star, points, kills, deaths } = req.body;
+    const { name, icon, star } = req.body;
     const updated = {
       ...found.entry,
       name,
       icon: icon || "",
       star: Number(star) || 0,
-      points: Number(points) || 0,
-      kills: Number(kills) || 0,
-      deaths: Number(deaths) || 0,
     };
     rankings.upsertEntry(found.category, updated);
     res.redirect("/admin/rankings");
@@ -233,7 +228,73 @@ router.post("/rankings/:id/delete", requireAuth, (req, res) => {
   res.redirect("/admin/rankings");
 });
 
-/* ---------------- Servers (MakongStore plugin bridge) ---------------- */
+/* ---------------- Coupons ---------------- */
+
+router.get("/coupons", requireAuth, (req, res) => {
+  res.render("coupons", { coupons: coupons.getCoupons() });
+});
+
+router.get("/coupons/new", requireAuth, (req, res) => {
+  res.render("coupon-form", { coupon: null });
+});
+
+function parseCouponBody(body) {
+  const code = String(body.code || "").trim().toUpperCase();
+  if (!code) throw new Error("Code is required");
+  if (!["percent", "fixed"].includes(body.type)) throw new Error("Invalid discount type");
+  const value = Number(body.value);
+  if (!Number.isFinite(value) || value <= 0) throw new Error("Value must be a positive number");
+  if (body.type === "percent" && value > 100) throw new Error("A percent discount can't exceed 100");
+
+  return {
+    code,
+    type: body.type,
+    value,
+    active: body.active === "on" || body.active === "true",
+    minAmount: body.minAmount === "" || body.minAmount == null ? null : Number(body.minAmount),
+    maxUses: body.maxUses === "" || body.maxUses == null ? null : Math.max(1, Math.round(Number(body.maxUses))),
+    expiresAt: body.expiresAt ? new Date(body.expiresAt).getTime() : null,
+  };
+}
+
+router.post("/coupons", requireAuth, express.urlencoded({ extended: true }), (req, res, next) => {
+  try {
+    const parsed = parseCouponBody(req.body);
+    if (coupons.findByCode(parsed.code)) throw new Error(`Code ${parsed.code} is already in use`);
+    const coupon = { id: coupons.newId(), ...parsed, usedCount: 0, createdAt: Date.now() };
+    coupons.upsertCoupon(coupon);
+    res.redirect("/admin/coupons");
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/coupons/:id/edit", requireAuth, (req, res) => {
+  const coupon = coupons.findById(req.params.id);
+  if (!coupon) return res.status(404).send("Coupon not found");
+  res.render("coupon-form", { coupon });
+});
+
+router.post("/coupons/:id", requireAuth, express.urlencoded({ extended: true }), (req, res, next) => {
+  try {
+    const existing = coupons.findById(req.params.id);
+    if (!existing) return res.status(404).send("Coupon not found");
+    const parsed = parseCouponBody(req.body);
+    const clash = coupons.findByCode(parsed.code);
+    if (clash && clash.id !== existing.id) throw new Error(`Code ${parsed.code} is already in use`);
+    coupons.upsertCoupon({ ...existing, ...parsed });
+    res.redirect("/admin/coupons");
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post("/coupons/:id/delete", requireAuth, (req, res) => {
+  coupons.deleteCoupon(req.params.id);
+  res.redirect("/admin/coupons");
+});
+
+/* ---------------- Servers (MakongCore plugin bridge) ---------------- */
 
 router.get("/servers", requireAuth, (req, res) => {
   res.render("servers", {

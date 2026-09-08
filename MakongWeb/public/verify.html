@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Verify | Makong Network</title>
+<meta name="description" content="Verify your Minecraft account with Discord or Telegram on Makong Network." />
+<link rel="canonical" href="https://www.makongmc.com/verify" />
+<meta name="theme-color" content="#f7b537" />
+<link rel="icon" href="/images/site/logo-icon.png" />
+<link rel="apple-touch-icon" href="/images/site/logo-icon.png" />
+
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Makong Network" />
+<meta property="og:url" content="https://www.makongmc.com/verify" />
+<meta property="og:title" content="Verify | Makong Network" />
+<meta property="og:description" content="Verify your Minecraft account with Discord or Telegram on Makong Network." />
+<meta property="og:image" content="https://www.makongmc.com/images/site/og-cover.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Verify | Makong Network" />
+<meta name="twitter:description" content="Verify your Minecraft account with Discord or Telegram on Makong Network." />
+<meta name="twitter:image" content="https://www.makongmc.com/images/site/og-cover.png" />
+
+<link rel="stylesheet" href="/css/style.css" />
+<script>
+// Apply the saved theme before first paint so there's no flash. Dark is default.
+try { if (localStorage.getItem("makong-theme") === "light") document.documentElement.setAttribute("data-theme","light"); } catch (e) {}
+</script>
+</head>
+<body>
+  <nav class="site-nav">
+    <div class="container">
+      <a class="brand" href="/">
+        <img id="nav-logo" src="/images/site/logo-icon.png" alt="logo" onerror="this.style.display='none'" />
+        Makong Network
+      </a>
+      <div class="nav-tools">
+        <div class="lang-dropdown">
+          <button type="button" class="lang-toggle" onclick="toggleLangMenu()" aria-haspopup="true" aria-expanded="false" aria-label="Language">
+            <span class="lang-current">EN</span>
+          </button>
+          <ul class="lang-menu" role="menu">
+            <li role="none"><button type="button" role="menuitem" class="lang-option" data-lang="en" onclick="setLang('en')">English</button></li>
+            <li role="none"><button type="button" role="menuitem" class="lang-option" data-lang="km" onclick="setLang('km')">ខ្មែរ</button></li>
+            <li role="none"><button type="button" role="menuitem" class="lang-option" data-lang="zh" onclick="setLang('zh')">中文</button></li>
+            <li role="none"><button type="button" role="menuitem" class="lang-option" data-lang="vi" onclick="setLang('vi')">Tiếng Việt</button></li>
+          </ul>
+        </div>
+        <button class="theme-toggle" onclick="toggleTheme()" aria-label="Switch theme"><img class="theme-icon" src="/images/site/sun-icon.png" alt="" /></button>
+      </div>
+      <ul class="nav-links">
+        <li><a href="/"><img class="nav-icon" src="/images/site/icon-home.png" alt="" /><span data-i18n="nav.home">Home</span></a></li>
+        <li><a href="/store"><img class="nav-icon" src="/images/site/icon-store-nav.png" alt="" /><span data-i18n="nav.store">Store</span></a></li>
+        <li><a href="/ranking"><img class="nav-icon" src="/images/site/icon-ranking.png" alt="" onerror="this.style.display='none'" /><span data-i18n="nav.ranking">Ranking</span></a></li>
+        <li><a href="/verify" class="active"><img class="nav-icon" src="/images/site/icon-verify.png" alt="" onerror="this.style.display='none'" /><span data-i18n="nav.verify">Verify</span></a></li>
+      </ul>
+      <button class="nav-toggle" onclick="toggleNav()" aria-label="Menu" data-i18n-aria="nav.menu">&#9776;</button>
+    </div>
+  </nav>
+
+  <main>
+    <section class="section">
+      <div class="container">
+        <h2 class="no-rule"><img class="heading-leaf" src="/images/site/icon-leaf.png" alt="" />Makong<img class="heading-leaf" src="/images/site/icon-leaf.png" alt="" /></h2>
+        <p class="section-subtitle" data-i18n="verify.subtitle">ACCOUNT VERIFICATION</p>
+
+        <div class="checkout-panel verify-panel">
+          <h3 data-i18n="verify.title">Verify your account</h3>
+          <p class="checkout-hint centered" data-i18n="verify.hint">
+            Got a 6-digit code in-game? Choose where to send it.
+          </p>
+          <div class="region-choice">
+            <button type="button" class="region-btn" id="verify-discord">
+              <img class="region-flag" src="/images/site/icon-discord.png" alt="" />
+              <span class="region-name">Discord</span>
+              <span class="region-desc" data-i18n="verify.discordDesc">Verify in our server</span>
+            </button>
+            <button type="button" class="region-btn" id="verify-telegram">
+              <img class="region-flag" src="/images/site/icon-telegram.png" alt="" />
+              <span class="region-name">Telegram</span>
+              <span class="region-desc" data-i18n="verify.telegramDesc">Message our bot</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p id="footer-copy" data-i18n="footer.copy"></p>
+  </footer>
+
+  <script src="/js/i18n.js"></script>
+  <script src="/js/main.js"></script>
+  <script src="/js/verify.js"></script>
+</body>
+</html>

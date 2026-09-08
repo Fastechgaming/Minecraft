@@ -1,0 +1,75 @@
+# Account verification - cracked-player Discord/Telegram linking, premium
+# detection, and the Discord staff commands that ride along with it.
+# INFO: Keep bot tokens private. Never publish them or commit them to Git.
+discord:
+  enabled: false
+  bot_token: "PUT_DISCORD_BOT_TOKEN_HERE"
+  invite: "discord.gg/makong"
+  guild:
+    id: ""
+    required: true
+    required_role_id: ""
+    # INFO: A Discord account may verify if it satisfies AT LEAST ONE of
+    # INFO: these tiers - each tier needs BOTH its account-age AND its
+    # INFO: guild-membership-age minimum met (both in days; 0 means "no
+    # INFO: minimum"). Add, remove, or edit tiers freely; at least one
+    # INFO: tier is required or nobody will ever pass.
+    # INFO: Shipped defaults: (a) a 6-month-old account that's been in the
+    # INFO: guild for a month, or (b) a 1-year-old account regardless of
+    # INFO: how recently it joined.
+    eligibility_tiers:
+      - minimum_account_age_days: 180
+        minimum_membership_days: 30
+      - minimum_account_age_days: 365
+        minimum_membership_days: 0
+  verification:
+    channel_id: ""
+    panel_message_id: ""
+  roles:
+    crack: ""
+    java: ""
+    bedrock: ""
+  commands:
+    staff_role_id: ""
+    ban:
+      enabled: true
+    unban:
+      enabled: true
+
+telegram:
+  enabled: false
+  bot_token: "PUT_TELEGRAM_BOT_TOKEN_HERE"
+  username: "makongmcbot"
+
+linking:
+  # INFO: Cracked players must verify with Discord OR Telegram. Only takes
+  # INFO: effect when at least one of discord.enabled / telegram.enabled
+  # INFO: above is true - with both off, this is ignored (nothing freezes
+  # INFO: cracked players, since there'd be no bot for them to verify
+  # INFO: through). Set this to false yourself to make linking fully
+  # INFO: optional even while a bot is enabled.
+  required_for_cracked: true
+  code_length: 6
+  code_expire_minutes: 10
+  one_minecraft_per_discord: true
+  one_discord_per_minecraft: true
+  one_minecraft_per_telegram: true
+  one_telegram_per_minecraft: true
+  premium_detection:
+    enabled: true
+    unknown_as_cracked: true
+    # INFO: Mojang username lookup is best-effort on offline-mode servers; use an auth plugin for strict premium/cracked detection.
+  # INFO: While a player is frozen waiting to verify, this is re-sent on
+  # INFO: a repeat - title/subtitle/action bar/chat message, all of it -
+  # INFO: since a Minecraft title or action bar fades out on its own
+  # INFO: after a few seconds and would otherwise only ever be shown once,
+  # INFO: right when the player gets frozen.
+  # INFO: {code} / {discord} / {telegram} are replaced in any of the four
+  # INFO: lines below - {discord} is discord.invite above, {telegram} is
+  # INFO: "@" + telegram.username above.
+  reminder:
+    interval_seconds: 3
+    title: "{code}"
+    subtitle: "Send this code to Discord/Telegram to play"
+    actionbar: "&bDiscord: {discord} &7| &bTelegram: {telegram}"
+    message: "&cYou must link your account to continue. &7Code: &e{code}"

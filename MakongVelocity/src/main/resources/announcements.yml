@@ -1,0 +1,46 @@
+# Periodic network-wide announcements - each entry under `announcements:`
+# is broadcast on its own repeating timer (its own `interval`, in seconds),
+# independently of the others. Add, remove, or rename entries freely - the
+# keys ("store", "discord") are just labels, MakongVelocity reads every
+# entry under `announcements:` the same way.
+#
+# link:       optional - clicking the broadcast message opens this URL.
+#             Leave blank ("") to make the message unclickable.
+# interval:   seconds between broadcasts of this entry.
+# sound:      a Minecraft sound name, Bukkit-style (e.g. ENTITY_PLAYER_LEVELUP)
+#             or Adventure-style (entity.player.levelup) - both work. Leave
+#             blank to play no sound.
+# message:    broadcast to every player's chat, network-wide. Supports
+#             legacy "&" color codes (&a, &l, &n, ...).
+# action-bar: optional - also shown in every player's action bar. Leave
+#             blank ("") to skip the action bar.
+announcements:
+  store:
+    link: https://www.makongmc.com
+    interval: 180
+    sound: ENTITY_PLAYER_LEVELUP
+    message: |-
+      &8────────────────
+      &a🛒 &2&lMAKONG STORE
+      &8────────────────
+      &fSupport the server by purchasing
+      &aranks, coins, keys &fand more!
+      &f
+      &a➟ &nwww.makongmc.com
+      &8────────────────
+    action-bar: ''
+
+  discord:
+    link: https://discord.gg/makong
+    interval: 140
+    sound: ENTITY_PLAYER_LEVELUP
+    message: |-
+      &8────────────────
+      &b✉ &3&lDISCORD COMMUNITY
+      &8────────────────
+      &fStay updated with &bannouncements,
+      &bgiveaways, events &fand more!
+      &f
+      &b➟ &ndiscord.gg/makong
+      &8────────────────
+    action-bar: ''

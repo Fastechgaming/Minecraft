@@ -311,7 +311,42 @@ function gamemodeName(id) {
   return gm ? gm.name : id || "—";
 }
 
+// One line per cart item - "• Name (upgrade info) (duration) ×qty — $amount".
+function lineText(line) {
+  const bits = [`• ${line.itemName}`];
+  if (line.upgrade) bits.push(`(${line.upgrade.fromRankId} → ${line.upgrade.toRankId})`);
+  if (line.duration) bits.push(line.duration === "permanent" ? "(Permanent)" : "(1 Month)");
+  if (line.quantity > 1) bits.push(`×${line.quantity}`);
+  bits.push(`— $${Number(line.amount).toFixed(2)}`);
+  return bits.join(" ");
+}
+
 function orderSummaryText(order) {
+  // *Total*/*Amount* is always order.amount - already the coupon-discounted
+  // figure when one is applied, so this line alone is what the admin should
+  // expect to see land in the bank account. The coupon line just explains why.
+  const couponLine = order.coupon ? `*Coupon:* \`${order.coupon.code}\` (−$${Number(order.coupon.discount).toFixed(2)})` : "";
+
+  if (order.items) {
+    const gamemodeNames = [...new Set(order.items.map((i) => gamemodeName(i.gamemode)))].join(", ");
+    return [
+      "🛒 *New Makong Network order*",
+      "",
+      `*Gamemode:* ${gamemodeNames}`,
+      "*Items:*",
+      ...order.items.map(lineText),
+      "",
+      couponLine,
+      `*Total:* $${Number(order.amount).toFixed(2)} ${order.currency}`,
+      `*In-server name:* \`${order.playerName}\``,
+      `*Edition:* ${order.edition === "bedrock" ? "Bedrock" : "Java"}`,
+      `*Order:* \`${order.id}\``,
+      "",
+      "Check the receipt above, then Accept or Reject.",
+    ]
+      .filter(Boolean)
+      .join("\n");
+  }
   return [
     "🛒 *New Makong Network order*",
     "",
@@ -320,6 +355,7 @@ function orderSummaryText(order) {
     order.upgrade ? `*Upgrade:* ${order.upgrade.fromRankId} → ${order.upgrade.toRankId}` : "",
     order.duration ? `*Duration:* ${order.duration === "permanent" ? "Permanent" : "1 Month"}` : "",
     order.quantity > 1 ? `*Quantity:* ${order.quantity}` : "",
+    couponLine,
     `*Amount:* $${Number(order.amount).toFixed(2)} ${order.currency}`,
     `*In-server name:* \`${order.playerName}\``,
     `*Edition:* ${order.edition === "bedrock" ? "Bedrock" : "Java"}`,
@@ -331,40 +367,87 @@ function orderSummaryText(order) {
     .join("\n");
 }
 
+// Generic operational alert, distinct from the per-order messages above -
+// "something's wrong with the store or a server connection" rather than
+// "here's a new order". Same admin chat, plain text, no inline buttons.
+//
+// `key` dedupes repeats: a recurring problem (MakongCore staying down, a
+// broken route throwing on every request) pings once per cooldown window
+// instead of once per request. Omit `key` for a one-off that should always
+// send (e.g. a state-change "back online" message - those are already rare
+// by construction, so nothing to de-dupe). Never throws - if Telegram
+// itself isn't configured or reachable, there is nowhere left to report
+// that failure to beyond the server console.
+const alertCooldowns = new Map(); // key -> last-sent timestamp
+const ALERT_COOLDOWN_MS = 10 * 60 * 1000;
+
+async function notifyAdmin(text, { key, cooldownMs = ALERT_COOLDOWN_MS } = {}) {
+  if (key) {
+    const last = alertCooldowns.get(key);
+    if (last && Date.now() - last < cooldownMs) return { ok: false, reason: "cooldown" };
+    alertCooldowns.set(key, Date.now());
+  }
+  console.warn(`[alert] ${text.replace(/\n/g, " ")}`);
+  if (!bot || !ADMIN_CHAT_ID) return { ok: false, reason: "Telegram bot is not configured." };
+  try {
+    await bot.sendMessage(ADMIN_CHAT_ID, text, { parse_mode: "Markdown" });
+    return { ok: true };
+  } catch (err) {
+    console.error("[alert] failed to send Telegram alert:", err.message);
+    return { ok: false, reason: err.message };
+  }
+}
+
 // Called by the website when a customer submits their payment screenshot.
 async function sendOrderForReview(order, proofPath) {
   if (!bot || !ADMIN_CHAT_ID) {
     return { ok: false, reason: "Telegram bot is not configured (token / admin chat id missing)." };
   }
+  const buttons = {
+    inline_keyboard: [
+      [
+        { text: "✅ Accept", callback_data: `ord:accept:${order.id}` },
+        { text: "❌ Reject", callback_data: `ord:reject:${order.id}` },
+      ],
+    ],
+  };
   try {
     await bot.sendPhoto(ADMIN_CHAT_ID, fs.createReadStream(proofPath), {
       caption: orderSummaryText(order),
       parse_mode: "Markdown",
-      reply_markup: {
-        inline_keyboard: [
-          [
-            { text: "✅ Accept", callback_data: `ord:accept:${order.id}` },
-            { text: "❌ Reject", callback_data: `ord:reject:${order.id}` },
-          ],
-        ],
-      },
+      reply_markup: buttons,
     });
     return { ok: true };
   } catch (err) {
-    return { ok: false, reason: err.message };
+    // The photo attach is what can fail on its own (a bad/huge file, a
+    // transient Telegram hiccup) even while the bot itself is fine - retry
+    // as a plain text message with the same Accept/Reject buttons, so the
+    // order is still actionable from Telegram even without the receipt
+    // image inline.
+    try {
+      await bot.sendMessage(
+        ADMIN_CHAT_ID,
+        `⚠️ _Payment screenshot failed to attach (${err.message}) — reviewing without it:_\n\n${orderSummaryText(order)}`,
+        { parse_mode: "Markdown", reply_markup: buttons }
+      );
+      return { ok: true, viaFallback: true };
+    } catch (err2) {
+      return { ok: false, reason: err2.message };
+    }
   }
 }
 
-// Builds the exact command(s) you'd paste into console/in-game, with
+// Builds the exact command(s) you'd paste into console/in-game for one line
+// (a cart item, or a legacy single-item order treated as one line), with
 // {player} etc. already filled in. Never touches the Minecraft server itself
 // - announceAccepted() below separately hands this to pluginBridge if the
 // target server happens to be connected, but the text is always produced
 // here regardless, since it's also what's shown for manual delivery.
-function buildDeliveryCommand(order, item) {
-  const context = { player: order.playerName, itemName: order.itemName, orderId: order.id, quantity: order.quantity || 1 };
+function buildDeliveryCommand(line, item) {
+  const context = { player: line.playerName, itemName: line.itemName, orderId: line.orderId, quantity: line.quantity || 1 };
 
-  if (order.upgrade) {
-    const { fromGroup, toGroup } = order.upgrade;
+  if (line.upgrade) {
+    const { fromGroup, toGroup } = line.upgrade;
     const remove = buildCommand(`lp user {player} parent remove ${fromGroup}`, context);
     const add = buildCommand(`lp user {player} parent add ${toGroup}`, context);
     return `${remove}\n${add}`;
@@ -375,35 +458,65 @@ function buildDeliveryCommand(order, item) {
   return buildCommand(template, context);
 }
 
+// Every order line, normalized to one shape - a cart order's own items, or
+// a legacy single-item order treated as a single synthetic line - so
+// announceAccepted() below only has to handle one case.
+function orderLines(order) {
+  if (order.items) {
+    return order.items.map((i) => ({
+      gamemode: i.gamemode,
+      itemName: i.itemName,
+      command: buildDeliveryCommand(
+        { playerName: order.playerName, itemName: i.itemName, orderId: order.id, quantity: i.quantity, upgrade: i.upgrade },
+        store.findItem(i.itemId)
+      ),
+    }));
+  }
+  return [
+    {
+      gamemode: order.gamemode,
+      itemName: order.itemName,
+      command: buildDeliveryCommand(
+        { playerName: order.playerName, itemName: order.itemName, orderId: order.id, quantity: order.quantity, upgrade: order.upgrade },
+        store.findItem(order.itemId)
+      ),
+    },
+  ];
+}
+
 // Marks an order accepted and sends the gamemode/item/amount/copy-paste
 // command message - shared by the manual Accept button below and an
 // automatically-verified payment (e.g. a Tebex payment already confirmed
-// server-side, so there's nothing left to "Accept").
+// server-side, so there's nothing left to "Accept"). Each line is delivered
+// to its own gamemode server independently, so a cart mixing items from two
+// different servers still delivers correctly to both.
 async function announceAccepted(order, { label = "✅ *Accepted*" } = {}) {
-  const item = store.findItem(order.itemId);
-  const command = buildDeliveryCommand(order, item);
+  const lines = orderLines(order);
 
   store.updateOrder(order.id, {
     status: "accepted",
     decidedAt: Date.now(),
-    manualCommand: command,
+    manualCommand: lines.map((l) => l.command).filter(Boolean).join("\n") || null,
   });
 
-  // If this order's gamemode server is connected via a MakongStore plugin
-  // right now, queue the command(s) for it to run automatically instead of
-  // only ever showing them for copy-paste. A multi-line command (an upgrade's
+  // If a line's gamemode server is connected via a MakongCore plugin right
+  // now, queue its command(s) for it to run automatically instead of only
+  // ever showing them for copy-paste. A multi-line command (an upgrade's
   // remove+add) is split so each line reaches the plugin as its own console
   // command - it drains and runs them in the order they were queued.
-  let deliveryLine = command
-    ? `Run this manually:\n\`\`\`\n${command}\n\`\`\``
-    : "_No delivery command configured for this item — deliver it manually._";
-  if (command && order.gamemode && pluginBridge.isOnline(order.gamemode)) {
-    command
-      .split("\n")
-      .filter(Boolean)
-      .forEach((line) => pluginBridge.queueCommand(order.gamemode, line, { orderId: order.id }));
-    deliveryLine = `✅ Sent automatically to *${order.gamemode}*:\n\`\`\`\n${command}\n\`\`\``;
-  }
+  const deliveryText = lines
+    .map((line) => {
+      if (!line.command) return `*${line.itemName}:* _no delivery command configured — deliver it manually._`;
+      if (line.gamemode && pluginBridge.isOnline(line.gamemode)) {
+        line.command
+          .split("\n")
+          .filter(Boolean)
+          .forEach((cmd) => pluginBridge.queueCommand(line.gamemode, cmd, { orderId: order.id }));
+        return `✅ *${line.itemName}* sent automatically to *${line.gamemode}*:\n\`\`\`\n${line.command}\n\`\`\``;
+      }
+      return `*${line.itemName}* — run manually:\n\`\`\`\n${line.command}\n\`\`\``;
+    })
+    .join("\n\n");
 
   if (!bot || !ADMIN_CHAT_ID) {
     return { ok: false, reason: "Telegram bot is not configured (token / admin chat id missing)." };
@@ -415,15 +528,21 @@ async function announceAccepted(order, { label = "✅ *Accepted*" } = {}) {
       [
         `${label} order \`${order.id}\``,
         "",
-        `*Gamemode:* ${gamemodeName(order.gamemode)}`,
-        `*Item:* ${order.itemName}`,
-        order.upgrade ? `*Upgrade:* ${order.upgrade.fromRankId} → ${order.upgrade.toRankId}` : "",
-        order.duration ? `*Duration:* ${order.duration === "permanent" ? "Permanent" : "1 Month"}` : "",
-        order.quantity > 1 ? `*Quantity:* ${order.quantity}` : "",
+        order.items
+          ? [`*Gamemode:* ${[...new Set(order.items.map((i) => gamemodeName(i.gamemode)))].join(", ")}`, "*Items:*", ...order.items.map(lineText)].join("\n")
+          : [
+              `*Gamemode:* ${gamemodeName(order.gamemode)}`,
+              `*Item:* ${order.itemName}`,
+              order.upgrade ? `*Upgrade:* ${order.upgrade.fromRankId} → ${order.upgrade.toRankId}` : "",
+              order.duration ? `*Duration:* ${order.duration === "permanent" ? "Permanent" : "1 Month"}` : "",
+              order.quantity > 1 ? `*Quantity:* ${order.quantity}` : "",
+            ]
+              .filter(Boolean)
+              .join("\n"),
         `*Amount:* $${Number(order.amount).toFixed(2)} ${order.currency}`,
         `*Player:* \`${order.playerName}\` (${order.edition === "bedrock" ? "Bedrock" : "Java"})`,
         "",
-        deliveryLine,
+        deliveryText,
       ]
         .filter(Boolean)
         .join("\n"),
@@ -474,4 +593,4 @@ async function handleOrderDecision(query) {
   return announceAccepted(order);
 }
 
-module.exports = { initBot, sendOrderForReview, announceAccepted };
+module.exports = { initBot, sendOrderForReview, announceAccepted, notifyAdmin };

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Coupons · Admin</title>
+  <link rel="stylesheet" href="/css/admin.css" />
+</head>
+<body class="admin-body">
+  <header class="admin-header">
+    <h1>Coupons</h1>
+    <nav class="admin-nav">
+      <a class="btn-ghost" href="/admin">Store items</a>
+      <a class="btn-ghost" href="/admin/rankings">Rankings</a>
+      <a class="btn-ghost" href="/admin/servers">Servers</a>
+      <form method="POST" action="/admin/logout"><button class="btn-ghost">Log out</button></form>
+    </nav>
+  </header>
+
+  <main class="admin-main">
+    <section class="admin-section">
+      <div class="admin-section-head">
+        <h2>Promo codes</h2>
+        <a class="btn" href="/admin/coupons/new">+ Add coupon</a>
+      </div>
+      <% if (!coupons.length) { %>
+        <p class="muted">No coupons yet.</p>
+      <% } else { %>
+        <div class="admin-table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Discount</th>
+                <th>Min. order</th>
+                <th>Uses</th>
+                <th>Expires</th>
+                <th>Status</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <% coupons.forEach(function(c) { %>
+                <% var expired = c.expiresAt && Date.now() > c.expiresAt; %>
+                <% var usedUp = c.maxUses != null && (c.usedCount || 0) >= c.maxUses; %>
+                <tr>
+                  <td><code><%= c.code %></code></td>
+                  <td><%= c.type === "percent" ? c.value + "%" : "$" + c.value.toFixed(2) %></td>
+                  <td><%= c.minAmount ? "$" + Number(c.minAmount).toFixed(2) : "—" %></td>
+                  <td><%= c.usedCount || 0 %><%= c.maxUses != null ? " / " + c.maxUses : "" %></td>
+                  <td><%= c.expiresAt ? new Date(c.expiresAt).toLocaleDateString() : "—" %></td>
+                  <td>
+                    <% if (!c.active) { %>Disabled
+                    <% } else if (expired) { %>Expired
+                    <% } else if (usedUp) { %>Used up
+                    <% } else { %>Active
+                    <% } %>
+                  </td>
+                  <td class="admin-table-actions">
+                    <a class="btn-ghost" href="/admin/coupons/<%= c.id %>/edit">Edit</a>
+                    <form method="POST" action="/admin/coupons/<%= c.id %>/delete" onsubmit="return confirm('Delete this coupon?')">
+                      <button class="btn-danger">Delete</button>
+                    </form>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </section>
+  </main>
+</body>
+</html>

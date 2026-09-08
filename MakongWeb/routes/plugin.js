@@ -1,6 +1,6 @@
-// API the MakongStore plugins (Paper + Velocity) connect to - see
+// API the MakongCore plugins (Paper + Velocity) connect to - see
 // lib/pluginBridge.js for the protocol/architecture notes and
-// ../../MakongStore/README.md for the plugin side.
+// ../../MakongCore/README.md for the plugin side.
 const express = require("express");
 const pluginBridge = require("../lib/pluginBridge");
 
@@ -8,10 +8,10 @@ const router = express.Router();
 
 function auth(req, res, next) {
   if (!pluginBridge.enabled()) {
-    return res.status(503).json({ error: "MakongStore bridge is not configured (MAKONGSTORE_SECRET unset)." });
+    return res.status(503).json({ error: "MakongCore bridge is not configured (MAKONGCORE_SECRET unset)." });
   }
   const secret = req.get("X-Makong-Secret") || "";
-  if (secret !== process.env.MAKONGSTORE_SECRET) {
+  if (secret !== process.env.MAKONGCORE_SECRET) {
     return res.status(401).json({ error: "Bad or missing X-Makong-Secret." });
   }
   next();
@@ -69,6 +69,57 @@ router.post("/pong", (req, res) => {
   if (!serverId || !target || !pingId) return res.status(400).json({ error: "serverId, target and pingId are required" });
   pluginBridge.queuePong(String(serverId), String(target), String(pingId));
   res.json({ ok: true });
+});
+
+// A plugin's periodic Team/MaTier Star standings report, shown live on the
+// public Ranking page (see lib/pluginBridge.js's getLiveRankings()).
+const RANKINGS_MAX_ENTRIES = 200;
+
+function sanitizeEntries(list) {
+  if (!Array.isArray(list)) return [];
+  return list.slice(0, RANKINGS_MAX_ENTRIES).reduce((out, entry) => {
+    if (!entry || typeof entry !== "object") return out;
+    const name = String(entry.name || "").slice(0, 64).trim();
+    if (!name) return out;
+    const clean = { name, star: Number(entry.star) || 0 };
+    if (entry.icon) clean.icon = String(entry.icon).slice(0, 8);
+    if (entry.tier) clean.tier = String(entry.tier).slice(0, 8);
+    out.push(clean);
+    return out;
+  }, []);
+}
+
+router.post("/rankings", (req, res) => {
+  const { serverId, teams, players } = req.body || {};
+  if (!serverId) return res.status(400).json({ error: "serverId is required" });
+  pluginBridge.reportRankings(String(serverId), sanitizeEntries(teams), sanitizeEntries(players));
+  res.json({ ok: true });
+});
+
+// A connected plugin (currently just MakongVelocity's /mc autorestart)
+// queuing a console command on ANOTHER connected server - same command
+// queue the admin panel's /admin/servers already uses, just a second
+// caller. No extra authorization boundary beyond the shared secret every
+// plugin route here already requires: whoever holds MAKONGCORE_SECRET can
+// already do this via the admin panel.
+const COMMAND_MAX_LENGTH = 500;
+
+router.post("/command", (req, res) => {
+  const { serverId, targetServerId, command } = req.body || {};
+  if (!serverId || !targetServerId || !command) {
+    return res.status(400).json({ error: "serverId, targetServerId and command are required" });
+  }
+  const clean = String(command).slice(0, COMMAND_MAX_LENGTH).trim();
+  if (!clean) return res.status(400).json({ error: "command is empty" });
+  // Refuse rather than queue blindly into a target that isn't actually
+  // polling right now - a command sitting in a dead target's queue forever
+  // looks like success to the caller but never runs. This is the freshest
+  // online check there is (based on that server's own last poll).
+  if (!pluginBridge.isOnline(String(targetServerId))) {
+    return res.status(409).json({ ok: false, error: `${targetServerId} is not currently connected` });
+  }
+  const commandId = pluginBridge.queueCommand(String(targetServerId), clean, { from: String(serverId) });
+  res.json({ ok: true, commandId });
 });
 
 module.exports = router;

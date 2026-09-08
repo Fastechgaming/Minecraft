@@ -11,12 +11,30 @@
     <h1>Makong Network Rankings Admin</h1>
     <nav class="admin-nav">
       <a class="btn-ghost" href="/admin">Store items</a>
+      <a class="btn-ghost" href="/admin/coupons">Coupons</a>
       <a class="btn-ghost" href="/admin/servers">Servers</a>
       <form method="POST" action="/admin/logout"><button class="btn-ghost">Log out</button></form>
     </nav>
   </header>
 
   <main class="admin-main">
+    <%
+      // Same Star -> tier thresholds as public/js/ranking.js's TIERS (and the
+      // MakongCore plugin's module/matier.yml matier.tiers) - kept in sync by
+      // hand since these are three different files.
+      function tierFor(star) {
+        var value = Number(star) || 0;
+        if (value >= 1500) return "M1";
+        if (value >= 1200) return "M2";
+        if (value >= 975) return "M3";
+        if (value >= 750) return "M4";
+        if (value >= 600) return "M5";
+        if (value >= 450) return "M6";
+        if (value >= 300) return "M7";
+        if (value >= 150) return "M8";
+        return "M9";
+      }
+    %>
     <% [["teams", "Top Team", teams], ["players", "Top Player", players]].forEach(function(section) { %>
       <% var category = section[0], label = section[1], list = section[2]; %>
       <section class="admin-section">
@@ -33,10 +51,7 @@
                 <tr>
                   <th>Name</th>
                   <th>Star</th>
-                  <th>Points</th>
-                  <th>Kills</th>
-                  <th>Deaths</th>
-                  <th>KDR</th>
+                  <% if (category === "players") { %><th>Tier</th><% } %>
                   <th></th>
                 </tr>
               </thead>
@@ -45,10 +60,7 @@
                   <tr>
                     <td><%= entry.icon ? entry.icon + " " : "" %><%= entry.name %></td>
                     <td><%= entry.star %></td>
-                    <td><%= entry.points %></td>
-                    <td><%= entry.kills %></td>
-                    <td><%= entry.deaths %></td>
-                    <td><%= entry.kdr %></td>
+                    <% if (category === "players") { %><td><%= tierFor(entry.star) %></td><% } %>
                     <td class="admin-table-actions">
                       <a class="btn-ghost" href="/admin/rankings/<%= entry.id %>/edit">Edit</a>
                       <form method="POST" action="/admin/rankings/<%= entry.id %>/delete" onsubmit="return confirm('Delete this entry?')">

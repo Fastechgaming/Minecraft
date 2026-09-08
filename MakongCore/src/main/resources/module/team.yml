@@ -1,0 +1,89 @@
+# MakongCore Team module
+# INFO: Everything below controls the /team system.
+# INFO: Change these values instead of editing Java code.
+team:
+  # INFO: Team size and naming limits.
+  limits:
+    max_team_size: 36
+    min_name_length: 3
+    max_name_length: 15
+    min_tag_length: 2
+    max_tag_length: 5
+    max_description_length: 32
+  # INFO: Defaults for newly created teams.
+  defaults:
+    description: "a new team!"
+  # INFO: Invitation and join-request expiration.
+  invites:
+    expire_seconds: 3600
+  # INFO: Team PvP toggle.
+  pvp:
+    enabled: true
+    default_status: false
+    toggle_cooldown_seconds: 300
+  # INFO: Team alliance limits and request behavior.
+  allies:
+    enabled: true
+    max_allies: 10
+    allow_request_toggle: true
+  # INFO: Team chat prefix settings.
+  chat:
+    character_enabled: true
+    character: "#"
+  # INFO: Rename cooldown in seconds.
+  rename:
+    cooldown_seconds: 604800
+  # INFO: Weekly Points reset and weekend Star rewards. Weekly Points are cleared every payout/reset cycle.
+  weekly_points:
+    reset_enabled: true
+    reset_day: SUNDAY
+    reset_hour: 0
+    reset_minute: 0
+  # INFO: Weekly Star rewards are paid from the completed previous week before Weekly Points are cleared.
+  weekly_rewards:
+    enabled: true
+    payout_day: SUNDAY
+    payout_hour: 0
+    payout_minute: 0
+    top_1_stars: 40
+    top_2_stars: 30
+    top_3_stars: 25
+    top_4_5_stars: 20
+    top_6_20_stars_start: 15
+    top_6_20_stars_decrement: 1
+  # INFO: Annual reset for team Stars.
+  annual_star_reset:
+    enabled: true
+    month: 1
+    day: 1
+    hour: 0
+    minute: 0
+  # INFO: Automatically disband inactive teams.
+  disband:
+    auto_disband: false
+    inactive_days: 15
+    check_interval_minutes: 360
+  # INFO: Player statistics and Weekly Point scoring.
+  # INFO: Every team member has weekly points, kills, deaths and playtime.
+  # INFO: These individual stats are combined into the team's Weekly Points.
+  scoring:
+    enabled: true
+    minimum_points: 0
+    spam_threshold_seconds: 60
+    events:
+      playtime_per_hour: 1
+      kill: 1
+      kill_spam: 0
+      death: 0
+      death_spam: -1
+  # INFO: Team creation validation. These mirror the limits above.
+  creation:
+    min_tag_length: 2
+    max_tag_length: 5
+    min_name_length: 3
+    max_name_length: 15
+  # INFO: PlaceholderAPI display (see MakongCore's README "PlaceholderAPI"
+  # INFO: section). Supports MiniMessage color tags.
+  placeholders:
+    # INFO: What %team_tag% shows for a player who isn't in any team.
+    no_team: "<gray>No Team</gray>"

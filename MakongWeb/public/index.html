@@ -63,6 +63,8 @@ try { if (localStorage.getItem("makong-theme") === "light") document.documentEle
           <ul class="lang-menu" role="menu">
             <li role="none"><button type="button" role="menuitem" class="lang-option" data-lang="en" onclick="setLang('en')">English</button></li>
             <li role="none"><button type="button" role="menuitem" class="lang-option" data-lang="km" onclick="setLang('km')">ខ្មែរ</button></li>
+            <li role="none"><button type="button" role="menuitem" class="lang-option" data-lang="zh" onclick="setLang('zh')">中文</button></li>
+            <li role="none"><button type="button" role="menuitem" class="lang-option" data-lang="vi" onclick="setLang('vi')">Tiếng Việt</button></li>
           </ul>
         </div>
         <button class="theme-toggle" onclick="toggleTheme()" aria-label="Switch theme"><img class="theme-icon" src="/images/site/sun-icon.png" alt="" /></button>
@@ -71,6 +73,7 @@ try { if (localStorage.getItem("makong-theme") === "light") document.documentEle
         <li><a href="/"><img class="nav-icon" src="/images/site/icon-home.png" alt="" /><span data-i18n="nav.home">Home</span></a></li>
         <li><a href="/store"><img class="nav-icon" src="/images/site/icon-store-nav.png" alt="" /><span data-i18n="nav.store">Store</span></a></li>
         <li><a href="/ranking"><img class="nav-icon" src="/images/site/icon-ranking.png" alt="" onerror="this.style.display='none'" /><span data-i18n="nav.ranking">Ranking</span></a></li>
+        <li><a href="/verify"><img class="nav-icon" src="/images/site/icon-verify.png" alt="" onerror="this.style.display='none'" /><span data-i18n="nav.verify">Verify</span></a></li>
       </ul>
       <button class="nav-toggle" onclick="toggleNav()" aria-label="Menu" data-i18n-aria="nav.menu">&#9776;</button>
     </div>

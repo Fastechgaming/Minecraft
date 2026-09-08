@@ -1,0 +1,30 @@
+name: MakongCore
+version: ${version}
+main: com.angkor.makongcore.MakongCore
+api-version: '1.21'
+author: Angkor
+softdepend: [floodgate, PlaceholderAPI]
+commands:
+  team:
+    description: Open and manage your team
+    usage: /team [...]
+    aliases: [teams]
+  makongcore:
+    description: MakongCore administration
+    usage: /makongcore <help|reload|info|list|team|disband|forcejoin|forceleave|addpoints|setpoints|addstars|setstars|ping|autorestart>
+    aliases: [mateam]
+  matier:
+    description: Player MaTier profile and leaderboard
+    usage: /matier [top|stats|set|add|remove|reset|resetall|reload]
+  link:
+    description: Link your Minecraft account to Discord
+    usage: /link
+permissions:
+  mateam.use:
+    default: true
+  mateam.admin:
+    description: Access /mateam (/makongcore) administrative commands
+    default: op
+  makongcore.admin:
+    description: Access /matier's admin subcommands (stats/set/add/remove/reset/resetall/reload)
+    default: op

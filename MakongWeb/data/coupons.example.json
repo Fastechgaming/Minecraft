@@ -1,0 +1,5 @@
+{
+  "coupons": [
+    { "id": "coupon-example1", "code": "WELCOME10", "type": "percent", "value": 10, "active": true, "minAmount": null, "maxUses": null, "usedCount": 0, "expiresAt": null, "createdAt": 1700000000000 }
+  ]
+}

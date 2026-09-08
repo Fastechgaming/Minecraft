@@ -1,0 +1,87 @@
+plugins {
+    id 'java'
+    id 'com.gradleup.shadow' version '8.3.6'
+}
+
+group = 'com.angkor'
+version = '1.2.21'
+
+description = 'Simple, fast, Java + Bedrock compatible team plugin for Paper/Purpur 1.21.x'
+
+repositories {
+    maven { name = 'papermc'; url = 'https://repo.papermc.io/repository/maven-public/' }
+    maven { name = 'placeholderapi'; url = 'https://repo.extendedclip.com/content/repositories/placeholderapi/' }
+    mavenCentral()
+}
+
+dependencies {
+    compileOnly 'io.papermc.paper:paper-api:1.21.11-R0.1-SNAPSHOT'
+    // Optional: %team_tag%/%team_star%/%matier%/%matier_star% (see
+    // hook/TeamPlaceholders.java, hook/MaTierPlaceholders.java). compileOnly
+    // because a PlaceholderExpansion subclass must exist at compile time,
+    // but it's still a soft dependency at runtime - see plugin.yml's
+    // softdepend and MakongCore#registerPlaceholders, which only registers
+    // either class if PlaceholderAPI is actually installed.
+    compileOnly 'me.clip:placeholderapi:2.11.6'
+    implementation 'com.zaxxer:HikariCP:7.0.2'
+    implementation 'com.h2database:h2:2.4.240'
+    implementation 'com.mysql:mysql-connector-j:9.4.0'
+    implementation 'net.dv8tion:JDA:6.5.0'
+}
+
+java {
+    toolchain { languageVersion = JavaLanguageVersion.of(21) }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 21
+}
+
+/*
+ * Build a self-contained plugin jar via the Shadow plugin. JDA is
+ * relocated to a MakongCore-private package - it's unrelocated bundling
+ * that caused a real classloading collision with AxRefund (also on this
+ * server), which separately loads JDA 5.2.2 via Paper's library loader.
+ * Bukkit/Paper's plugin classloaders share visibility across plugins for
+ * identically-named classes, so whichever JDA version loaded first
+ * server-wide silently won for both plugins - AxRefund's older 5.2.2
+ * classes ended up handling MakongCore's Discord interactions, and 5.2.2
+ * predates the Components V2 modal format MakongCore's code (compiled
+ * against JDA 6.5.0) produces, causing modal-submission parse failures.
+ * Relocating gives MakongCore's own copy a package name no other plugin
+ * can ever collide with.
+ *
+ * JDBC service files from H2/MySQL are intentionally excluded from the
+ * dependency ZIPs and supplied once by MaTeam below.
+ */
+tasks.named('shadowJar').configure {
+    archiveClassifier = ''
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    relocate 'net.dv8tion.jda', 'com.angkor.makongcore.libs.jda'
+
+    exclude 'META-INF/services/java.sql.Driver'
+    exclude 'META-INF/*.SF'
+    exclude 'META-INF/*.RSA'
+    exclude 'META-INF/*.DSA'
+
+    manifest {
+        attributes(
+            'Implementation-Title': 'MakongCore',
+            'Implementation-Version': project.version
+        )
+    }
+}
+
+tasks.named('jar', Jar).configure {
+    enabled = false
+}
+
+processResources {
+    filesMatching('plugin.yml') { expand(version: project.version) }
+}
+
+tasks.named('build') {
+    dependsOn(tasks.named('shadowJar'))
+}

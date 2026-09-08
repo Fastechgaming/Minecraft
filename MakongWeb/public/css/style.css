@@ -1,7 +1,9 @@
 /* ===== Makong Network — cartoony Angkor Wat / jungle Minecraft theme ===== */
-@import url("https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Press+Start+2P&family=Noto+Sans:wght@400;600;700&family=Kantumruy+Pro:wght@400;600;700&display=swap");
-/* Kantumruy Pro carries the Khmer glyphs - it sits in every font stack after
-   the Latin faces so the site reads properly with the language set to ខ្មែរ. */
+@import url("https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Press+Start+2P&family=Noto+Sans:wght@400;600;700&family=Kantumruy+Pro:wght@400;600;700&family=Noto+Sans+SC:wght@400;600;700&display=swap");
+/* Kantumruy Pro carries the Khmer glyphs and Noto Sans SC the Chinese ones -
+   both sit in every font stack after the Latin faces so the site reads
+   properly with the language set to ខ្មែរ or 中文. Vietnamese needs no extra
+   font: Baloo 2 and Noto Sans already cover its Latin Extended diacritics. */
 
 /* The genuine in-game Minecraft font, for English/Latin text - it has no
    Khmer glyphs, so it sits first in the stack and just falls through to
@@ -129,7 +131,7 @@ html { scroll-behavior: smooth; }
 
 body {
   margin: 0;
-  font-family: "Minecraft", "Noto Sans", "Kantumruy Pro", system-ui, sans-serif;
+  font-family: "Minecraft", "Noto Sans", "Kantumruy Pro", "Noto Sans SC", system-ui, sans-serif;
   /* dappled forest light: soft color pools over the base tone, not a flat fill */
   background:
     radial-gradient(720px 420px at 8% 0%, rgba(127, 216, 88, 0.16), transparent 60%),
@@ -141,7 +143,7 @@ body {
 }
 
 h1, h2, h3, .brand {
-  font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", "Noto Sans", sans-serif;
+  font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", "Noto Sans SC", "Noto Sans", sans-serif;
   color: var(--brown-dark);
   letter-spacing: 0.01em;
   font-weight: 800;
@@ -248,7 +250,7 @@ button, input, select, textarea { font-family: inherit; }
   padding: 0;
   border-radius: 10px;
   cursor: pointer;
-  font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", sans-serif;
+  font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", "Noto Sans SC", sans-serif;
   font-weight: 800;
   font-size: 0.95rem;
   color: var(--on-dark);
@@ -292,7 +294,7 @@ button, input, select, textarea { font-family: inherit; }
   align-items: center;
   color: var(--on-dark);
   font-weight: 700;
-  font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", sans-serif;
+  font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", "Noto Sans SC", sans-serif;
   font-size: 0.95rem;
   border-radius: 10px;
   background: linear-gradient(180deg, var(--jungle), var(--jungle-dark));
@@ -855,6 +857,114 @@ a.feature-card.linked .feature-title { color: var(--link-accent); }
   .store-controls .store-tabs { justify-content: center; }
 }
 
+/* Cart toggle - floats bottom-right over the page (fixed to the viewport,
+   not the store-controls bar it used to sit in). Solid yellow rather than
+   the site's --gold (which actually reads as pale lime, see Buy Now) -
+   picked specifically so this button doesn't blend in as another piece
+   of chrome. Gently pulses with a glowing ring while the cart actually
+   has something in it. Store icon + "Cart" label + item-count badge. */
+.cart-toggle {
+  position: fixed;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  background: linear-gradient(180deg, #ffe066, #ffc107);
+  border: 3px solid var(--stone-darkest);
+  border-radius: 999px;
+  padding: 0.75rem 1.4rem 0.75rem 0.8rem;
+  cursor: pointer;
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.55), 0 5px 0 #b8860b, 0 10px 20px rgba(42, 22, 8, 0.4);
+  transition: transform 0.18s cubic-bezier(.34,1.56,.64,1), box-shadow 0.15s;
+}
+.cart-toggle[hidden] { display: none; }
+.cart-toggle:hover { transform: scale(1.08); }
+.cart-toggle:active { transform: translateY(3px); box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.55), 0 1px 0 #b8860b; }
+.cart-toggle:has(.cart-badge:not([hidden])) { animation: cart-toggle-pulse 2s ease-in-out infinite; }
+@keyframes cart-toggle-pulse {
+  0%, 100% { box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.55), 0 5px 0 #b8860b, 0 10px 20px rgba(42, 22, 8, 0.4), 0 0 0 0 rgba(255, 193, 7, 0.6); }
+  50% { box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.55), 0 5px 0 #b8860b, 0 10px 20px rgba(42, 22, 8, 0.4), 0 0 0 10px rgba(255, 193, 7, 0); }
+}
+.cart-icon { width: 30px; height: 30px; object-fit: contain; flex-shrink: 0; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.25)); }
+.cart-label {
+  font-family: "Minecraft", "Baloo 2", sans-serif;
+  font-weight: 800;
+  color: #4a3300;
+  font-size: 1.05rem;
+  letter-spacing: 0.02em;
+}
+.cart-badge {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--terracotta);
+  color: #fff;
+  font-family: "Minecraft", "Baloo 2", sans-serif;
+  font-size: 0.78rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid var(--stone-darkest);
+  box-shadow: 0 2px 6px rgba(42, 22, 8, 0.4);
+}
+.cart-badge[hidden] { display: none; }
+@media (max-width: 620px) {
+  .cart-toggle { right: 1rem; bottom: 1rem; padding: 0.65rem 1.15rem 0.65rem 0.7rem; }
+}
+
+/* Cart modal rows - same "receipt" feel as the checkout summary. */
+.cart-rows { display: flex; flex-direction: column; gap: 0.7rem; margin-bottom: 1rem; max-height: 50vh; overflow-y: auto; }
+.cart-row {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding-bottom: 0.7rem;
+  border-bottom: 1px dashed var(--stone-dark);
+}
+.cart-row:last-child { border-bottom: none; padding-bottom: 0; }
+.cart-row-img {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 2px solid var(--stone-darkest);
+  background: var(--cream-dark);
+}
+.cart-row-body { flex: 1; min-width: 0; }
+.cart-row-name { font-weight: 800; color: var(--ink); font-size: 0.92rem; }
+.cart-row-tags { color: var(--ink-soft); font-size: 0.78rem; font-weight: 600; }
+.cart-row-price { color: var(--terracotta); font-family: "Minecraft", "Baloo 2", sans-serif; font-weight: 800; white-space: nowrap; }
+.cart-row-remove {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: var(--ink-soft);
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.2rem 0.4rem;
+}
+.cart-row-remove:hover { color: var(--terracotta); }
+.cart-total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 0.8rem;
+  border-top: 2px dashed var(--stone-dark);
+  margin-bottom: 1rem;
+  font-weight: 800;
+  color: var(--ink);
+}
+.cart-total-row strong { color: var(--terracotta); font-family: "Minecraft", "Baloo 2", sans-serif; font-size: 1.2rem; }
+
 /* Gamemode picker - a custom dropdown (same pattern as the language
    switcher) instead of a native <select>, so the closed button can read
    "Gamemode: BoxPvP" while the open list just shows "BoxPvP", "SMP", etc. */
@@ -867,7 +977,7 @@ a.feature-card.linked .feature-title { color: var(--link-accent); }
   padding: 0.65rem 1.4rem;
   border: 3px solid var(--moss-dark);
   border-radius: 999px;
-  font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", sans-serif;
+  font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", "Noto Sans SC", sans-serif;
   font-weight: 800;
   font-size: 1rem;
   color: var(--brown-darkest);
@@ -911,7 +1021,7 @@ a.feature-card.linked .feature-title { color: var(--link-accent); }
   align-items: center;
   color: var(--on-dark);
   font-weight: 700;
-  font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", sans-serif;
+  font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", "Noto Sans SC", sans-serif;
   font-size: 0.95rem;
   border-radius: 10px;
   background: linear-gradient(180deg, var(--jungle), var(--jungle-dark));
@@ -1169,7 +1279,7 @@ a.continue-btn { display: block; box-sizing: border-box; text-align: center; tex
   border-radius: 10px;
   padding: 0.5rem 0.9rem;
   font-weight: 800;
-  font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", sans-serif;
+  font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", "Noto Sans SC", sans-serif;
   font-size: 0.85rem;
   cursor: pointer;
   box-shadow: 0 3px 0 var(--stone-darkest);
@@ -1289,6 +1399,52 @@ a.continue-btn { display: block; box-sizing: border-box; text-align: center; tex
 }
 .checkout-rows strong { color: var(--ink); }
 .checkout-rows .price { color: var(--terracotta); font-family: "Minecraft", "Baloo 2", sans-serif; font-size: 1.1rem; }
+
+/* Cart order summary - one row per item above the same .checkout-rows total. */
+.checkout-summary-multi { flex-direction: column; align-items: stretch; }
+.checkout-summary-multi h3 { margin: 0 0 0.6rem; }
+.checkout-cart-rows { display: flex; flex-direction: column; gap: 0.6rem; margin-bottom: 0.9rem; }
+.checkout-cart-row { display: flex; align-items: center; gap: 0.7rem; }
+.checkout-item-img.small { width: 48px; height: 48px; border-radius: 8px; }
+.checkout-cart-row-body { flex: 1; min-width: 0; }
+.checkout-cart-row-name { font-weight: 800; color: var(--ink); font-size: 0.9rem; }
+.checkout-item-tags { color: var(--ink-soft); font-size: 0.78rem; font-weight: 600; }
+.checkout-cart-row-price { color: var(--terracotta); font-family: "Minecraft", "Baloo 2", sans-serif; font-weight: 800; white-space: nowrap; }
+
+/* Coupon step + discount row in the order summary */
+.coupon-step { padding-top: 0.9rem; }
+.coupon-input-row { display: flex; gap: 0.6rem; }
+.coupon-input-row input {
+  flex: 1;
+  padding: 0.7rem 0.8rem;
+  border-radius: 10px;
+  border: 3px solid var(--stone-darkest);
+  font-size: 0.95rem;
+  background: var(--input-bg);
+  color: var(--ink);
+  text-transform: uppercase;
+}
+.coupon-input-row .change-name-btn { width: auto; padding: 0.7rem 1rem; white-space: nowrap; }
+.coupon-applied-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--moss);
+  margin: 0 0 0.3rem;
+}
+.link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--terracotta);
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
 
 .checkout-step { padding: 1.25rem 0 0; }
 .checkout-step h3 { margin: 0 0 0.3rem; font-size: 1.1rem; }
@@ -1437,6 +1593,9 @@ a.continue-btn { display: block; box-sizing: border-box; text-align: center; tex
 .games-gate .field { text-align: left; margin-top: 1.1rem; }
 .games-gate .preview-name { display: block; margin-top: 0.35rem; }
 .games-disclaimer { margin-top: 0.9rem; font-size: 0.8rem; opacity: 0.85; }
+
+.verify-panel { max-width: 460px; margin: 0 auto; text-align: center; }
+.verify-panel h3 { margin: 0.2rem 0 0.4rem; font-size: 1.35rem; }
 
 .player-bar {
   display: flex;
@@ -1744,7 +1903,7 @@ body.game-open { overflow: hidden; }
 /* ---------- Build It! ---------- */
 .build-banner {
   text-align: center;
-  font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", sans-serif;
+  font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", "Noto Sans SC", sans-serif;
   font-weight: 800;
   font-size: 1.05rem;
   margin-bottom: 0.6rem;
@@ -1828,11 +1987,13 @@ body.game-open { overflow: hidden; }
   .daily-progress-label { font-size: 0.72rem; }
 }
 
-/* ---------- Khmer typography ----------
+/* ---------- Khmer & Chinese typography ----------
    The small-caps look (uppercase + letter-spacing) is an English design
    device. Khmer is a cluster script: letter-spacing pulls its vowels and
-   diacritics away from the consonants they belong to, so both are switched
-   off wherever the page is set to ខ្មែរ. */
+   diacritics away from the consonants they belong to. Chinese has no case
+   at all, so "uppercase" is a no-op and the extra letter-spacing just looks
+   odd between characters. Both are switched off for ខ្មែរ and 中文 - Vietnamese
+   stays on the English treatment since it's Latin script like French/German. */
 html[lang="km"] .info-card .label,
 html[lang="km"] .info-card.stacked .sub-label,
 html[lang="km"] .player-label,
@@ -1840,7 +2001,15 @@ html[lang="km"] .result-score-label,
 html[lang="km"] .hud-label,
 html[lang="km"] .bb-target-label,
 html[lang="km"] .section-subtitle,
-html[lang="km"] #submit-btn {
+html[lang="km"] #submit-btn,
+html[lang="zh"] .info-card .label,
+html[lang="zh"] .info-card.stacked .sub-label,
+html[lang="zh"] .player-label,
+html[lang="zh"] .result-score-label,
+html[lang="zh"] .hud-label,
+html[lang="zh"] .bb-target-label,
+html[lang="zh"] .section-subtitle,
+html[lang="zh"] #submit-btn {
   text-transform: none;
   letter-spacing: 0;
 }
@@ -1850,6 +2019,22 @@ html[lang="km"] body { line-height: 1.75; }
 html[lang="km"] .daily-progress-label,
 html[lang="km"] .game-hint,
 html[lang="km"] .checkout-hint { line-height: 1.7; }
+
+/* ---------- Ranking page: Top Player (left/top) + Top Team (right/bottom) ---------- */
+.ranking-boards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+@media (max-width: 760px) {
+  .ranking-boards { grid-template-columns: 1fr; }
+}
+.ranking-source {
+  margin: -0.4rem 0 1rem;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
 
 /* ---------- Points leaderboard ---------- */
 .board-panel { padding: 1rem 1.1rem 1.2rem; }
@@ -1862,6 +2047,18 @@ html[lang="km"] .checkout-hint { line-height: 1.7; }
   margin-bottom: 0.6rem;
 }
 .board-head h3 { margin: 0; font-size: 1.1rem; }
+.board-search {
+  display: block;
+  width: 100%;
+  margin-bottom: 0.6rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 10px;
+  border: 3px solid var(--stone-darkest);
+  background: var(--input-bg);
+  color: var(--ink);
+  font-size: 0.88rem;
+}
+.board-search::placeholder { color: var(--ink-soft); }
 .board-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.35rem; }
 .board-row {
   display: grid;
@@ -1876,9 +2073,30 @@ html[lang="km"] .checkout-hint { line-height: 1.7; }
   font-size: 0.9rem;
 }
 .board-row.is-you { border-color: var(--gold); box-shadow: 0 0 10px rgba(255, 205, 90, 0.45); }
-.board-rank { font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", sans-serif; font-size: 1.05rem; text-align: center; color: var(--ink-soft); }
+.board-rank { font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", "Noto Sans SC", sans-serif; font-size: 1.05rem; text-align: center; color: var(--ink-soft); }
 .board-name { color: var(--ink); overflow-wrap: anywhere; }
-.board-points { font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", sans-serif; font-weight: 800; color: var(--gold-deep); }
+.board-points { font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", "Noto Sans SC", sans-serif; font-weight: 800; color: var(--gold-deep); white-space: nowrap; }
+/* A player's rank tier (M1-M9) - reported live by the plugin, or derived
+   from Star via tierFor() for admin-curated fallback data (both in
+   public/js/ranking.js). Teams don't get one, only their Star total. */
+/* Background color is set inline per-row (public/js/ranking.js's
+   TIER_COLORS - M9's dull stone gray through M1's pure Minecraft green,
+   same palette as the plugin's MaTierService.TIER_HEX). The dark
+   text-shadow keeps the tier code readable against every color in that
+   range, including the lighter ones (M1's bright green). */
+.board-tier {
+  display: inline-block;
+  margin-left: 0.4rem;
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  border: 1.5px solid rgba(0, 0, 0, 0.35);
+  color: #fff;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.55);
+  font-family: "Minecraft", "Baloo 2", sans-serif;
+  font-size: 0.7rem;
+  font-weight: 800;
+  vertical-align: middle;
+}
 .board-you {
   display: inline-block;
   margin-left: 0.35rem;
@@ -1891,23 +2109,26 @@ html[lang="km"] .checkout-hint { line-height: 1.7; }
   vertical-align: middle;
 }
 .board-empty { color: var(--ink-soft); font-size: 0.88rem; text-align: center; padding: 0.6rem; }
+.board-pager { display: flex; align-items: center; justify-content: center; gap: 0.8rem; margin-top: 0.7rem; }
+.pager-btn {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 8px;
+  border: 2px solid var(--stone-darkest);
+  background: linear-gradient(180deg, var(--jungle), var(--jungle-dark));
+  color: #fff;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 3px 0 var(--stone-darkest);
+}
+.pager-btn:active:not(:disabled) { transform: translateY(1px); box-shadow: 0 1px 0 var(--stone-darkest); }
+.pager-btn:disabled { opacity: 0.35; cursor: default; }
+.pager-label { font-size: 0.82rem; color: var(--ink-soft); font-weight: 700; white-space: nowrap; }
 
 /* Ranking page reuses this leaderboard row for both Top Team and Top Player,
    just with a stat other than points in .board-points and the top 3 rows
    picked out with a medal-colored left border. */
-.board-avatar {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.7rem;
-  height: 1.7rem;
-  margin-right: 0.5rem;
-  border-radius: 50%;
-  background: var(--input-bg);
-  border: 2px solid var(--stone-darkest);
-  font-size: 0.9rem;
-  vertical-align: middle;
-}
 .board-row.rank-1 { border-color: var(--gold-deep); box-shadow: 0 0 10px rgba(215, 255, 160, 0.35); }
 .board-row.rank-2 { border-color: #c9c9c9; }
 .board-row.rank-3 { border-color: #cd8a4c; }
@@ -1936,7 +2157,8 @@ html[lang="km"] .checkout-hint { line-height: 1.7; }
 .board-table tr.is-you td { background: color-mix(in srgb, var(--gold) 22%, transparent); }
 .board-table td.board-rank { width: 48px; text-align: center; }
 .board-table td.board-points { text-align: right; white-space: nowrap; }
-html[lang="km"] .board-table th { text-transform: none; letter-spacing: 0; }
+html[lang="km"] .board-table th,
+html[lang="zh"] .board-table th { text-transform: none; letter-spacing: 0; }
 
 /* the name-change button while the 24h lock is on */
 .back-link.locked { opacity: 0.65; cursor: not-allowed; }
@@ -1958,7 +2180,8 @@ html[lang="km"] .board-table th { text-transform: none; letter-spacing: 0; }
   color: var(--ink-soft);
   margin-bottom: 0.4rem;
 }
-html[lang="km"] .board-mini-title { text-transform: none; letter-spacing: 0; }
+html[lang="km"] .board-mini-title,
+html[lang="zh"] .board-mini-title { text-transform: none; letter-spacing: 0; }
 .board-list.mini { gap: 0.28rem; text-align: left; }
 .board-list.mini .board-row { padding: 0.3rem 0.5rem; font-size: 0.82rem; grid-template-columns: 30px 1fr auto; }
 .board-view-full {
@@ -2010,7 +2233,7 @@ html[lang="km"] .board-mini-title { text-transform: none; letter-spacing: 0; }
 }
 .countdown-screen { padding: 2rem 0 1rem; }
 .countdown-number {
-  font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", sans-serif;
+  font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", "Noto Sans SC", sans-serif;
   font-weight: 800;
   font-size: 4.5rem;
   line-height: 1;
@@ -2168,7 +2391,7 @@ html[lang="km"] .board-mini-title { text-transform: none; letter-spacing: 0; }
   padding: 0.5rem;
   color: var(--on-dark);
   font-weight: 700;
-  font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", sans-serif;
+  font-family: "Minecraft", "Baloo 2", "Kantumruy Pro", "Noto Sans SC", sans-serif;
   font-size: 0.85rem;
   border-radius: 10px;
   background: linear-gradient(180deg, var(--jungle), var(--jungle-dark));
@@ -2277,8 +2500,31 @@ html[lang="km"] .board-mini-title { text-transform: none; letter-spacing: 0; }
   color: var(--terracotta);
   margin-bottom: 0.9rem;
 }
+/* All three actions (Confirm / Add to Cart / Cancel) sized identically so
+   they read as one uniform button stack, not a primary button with two
+   afterthoughts hanging off it. Only size/shape is unified here - each
+   keeps its own color treatment (gold confirm, stone add-to-cart,
+   outlined cancel) so Confirm still reads as the primary action. */
 .confirm-actions { display: flex; flex-direction: column; gap: 0.5rem; align-items: center; }
-.confirm-actions .continue-btn { max-width: 260px; }
+.confirm-actions .continue-btn,
+.confirm-actions .change-name-btn,
+.confirm-actions .back-link {
+  width: 100%;
+  max-width: 260px;
+  box-sizing: border-box;
+  padding: 0.85rem;
+  font-size: 1.05rem;
+  border-radius: 12px;
+  text-align: center;
+}
+.confirm-actions .change-name-btn { border-width: 3px; }
+.confirm-actions .back-link {
+  border: 3px solid var(--stone-darkest);
+  background: transparent;
+  color: var(--brown-dark);
+  font-family: "Minecraft", "Baloo 2", sans-serif;
+  font-weight: 800;
+}
 
 /* =========================================================
    Block Breaker + Diamond Rush textures

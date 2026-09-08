@@ -50,8 +50,8 @@ Everything below lives in **`MakongWeb/.env`** (secrets) and **`MakongWeb/config
 | `TELEGRAM_BOT_TOKEN` | Create a bot via [@BotFather](https://t.me/BotFather) on Telegram. |
 | `TELEGRAM_ADMIN_CHAT_ID` | Your personal numeric Telegram ID — message [@userinfobot](https://t.me/userinfobot) to get it. Purchase alerts and the `/additem` etc. admin commands are locked to this ID only. |
 | `TELEGRAM_SUPPORT_USERNAME` | Your public support `@username` shown on the purchase-success screen. |
-| `MAKONGSTORE_SECRET` | Optional — any long random string, matched in every MakongStore plugin's `config.yml`. Turns on the Servers admin page, live command delivery on Accept, and cross-server ping — see "Connecting the Minecraft plugins". |
-| `MAKONGSTORE_URL` | Optional, separate from the above — only if you're also running the older single-plugin player-verify HTTP API. |
+| `MAKONGCORE_SECRET` | Optional — any long random string, matched in every MakongCore plugin's `config.yml`. Turns on the Servers admin page, live command delivery on Accept, and cross-server ping — see "Connecting the Minecraft plugins". |
+| `MAKONGCORE_URL` | Optional, separate from the above — only if you're also running the older single-plugin player-verify HTTP API. |
 | `TEBEX_WEBSTORE_TOKEN` | Optional — Tebex Creator Panel → Webstore → Integrations → Headless API. Adds a "Pay via Tebex" (card/wallet) button on checkout, see "Purchase flow". Leave empty to skip it. |
 
 ## 3. Managing store items (3 ways — pick whichever is easiest for you)
@@ -77,20 +77,57 @@ gamemode** — EcoSMP's VIP and BoxPvP's VIP are unrelated ranks that happen to
 share a name, so a rank id is `rank-<gamemode>-<slug>` (e.g. `rank-ecosmp-vip`),
 not just `rank-<slug>`.
 
-## 4. Managing rankings (`/ranking` — Top Team / Top Player)
+## 4. Managing rankings (`/ranking` — Top Player / Top Team)
 
-The `/ranking` page shows two leaderboards, **Top Team** and **Top Player**,
-each sortable by **Star**, **Points**, **Kills**, **Deaths** or **KDR**
-(kills ÷ deaths, computed automatically — it just shows Kills when Deaths is
-still 0, instead of dividing by zero).
+The `/ranking` page shows two leaderboards side by side on desktop (**Top
+Player** on the left, **Top Team** on the right) and stacked on mobile
+(Player on top, Team below), both ranked by **Star** — the only stat this
+page shows. Each board is paginated 10 at a time with prev/next arrows, and
+has its own search box that filters by name across the *whole* leaderboard
+(not just the visible page) — a searched-for player or team still shows
+their true rank (e.g. #47), it isn't renumbered to fit the search results.
 
-There's no live stats feed from the Minecraft server for this (MakongStore
-doesn't track kills/deaths/star/points), so it's an **admin-curated**
-leaderboard, same idea as store items: go to `http://your-domain/admin/rankings`,
-log in, and add/edit/delete teams and players with a form — name, an optional
-emoji icon (falls back to the name's first letter), and the four raw numbers.
-Or edit `MakongWeb/data/rankings.json` directly — it's a plain JSON file with
-`teams` and `players` arrays.
+A player's Star count also decides their rank **tier** (M9 down to M1),
+shown next to their name. Teams just show their Star total, with no tier —
+the tier ladder is a player-only concept. The thresholds match the
+MakongCore plugin's own `module/matier.yml` (`matier.tiers`) exactly:
+
+| Tier | Stars |
+|---|---|
+| M9 | 0 |
+| M8 | 150 |
+| M7 | 300 |
+| M6 | 450 |
+| M5 | 600 |
+| M4 | 750 |
+| M3 | 975 |
+| M2 | 1,200 |
+| M1 | 1,500+ (top 10 players only, in the plugin) |
+
+**Live data.** Once `MAKONGCORE_SECRET` is set and a MakongCore server has
+`config.yml`'s `website.enabled: true`, the plugin reports its real
+Team and MaTier Star standings on every poll tick (see
+`MakongCore/README.md`'s "Website Bridge" section). `GET /api/rankings`
+then serves that live data instead of the admin-curated JSON — the
+`/ranking` page shows a small "🟢 Live from the server" line when this is
+happening, or "Sample rankings" when it's falling back. A player's `tier`
+in live mode comes straight from the plugin's own `MaTierService
+.tierForRanked()`, so the top-10-only M1 cap is respected exactly; this
+page's local `tierFor()` lookup is only used for admin-curated fallback
+entries, which have no `tier` field of their own. Live data is per
+connected server, merged and de-duplicated by name across every server
+that's reported within the last 5 minutes (`RANKINGS_STALE_MS` in
+`lib/pluginBridge.js`) — a server that's gone quiet longer than that drops
+out, and once none are left, the page falls back to admin-curated data
+automatically.
+
+When the bridge isn't configured, or no server has reported yet, this
+page's Star numbers are **admin-curated**. Same idea as store items: go to
+`http://your-domain/admin/rankings`, log in, and
+add/edit/delete teams and players with a form — name, an optional emoji icon
+(falls back to the name's first letter), and their Star count. Or edit
+`MakongWeb/data/rankings.json` directly — it's a plain JSON file with `teams`
+and `players` arrays.
 
 ## 5. Purchase flow
 
@@ -123,7 +160,7 @@ from Telegram with one tap.
 3. **SUBMIT** → they get a **Submit successful** page telling them to wait for the owner to confirm, with a support link and a **Back to home** button.
 4. You receive a Telegram message with the receipt photo, the gamemode, the item, the price, and the in-server name, plus **✅ Accept** and **❌ Reject** buttons.
    - **Reject** → the order is marked rejected. Nothing else happens.
-   - **Accept** → the bot replies with the gamemode, item, amount, player name, and that item's **delivery command** with `{player}` already filled in (e.g. `lp user .Play_er parent add ecosmp_vip`), in a tap-to-copy code block. If that item's gamemode server is currently connected via a MakongStore plugin (section 7), the command is also **run automatically** and the message says so; otherwise paste it into your server console yourself, same as always.
+   - **Accept** → the bot replies with the gamemode, item, amount, player name, and that item's **delivery command** with `{player}` already filled in (e.g. `lp user .Play_er parent add ecosmp_vip`), in a tap-to-copy code block. If that item's gamemode server is currently connected via a MakongCore plugin (section 7), the command is also **run automatically** and the message says so; otherwise paste it into your server console yourself, same as always.
 
 Each item's delivery command is configured per item — set it in the web admin
 form ("Delivery command") or via `/edititem <id> deliveryCommand <command>` in
@@ -168,21 +205,22 @@ cookie (`makong_player`, handled by `routes/account.js`), so:
 * changing the name has a **60-second cooldown**, purely so nobody can hammer
   the verify endpoint.
 
-When the MakongStore plugin's player-verify API is connected, verifying also
+When the MakongCore plugin's player-verify API is connected, verifying also
 **checks the name really exists** on the Minecraft server and brings back the
 player's UUID, live coin balance and rank(s). See "Connecting the Minecraft
 plugins" below.
 
-## 7. Connecting the Minecraft plugins (MakongStore)
+## 7. Connecting the Minecraft plugins (MakongCore)
 
-`../MakongStore/` in this repo is a multi-module Maven project with the actual
-plugins that bridge this website to your Minecraft servers — a **Paper plugin**
-(one instance per backend server: Arcade, EcoSMP, BoxPvP, PlotCity,
-HyperClash…) and a **Velocity plugin** (one instance on your proxy), both
-built the same way (`mvn package` in `../MakongStore/`) and documented in its
-own README. The website works fine with none, some, or all of them running.
+`../MakongCore/` (Paper — one instance per backend server: Arcade, EcoSMP,
+BoxPvP, PlotCity, HyperClash…) and `../MakongVelocity/` (Velocity — one
+instance on your proxy, entirely optional) are two separate Gradle projects
+in this repo that bridge this website to your Minecraft servers, each built
+independently (`./gradlew build` in its own folder, using its own bundled
+wrapper) and documented in its own README. The website works fine with none,
+some, or all of them running.
 
-There are two independent things a MakongStore plugin can do:
+There are two independent things a MakongCore/MakongVelocity plugin can do:
 
 **A) The multi-server command bridge** (`lib/pluginBridge.js` + `routes/plugin.js`,
 `/admin/servers`) — each plugin instance *connects outward* to this website
@@ -196,17 +234,24 @@ different machines/hosts) and:
   **Accept** in Telegram, *if* that item's gamemode server is currently
   connected — falling back to the usual manual copy-paste command when it
   isn't;
-- can ping any other connected server (`/makong ping <server-id>` in-game or
-  on the proxy console) — this is the "servers respond to each other" piece,
-  relayed through the website so it works whether or not the servers share a
-  Velocity proxy.
+- can ping any other connected server (`/mateam ping <server-id>` on Paper,
+  `/mc ping <server-id>` on Velocity) — this is the "servers respond to each
+  other" piece, relayed through the website so it works whether or not the
+  servers share a Velocity proxy;
+- MakongVelocity's `/mc autorestart <seconds>` uses this same queue
+  (`POST /api/plugin/command`) to fan a restart-warning-then-restart command
+  out to every connected Paper backend at once — see its own README for the
+  intended panel-scheduling pattern. This endpoint refuses (409) rather than
+  queuing anything for a `targetServerId` that isn't currently online, so a
+  caller finds out immediately instead of a command silently sitting
+  undelivered forever.
 
-Turn this on by setting **`MAKONGSTORE_SECRET`** in `.env` (any long random
+Turn this on by setting **`MAKONGCORE_SECRET`** in `.env` (any long random
 string) and the same value in every plugin's `config.yml` — that one shared
 secret is all that's needed; there's no per-server URL to configure on the
 website side since the plugins dial out to it.
 
-**B) The older player-verify API** (`lib/makongstore.js`) — a single plugin
+**B) The older player-verify API** (`lib/makongcore.js`) — a single plugin
 HTTP server the website calls into for live coins/rank/name-verify data and
 mini-game payouts. This is a separate, optional piece not required for (A):
 
@@ -218,8 +263,8 @@ mini-game payouts. This is a separate, optional piece not required for (A):
 | Mini-game payouts | Credited in game, keyed on the round id | Recorded in `data/gamestats.json` only |
 | Store delivery | `POST /purchase/deliver` (queues for offline players) | The command bridge above, or manual Telegram, as before |
 
-Set `MAKONGSTORE_URL` (that plugin server's address) alongside
-`MAKONGSTORE_SECRET` in `.env` to turn this on too — same shared secret, sent
+Set `MAKONGCORE_URL` (that plugin server's address) alongside
+`MAKONGCORE_SECRET` in `.env` to turn this on too — same shared secret, sent
 as a header on every request, must match the plugin's `config.yml` exactly.
 The website server prints which mode(s) it started in. If it isn't on
 localhost or a private network, put the plugin's port behind a tunnel/VPN,
@@ -243,28 +288,38 @@ The "Chill Community / No Raiding / Live Cambodia Map" badges on the Home page c
 
 The layout is responsive: a hamburger nav under ~760px, a stacked hero on mobile, and a grid that reflows from multi-column (desktop) down to single-column (phones) throughout the store.
 
-## 10. Languages (English / ខ្មែរ)
+## 10. Languages (English / ខ្មែរ / 中文 / Tiếng Việt)
 
-Every page has a **KH / EN** button next to the ☀️/🌙 toggle. English is the
-default; the choice is remembered in the browser and applies to the whole site,
-including the games. Prices show the riel equivalent alongside the dollar amount
-when Khmer is selected (**1 USD = 4,000 ៛**) — the amount actually charged is
-still the dollar figure on the KHQR.
+Every page has a language button (next to the ☀️/🌙 toggle) that opens a
+dropdown with all four languages. English is the default; the choice is
+remembered in the browser and applies to the whole site, including the games.
+Prices show the riel equivalent alongside the dollar amount only when Khmer is
+selected (**1 USD = 4,000 ៛**) — Chinese and Vietnamese show the dollar figure
+like English does. The amount actually charged is always the dollar figure on
+the KHQR either way.
 
-All the text lives in one file, `public/js/i18n.js`, as two dictionaries (`en`
-and `km`) keyed by the same strings. To fix a translation, edit the `km` entry;
-to add new text, add the key to both. Markup opts in with `data-i18n="key"`
-(or `data-i18n-html`, `data-i18n-placeholder`, `data-i18n-title`,
-`data-i18n-aria`), and anything rendered from JavaScript calls `t("key", { vars })`
-and re-renders on the `i18n:change` event.
+All the text lives in one file, `public/js/i18n.js`, as four dictionaries
+(`en`, `km`, `zh`, `vi`) keyed by the same strings. To fix a translation, edit
+that language's entry; to add new text, add the key to **all four**. Markup
+opts in with `data-i18n="key"` (or `data-i18n-html`, `data-i18n-placeholder`,
+`data-i18n-title`, `data-i18n-aria`), and anything rendered from JavaScript
+calls `t("key", { vars })` and re-renders on the `i18n:change` event. The
+website's CI checks all four dictionaries define exactly the same set of
+keys, so a typo'd or missing key fails the build instead of silently falling
+back to English at runtime.
 
-Per the brief, Minecraft and technical vocabulary stays in English inside the
-Khmer text — Server, Rank, Keys, Java, Bedrock, Creeper, Zombie, Combo, KHQR,
-Telegram, Discord, block names and so on — because translating those reads
-strangely to a Khmer player who knows the game in English. Khmer glyphs come
-from Kantumruy Pro (loaded with the other Google Fonts), and the small-caps
+Per the brief, Minecraft and technical vocabulary stays in English across
+every translation — Server, Rank, Keys, Java, Bedrock, Creeper, Zombie, Combo,
+KHQR, Telegram, Discord, block names and so on — because translating those
+reads strangely to a player who already knows the game in English. Khmer
+glyphs come from Kantumruy Pro and Chinese from Noto Sans SC (both loaded
+alongside the other Google Fonts); Vietnamese needs no extra font since Baloo
+2 and Noto Sans already cover its Latin Extended diacritics. The small-caps
 styling (uppercase + letter-spacing) is switched off under `html[lang="km"]`
-because letter-spacing pulls Khmer vowels away from their consonants.
+and `html[lang="zh"]` — Khmer because letter-spacing pulls its vowels away
+from their consonants, Chinese because it has no concept of case at all so
+the effect just looks wrong. Vietnamese keeps the English treatment since
+it's a Latin script like French or German.
 
 ## 11. Running in production
 
@@ -276,7 +331,7 @@ opening a port. Short version of the two things people get wrong:
   Node server that needs raw TCP/UDP (Minecraft status pings), a filesystem and a
   long-running process. Cloudflare *Tunnel* is the Cloudflare product that fits.
 * Run it on the same machine as Minecraft if you can, and the player-verify
-  MakongStore plugin (section 7B) then sits on `127.0.0.1` and never touches
+  MakongCore plugin (section 7B) then sits on `127.0.0.1` and never touches
   the internet. The multi-server command bridge (7A) doesn't need this at all
   — plugins connect outward to the website's public URL, so backend servers
   can live on entirely different machines/hosts.
@@ -297,7 +352,7 @@ MakongWeb/
   data/proofs/            Uploaded payment screenshots (git-ignored, never served publicly)
   lib/store.js            Tiny JSON-file data layer
   lib/rankings.js         Tiny JSON-file data layer for the ranking page
-  lib/makongstore.js      Client for the MakongStore plugin's player-verify API (section 7B)
+  lib/makongcore.js      Client for the MakongCore plugin's player-verify API (section 7B)
   lib/pluginBridge.js     Multi-server command/ping bridge the plugins connect to (section 7A)
   lib/tebex.js            Client for Tebex's Headless API (optional card/wallet checkout)
   deploy/                 systemd unit, Cloudflare Tunnel config, update script
@@ -305,7 +360,7 @@ MakongWeb/
   lib/minecraft.js        Java+Bedrock status ping
   lib/commandTemplate.js  Turns "lp user {player} parent add vip" into a real command
   routes/api.js           Public JSON API (config, status, items, rankings, checkout, proof upload)
-  routes/plugin.js        MakongStore plugin bridge API (connect/poll/ack/ping) - see lib/pluginBridge.js
+  routes/plugin.js        MakongCore plugin bridge API (connect/poll/ack/ping) - see lib/pluginBridge.js
   routes/account.js       The player account cookie used by the store
   routes/admin.js         Password-protected admin panel (item CRUD, rankings CRUD, image upload, servers)
   telegram/bot.js         Telegram bot: order review (Accept/Reject) + /additem etc.

@@ -64,7 +64,7 @@ app.use("/admin", adminSession, adminRoutes);
 // Clean URLs: /store instead of /store.html. Old .html links (bookmarks,
 // anything already indexed) redirect permanently to the clean one instead of
 // just quietly still working, so there is one canonical URL per page.
-const CLEAN_PAGES = ["store", "checkout", "success", "ranking"];
+const CLEAN_PAGES = ["store", "checkout", "success", "ranking", "verify"];
 app.get(CLEAN_PAGES.map((p) => `/${p}.html`), (req, res) => {
   const page = req.path.replace(/\.html$/, "");
   const qs = req.url.slice(req.path.length); // preserve ?order=... etc.
@@ -82,15 +82,19 @@ app.use((err, req, res, next) => {
 app.listen(PORT, HOST, () => {
   console.log(`Makong Network website running on ${HOST}:${PORT}`);
   if (BEHIND_HTTPS) console.log(`[https] trusting proxy headers, session cookies marked Secure (SITE_URL=${process.env.SITE_URL})`);
-  if (require("./lib/makongstore").enabled()) {
-    console.log("[makongstore] plugin bridge configured — verifying names against the Minecraft server");
+  if (require("./lib/makongcore").enabled()) {
+    console.log("[makongcore] plugin bridge configured — verifying names against the Minecraft server");
   } else {
-    console.log("[makongstore] no plugin configured — names are accepted without server verification");
+    console.log("[makongcore] no plugin configured — names are accepted without server verification");
   }
   if (require("./lib/pluginBridge").enabled()) {
-    console.log("[pluginBridge] MAKONGSTORE_SECRET set — /api/plugin is open for MakongStore plugins to connect");
+    console.log("[pluginBridge] MAKONGCORE_SECRET set — /api/plugin is open for MakongCore plugins to connect");
   } else {
-    console.log("[pluginBridge] MAKONGSTORE_SECRET not set — /api/plugin is disabled");
+    console.log("[pluginBridge] MAKONGCORE_SECRET not set — /api/plugin is disabled");
   }
   telegram.initBot();
+  // Telegram-alerts on a connected server dropping off the bridge (or
+  // MakongCore's own verify API going unreachable, tracked separately in
+  // lib/makongcore.js) - see lib/pluginBridge.js's startHealthCheck().
+  require("./lib/pluginBridge").startHealthCheck();
 });

@@ -40,9 +40,11 @@ function render() {
     return;
   }
   receipt.hidden = false;
-  receipt.innerHTML = `
+
+  const itemRow = successOrder.items
+    ? `<div><span>${escapeHtml(t("checkout.items"))}</span><strong>${escapeHtml(successOrder.items.map((i) => i.itemName).join(", "))}</strong></div>`
+    : `
     <div><span>${escapeHtml(t("success.item"))}</span><strong>${escapeHtml(successOrder.itemName)}</strong></div>
-    <div><span>${escapeHtml(t("checkout.inServerName"))}</span><strong>${escapeHtml(successOrder.playerName)}</strong></div>
     ${
       successOrder.duration
         ? `<div><span>${escapeHtml(t("checkout.duration"))}</span><strong>${escapeHtml(t(successOrder.duration === "permanent" ? "store.durationPermanent" : "store.duration1Month"))}</strong></div>`
@@ -52,7 +54,16 @@ function render() {
       successOrder.quantity > 1
         ? `<div><span>${escapeHtml(t("store.quantity"))}</span><strong>×${successOrder.quantity}</strong></div>`
         : ""
-    }
+    }`;
+
+  const couponRow = successOrder.coupon
+    ? `<div><span>${escapeHtml(t("checkout.discount"))} (${escapeHtml(successOrder.coupon.code)})</span><strong>−${escapeHtml(formatPrice(successOrder.coupon.discount))}</strong></div>`
+    : "";
+
+  receipt.innerHTML = `
+    ${itemRow}
+    <div><span>${escapeHtml(t("checkout.inServerName"))}</span><strong>${escapeHtml(successOrder.playerName)}</strong></div>
+    ${couponRow}
     <div><span>${escapeHtml(t("success.amount"))}</span><strong>${escapeHtml(formatPrice(successOrder.amount))}</strong></div>
     <div><span>${escapeHtml(t("success.orderId"))}</span><strong>${escapeHtml(successOrder.id)}</strong></div>
   `;

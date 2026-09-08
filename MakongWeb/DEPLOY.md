@@ -22,7 +22,7 @@ without opening a single port.
 
 ```
    players ──HTTPS──▶ Cloudflare ──tunnel──▶ your box ──▶ node server.js :3000
-                                                     └──▶ Minecraft + MakongStore (localhost)
+                                                     └──▶ Minecraft + MakongCore (localhost)
 ```
 
 Running it on the same box as Minecraft is worth doing on purpose if you're
@@ -78,10 +78,10 @@ SESSION_SECRET=...                 # node -e "console.log(require('crypto').rand
 TELEGRAM_BOT_TOKEN=...
 TELEGRAM_ADMIN_CHAT_ID=...
 
-# Once the MakongStore plugins are running (see ../MakongStore/README.md) -
+# Once the MakongCore plugins are running (see ../MakongCore/README.md) -
 # same secret in every plugin's config.yml. Turns on the Servers admin page,
 # live command delivery on Accept, and cross-server ping.
-MAKONGSTORE_SECRET=...
+MAKONGCORE_SECRET=...
 ```
 
 Check it starts:
@@ -158,10 +158,10 @@ That pulls, reinstalls dependencies from the lockfile and restarts the service.
 ## What GitHub *is* good for here
 
 `.github/workflows/website-ci.yml` runs on every push: installs dependencies,
-parses every browser script, loads every server module, checks the English and
-Khmer dictionaries still define the same keys, then boots the server and hits
-the pages and the API. It catches a broken push before you deploy it. It does
-not host anything.
+parses every browser script, loads every server module, checks all four
+language dictionaries (English, Khmer, Chinese, Vietnamese) still define the
+same keys, then boots the server and hits the pages and the API. It catches a
+broken push before you deploy it. It does not host anything.
 
 ---
 

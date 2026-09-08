@@ -1,8 +1,8 @@
 // Tiny JSON-file "database" for the Ranking page - same pattern as lib/store.js.
-// There's no live stats feed from the Minecraft server (MakongStore doesn't
-// track kills/deaths/star/points), so this is an admin-curated leaderboard:
-// you add/edit teams and players from /admin/rankings with their current
-// numbers, same way items are curated.
+// Nothing wires this up to the MakongCore plugin's own MaTier/Team Star data
+// yet, so it's an admin-curated leaderboard for now: you add/edit teams and
+// players from /admin/rankings with their current numbers, same way items
+// are curated.
 const fs = require("fs");
 const path = require("path");
 const { nanoid } = require("nanoid");
@@ -34,29 +34,10 @@ function writeJson(file, data) {
 
 const CATEGORIES = ["teams", "players"];
 
-function round2(n) {
-  return Math.round(n * 100) / 100;
-}
-
-// Kills-per-death - the standard fallback of "just show kills" when nobody
-// has died yet, rather than dividing by zero or hiding the stat.
-function kdrOf(entry) {
-  const kills = Number(entry.kills) || 0;
-  const deaths = Number(entry.deaths) || 0;
-  return deaths > 0 ? round2(kills / deaths) : round2(kills);
-}
-
-function withKdr(entry) {
-  return { ...entry, kdr: kdrOf(entry) };
-}
-
 function getRankings() {
   const data = readJson(RANKINGS_FILE, { teams: [], players: [] });
   for (const cat of CATEGORIES) if (!Array.isArray(data[cat])) data[cat] = [];
-  return {
-    teams: data.teams.map(withKdr),
-    players: data.players.map(withKdr),
-  };
+  return data;
 }
 
 function saveRankings(data) {
