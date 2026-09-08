@@ -72,7 +72,13 @@ export async function startBot(): Promise<void> {
       GatewayIntentBits.MessageContent,
       GatewayIntentBits.DirectMessages
     ],
-    partials: [Partials.Message, Partials.Channel, Partials.Reaction, Partials.GuildMember, Partials.User]
+    partials: [Partials.Message, Partials.Channel, Partials.Reaction, Partials.GuildMember, Partials.User],
+    // Global default for every message this bot sends: @everyone/@here never
+    // pings, no matter where the text came from (AI-generated replies, a
+    // user's message echoed back, automod reasons, etc). User/role mentions
+    // still work — needed for things like level-up pings and staff pings.
+    // Per-call `allowedMentions` (none currently set) can still override this.
+    allowedMentions: { parse: ['users', 'roles'] }
   });
 
   client.lavalink = createLavalinkManager(client);
