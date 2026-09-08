@@ -63,7 +63,26 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
     // linking.reminder.interval_seconds in module/verification.yml.
     public void start(){long intervalTicks=Math.max(1,cfg.l("linking.reminder.interval_seconds",3))*20L;reminderTask=plugin.getServer().getScheduler().runTaskTimer(plugin,this::tickPending,intervalTicks,intervalTicks);if(!cfg.b("discord.enabled",false)&&!cfg.b("telegram.enabled",false))return; if(cfg.b("discord.enabled",false))startDiscord(); if(cfg.b("telegram.enabled",false))startTelegram();}
     public void stop(){if(reminderTask!=null){reminderTask.cancel();reminderTask=null;}if(jda!=null){jda.shutdownNow();jda=null;}if(telegram!=null){telegram.shutdownNow();telegram=null;}}
-    private void tickPending(){long now=System.currentTimeMillis();for(Pending x:new ArrayList<>(pending.values())){if(x.expiresAt<now){pending.remove(x.code);if(frozen.contains(x.uuid)){Player p=Bukkit.getPlayer(x.uuid);if(p!=null)freezeAndCode(p,x.accountType);}}}for(UUID u:new ArrayList<>(frozen)){Player p=Bukkit.getPlayer(u);String code=playerCodes.get(u);if(p!=null&&code!=null)sendReminder(p,code);}}
+    // A player can finish verifying via a DIFFERENT server's Discord/Telegram
+    // connection than the one they're frozen on (see verifyDiscord/
+    // verifyTelegram's db.findPending fallback) - that other server can't
+    // unfreeze them locally since they're not online there. So on every
+    // tick, re-check the shared account_links table for each locally frozen
+    // player and release them if a link now exists, regardless of which
+    // server actually completed it.
+    private void tickPending(){
+        long now=System.currentTimeMillis();
+        for(Pending x:new ArrayList<>(pending.values())){if(x.expiresAt<now){pending.remove(x.code);db.removePending(x.code);if(frozen.contains(x.uuid)){Player p=Bukkit.getPlayer(x.uuid);if(p!=null)freezeAndCode(p,x.accountType);}}}
+        for(UUID u:new ArrayList<>(frozen)){
+            if(Bukkit.getPlayer(u)==null)continue;
+            db.getAccountLink(u).thenAccept(link->Bukkit.getScheduler().runTask(plugin,()->{
+                Player p=Bukkit.getPlayer(u); if(p==null)return;
+                if(link!=null){pending.values().removeIf(v->v.uuid.equals(u));playerCodes.remove(u);release(u);return;}
+                String code=playerCodes.get(u);
+                if(code!=null)sendReminder(p,code);
+            }));
+        }
+    }
 
     // {code}/{discord}/{telegram} substitution, then "&"-style color codes
     // (easier to type in YAML than a literal section sign) translated to
@@ -111,8 +130,21 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
     private void editPanel(TextChannel ch,String id,net.dv8tion.jda.api.entities.MessageEmbed embed){ch.retrieveMessageById(id).queue(msg->msg.editMessageEmbeds(embed).setComponents(ActionRow.of(Button.primary("makong:verify","Verify Code"))).queue(),err->ch.sendMessageEmbeds(embed).setComponents(ActionRow.of(Button.primary("makong:verify","Verify Code"))).queue(msg->db.setMeta("discord_verification_panel_message_id",msg.getId())));}
     @Override public void onButtonInteraction(ButtonInteractionEvent e){if(!e.getComponentId().equals("makong:verify"))return;TextInput code=TextInput.create("code",TextInputStyle.SHORT).setPlaceholder("123456").setMinLength(6).setMaxLength(6).build();e.replyModal(Modal.create("makong:verify","Minecraft Verification").addComponents(Label.of("Verification Code",code)).build()).queue();}
     @Override public void onModalInteraction(ModalInteractionEvent e){if(!e.getModalId().equals("makong:verify"))return;String code=e.getValue("code")==null?"":e.getValue("code").getAsString().trim();if(!CODE.matcher(code).matches()){e.reply("❌ Invalid code.").setEphemeral(true).queue();return;} verifyDiscord(e,code);}
-    private void verifyDiscord(ModalInteractionEvent e,String code){Pending x=pending.get(code);if(x==null||x.expiresAt<System.currentTimeMillis()){e.reply("❌ Code expired or not found. Join the server again for a new code.").setEphemeral(true).queue();return;}if(!discordAllowed(e.getUser(),e.getMember(),e.getGuild(),false)){e.reply("❌ Your Discord account does not meet the server/account-age requirements.").setEphemeral(true).queue();return;}db.findByDiscord(e.getUser().getId()).thenAccept(existing->{if(existing!=null&&!existing.uuid().equals(x.uuid)){e.reply("❌ This Discord account is already linked to another Minecraft account.").setEphemeral(true).queue();return;}completeDiscord(e,x,existing);});}
-    private void completeDiscord(ModalInteractionEvent e,Pending x,Database.AccountLink existing){String telegram=existing==null?null:existing.telegramChatId();db.linkAccount(x.uuid,x.name(),e.getUser().getId(),telegram,x.accountType).thenRun(()->{pending.remove(x.code);playerCodes.remove(x.uuid);frozen.remove(x.uuid);Bukkit.getScheduler().runTask(plugin,()->release(x.uuid));Guild g=e.getGuild();String roleKey=x.accountType.equals("cracked")?"roles.crack":x.accountType.equals("bedrock")?"roles.bedrock":"roles.java";String roleId=cfg.s("discord."+roleKey,"");if(g!=null&&!roleId.isBlank()){Role role=g.getRoleById(roleId);if(role!=null)g.addRoleToMember(e.getUser(),role).queue();}e.reply("✅ Successfully connected to **"+x.name()+"**.").setEphemeral(true).queue();});}
+    // Every Discord-enabled server shares the same bot token and connection,
+    // so this modal submit can land on a different server than the one that
+    // generated the code (see Database#putPending's javadoc). Try the local,
+    // fast in-memory map first; only fall back to the shared DB lookup if
+    // this server doesn't recognize the code itself.
+    private void verifyDiscord(ModalInteractionEvent e,String code){
+        Pending local=pending.get(code);
+        if(local!=null){verifyDiscord(e,local);return;}
+        db.findPending(code).thenAccept(row->{
+            if(row==null){e.reply("❌ Code expired or not found. Join the server again for a new code.").setEphemeral(true).queue();return;}
+            verifyDiscord(e,new Pending(row.uuid(),row.name(),code,row.expiresAt(),row.accountType(),row.discordOnly()));
+        });
+    }
+    private void verifyDiscord(ModalInteractionEvent e,Pending x){if(x.expiresAt<System.currentTimeMillis()){e.reply("❌ Code expired or not found. Join the server again for a new code.").setEphemeral(true).queue();return;}if(!discordAllowed(e.getUser(),e.getMember(),e.getGuild(),false)){e.reply("❌ Your Discord account does not meet the server/account-age requirements.").setEphemeral(true).queue();return;}db.findByDiscord(e.getUser().getId()).thenAccept(existing->{if(existing!=null&&!existing.uuid().equals(x.uuid)){e.reply("❌ This Discord account is already linked to another Minecraft account.").setEphemeral(true).queue();return;}completeDiscord(e,x,existing);});}
+    private void completeDiscord(ModalInteractionEvent e,Pending x,Database.AccountLink existing){String telegram=existing==null?null:existing.telegramChatId();db.linkAccount(x.uuid,x.name(),e.getUser().getId(),telegram,x.accountType).thenRun(()->{pending.remove(x.code);db.removePending(x.code);playerCodes.remove(x.uuid);frozen.remove(x.uuid);Bukkit.getScheduler().runTask(plugin,()->release(x.uuid));Guild g=e.getGuild();String roleKey=x.accountType.equals("cracked")?"roles.crack":x.accountType.equals("bedrock")?"roles.bedrock":"roles.java";String roleId=cfg.s("discord."+roleKey,"");if(g!=null&&!roleId.isBlank()){Role role=g.getRoleById(roleId);if(role!=null)g.addRoleToMember(e.getUser(),role).queue();}e.reply("✅ Successfully connected to **"+x.name()+"**.").setEphemeral(true).queue();});}
     private boolean discordAllowed(User u,Member m,Guild g,boolean staff){
         if(g==null||m==null)return false;
         String guildId=cfg.s("discord.guild.id","");
@@ -177,9 +209,9 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
     }
     private Boolean detectPremium(String name){if(Bukkit.getOnlineMode())return true;if(!cfg.b("linking.premium_detection.enabled",true))return false;try{HttpRequest r=HttpRequest.newBuilder(URI.create("https://api.mojang.com/users/profiles/minecraft/"+java.net.URLEncoder.encode(name,java.nio.charset.StandardCharsets.UTF_8))).timeout(Duration.ofSeconds(4)).GET().build();HttpResponse<String> x=http.send(r,HttpResponse.BodyHandlers.ofString());if(x.statusCode()==200)return true;if(x.statusCode()==204||x.statusCode()==404)return false;return null;}catch(Exception e){return null;}}
     public void optionalLink(Player p){if(!cfg.b("discord.enabled",false)){p.sendMessage("§cDiscord linking is currently disabled.");return;}db.getAccountLink(p.getUniqueId()).thenAccept(l->{if(l!=null&&l.discordId()!=null&&!l.discordId().isBlank()){p.sendMessage("§aYour Discord account is already linked.");return;}String type=(floodgate!=null&&floodgate.isBedrock(p.getUniqueId()))?"bedrock":"java";Bukkit.getScheduler().runTask(plugin,()->displayOptionalCode(p,type));});}
-    private void displayOptionalCode(Player p,String type){if(!p.isOnline())return;pending.values().removeIf(v->v.uuid.equals(p.getUniqueId()));String code=String.format("%06d",ThreadLocalRandom.current().nextInt(1000000));long expiry=System.currentTimeMillis()+cfg.l("linking.code_expire_minutes",10)*60000L;Pending x=new Pending(p.getUniqueId(),p.getName(),code,expiry,type,true);pending.put(code,x);playerCodes.put(p.getUniqueId(),code);p.sendTitle(code,"Send this code to Discord to link",10,80,10);p.sendActionBar("§bDiscord: "+cfg.s("discord.invite","discord.gg/makong"));p.sendMessage("§aOptional Discord linking code: §e"+code+" §7(expires in 10 minutes)");plugin.getServer().getScheduler().runTaskLater(plugin,()->{if(code.equals(playerCodes.get(p.getUniqueId())))playerCodes.remove(p.getUniqueId());},200L);}
+    private void displayOptionalCode(Player p,String type){if(!p.isOnline())return;pending.values().removeIf(v->v.uuid.equals(p.getUniqueId()));String code=String.format("%06d",ThreadLocalRandom.current().nextInt(1000000));long expiry=System.currentTimeMillis()+cfg.l("linking.code_expire_minutes",10)*60000L;Pending x=new Pending(p.getUniqueId(),p.getName(),code,expiry,type,true);pending.put(code,x);db.putPending(code,p.getUniqueId(),p.getName(),expiry,type,true);playerCodes.put(p.getUniqueId(),code);p.sendTitle(code,"Send this code to Discord to link",10,80,10);p.sendActionBar("§bDiscord: "+cfg.s("discord.invite","discord.gg/makong"));p.sendMessage("§aOptional Discord linking code: §e"+code+" §7(expires in 10 minutes)");plugin.getServer().getScheduler().runTaskLater(plugin,()->{if(code.equals(playerCodes.get(p.getUniqueId())))playerCodes.remove(p.getUniqueId());},200L);}
     private void freezeAndCode(Player p,String type){freezeAndCode(p,type,true);}
-    private void freezeAndCode(Player p,String type,boolean blocking){if(!p.isOnline())return;pending.values().removeIf(v->v.uuid.equals(p.getUniqueId()));String code=String.format("%06d",ThreadLocalRandom.current().nextInt(1000000));long expiry=System.currentTimeMillis()+cfg.l("linking.code_expire_minutes",10)*60000L;Pending x=new Pending(p.getUniqueId(),p.getName(),code,expiry,type,false);pending.put(code,x);playerCodes.put(p.getUniqueId(),code);sendReminder(p,code);if(blocking){frozen.add(p.getUniqueId());p.setWalkSpeed(0f);}}
+    private void freezeAndCode(Player p,String type,boolean blocking){if(!p.isOnline())return;pending.values().removeIf(v->v.uuid.equals(p.getUniqueId()));String code=String.format("%06d",ThreadLocalRandom.current().nextInt(1000000));long expiry=System.currentTimeMillis()+cfg.l("linking.code_expire_minutes",10)*60000L;Pending x=new Pending(p.getUniqueId(),p.getName(),code,expiry,type,false);pending.put(code,x);db.putPending(code,p.getUniqueId(),p.getName(),expiry,type,false);playerCodes.put(p.getUniqueId(),code);sendReminder(p,code);if(blocking){frozen.add(p.getUniqueId());p.setWalkSpeed(0f);}}
     private void release(UUID u){frozen.remove(u);Player p=Bukkit.getPlayer(u);if(p!=null){p.setWalkSpeed(0.2f);p.setFlying(false);p.sendTitle("§aVerified","§7You may now play.",5,30,10);}}
     public boolean isFrozen(UUID u){return frozen.contains(u);}
     public String code(UUID u){return playerCodes.get(u);}
@@ -207,7 +239,20 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
         while(updates.find()){next=Math.max(next,Integer.parseInt(updates.group(1))+1);String chat=updates.group(2),text=updates.group(3).replace("\\\"","\"").trim();if(text.equals("/start")){telegramSend(token,chat,"Please send the 6 digit Minecraft verification code to verify.");continue;}if(CODE.matcher(text).matches())verifyTelegram(token,chat,text);}
         if(next>offset)pollTelegram(token,next);
     }catch(Exception ignored){}}
-    private void verifyTelegram(String token,String chat,String code){Pending x=pending.get(code);if(x==null||x.discordOnly||x.expiresAt<System.currentTimeMillis()){telegramSend(token,chat,"❌ Code expired or not found. Join the server again.");return;}db.findByTelegram(chat).thenAccept(existing->{if(existing!=null&&!existing.uuid().equals(x.uuid)){telegramSend(token,chat,"❌ This Telegram account is already linked.");return;}db.linkAccount(x.uuid,x.name(),existing==null?null:existing.discordId(),chat,x.accountType).thenRun(()->{pending.remove(code);playerCodes.remove(x.uuid);frozen.remove(x.uuid);Bukkit.getScheduler().runTask(plugin,()->release(x.uuid));telegramSend(token,chat,"✅ Successfully connected to account "+x.name());});});}
+    // Same cross-server fallback reasoning as verifyDiscord(String,...) -
+    // Telegram polling itself only ever runs on one server at a time (see
+    // startTelegram()'s single scheduled poller per JVM), but the code may
+    // still have been generated by a different server than the one whose
+    // Telegram poller is actually configured/running.
+    private void verifyTelegram(String token,String chat,String code){
+        Pending local=pending.get(code);
+        if(local!=null){verifyTelegram(token,chat,code,local);return;}
+        db.findPending(code).thenAccept(row->{
+            if(row==null||row.discordOnly()){telegramSend(token,chat,"❌ Code expired or not found. Join the server again.");return;}
+            verifyTelegram(token,chat,code,new Pending(row.uuid(),row.name(),code,row.expiresAt(),row.accountType(),row.discordOnly()));
+        });
+    }
+    private void verifyTelegram(String token,String chat,String code,Pending x){if(x.discordOnly||x.expiresAt<System.currentTimeMillis()){telegramSend(token,chat,"❌ Code expired or not found. Join the server again.");return;}db.findByTelegram(chat).thenAccept(existing->{if(existing!=null&&!existing.uuid().equals(x.uuid)){telegramSend(token,chat,"❌ This Telegram account is already linked.");return;}db.linkAccount(x.uuid,x.name(),existing==null?null:existing.discordId(),chat,x.accountType).thenRun(()->{pending.remove(code);db.removePending(code);playerCodes.remove(x.uuid);frozen.remove(x.uuid);Bukkit.getScheduler().runTask(plugin,()->release(x.uuid));telegramSend(token,chat,"✅ Successfully connected to account "+x.name());});});}
     private void telegramSend(String token,String chat,String text){try{String q=java.net.URLEncoder.encode(text,java.nio.charset.StandardCharsets.UTF_8);HttpRequest r=HttpRequest.newBuilder(URI.create("https://api.telegram.org/bot"+token+"/sendMessage?chat_id="+chat+"&text="+q)).GET().build();http.sendAsync(r,HttpResponse.BodyHandlers.discarding());}catch(Exception ignored){}}
     private record Pending(UUID uuid,String name,String code,long expiresAt,String accountType,boolean discordOnly){}
     private static final class FileConfigurationBridge{
