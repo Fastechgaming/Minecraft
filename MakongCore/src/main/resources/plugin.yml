@@ -21,7 +21,7 @@ commands:
     usage: /matier [top|stats|set|add|remove|reset|resetall|reload]
   malink:
     description: Account-linking admin commands
-    usage: /malink <help|reset|bypass|unbypass|bypasslist>
+    usage: /malink <help|status|reset|bypass|unbypass|bypasslist>
   link:
     description: Link your Minecraft account to Discord
     usage: /link

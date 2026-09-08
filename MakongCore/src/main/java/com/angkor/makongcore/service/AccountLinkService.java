@@ -204,6 +204,34 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
     public CompletableFuture<Void> addBypass(UUID uuid,String name){return db.addBypass(uuid,name);}
     public CompletableFuture<Boolean> removeBypass(UUID uuid){return db.removeBypass(uuid);}
     public CompletableFuture<List<Database.BypassEntry>> listBypass(){return db.listBypass();}
+    // /malink status <player> - a human-readable snapshot of whether they've
+    // linked yet, plus bypass state and (if they're online on this specific
+    // server) frozen/pending-code state. isFrozen()/code() are local to this
+    // server only - a player frozen on a different server won't show that
+    // part here, same caveat as the rest of this class's local `pending` map.
+    public CompletableFuture<String> statusLine(UUID uuid,String name){
+        return db.getAccountLink(uuid).thenCombine(db.isBypassed(uuid),(link,bypassed)->{
+            StringBuilder sb=new StringBuilder("<aqua>"+name+"</aqua>");
+            if(link!=null){
+                sb.append("\n<gray>Linked: <green>Yes</green>");
+                if(link.discordId()!=null&&!link.discordId().isBlank())sb.append(" <gray>| Discord ID: <white>"+link.discordId()+"</white>");
+                if(link.telegramChatId()!=null&&!link.telegramChatId().isBlank())sb.append(" <gray>| Telegram chat: <white>"+link.telegramChatId()+"</white>");
+                sb.append(" <gray>| Type: <white>"+link.accountType()+"</white>");
+                sb.append("\n<gray>Linked at: <white>"+Instant.ofEpochMilli(link.linkedAt())+"</white>");
+            } else {
+                sb.append("\n<gray>Linked: <red>No</red>");
+            }
+            sb.append("\n<gray>Bypassed: "+(bypassed?"<green>Yes</green>":"<white>No</white>")+"</gray>");
+            Player online=Bukkit.getPlayer(uuid);
+            if(online!=null){
+                boolean frozen=isFrozen(uuid);
+                sb.append("\n<gray>Online on this server, frozen: "+(frozen?"<yellow>Yes</yellow>":"<white>No</white>"));
+                if(frozen){String code=code(uuid);if(code!=null)sb.append(" <gray>| Pending code: <white>"+code+"</white>");}
+                sb.append("</gray>");
+            }
+            return sb.toString();
+        });
+    }
 
     // From MakongVelocity's "makong:accounttype" plugin message - see the
     // externalAccountType field javadoc above. The channel's payload also

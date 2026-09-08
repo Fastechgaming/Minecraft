@@ -42,6 +42,7 @@ public final class MaLinkCommand implements CommandExecutor, TabCompleter {
             case "bypass" -> bypass(sender, args, true);
             case "unbypass" -> bypass(sender, args, false);
             case "bypasslist" -> bypassList(sender);
+            case "status" -> status(sender, args);
             default -> send(sender, "<red>Unknown command. Use <yellow>/malink help</yellow>.</red>");
         }
         return true;
@@ -50,10 +51,21 @@ public final class MaLinkCommand implements CommandExecutor, TabCompleter {
     private void help(CommandSender s) {
         send(s, """
                 <gray><bold>MakongCore Account-Link Admin Commands</bold>
+                <yellow>/malink status <player></yellow> <gray>- Whether they've linked yet, plus bypass/frozen state
                 <yellow>/malink reset <player></yellow> <gray>- Unlink their Discord/Telegram; if they're online, re-checks them for verification immediately
                 <yellow>/malink bypass <player></yellow> <gray>- Let a cracked player skip the linking requirement entirely
                 <yellow>/malink unbypass <player></yellow> <gray>- Remove a player's bypass
                 <yellow>/malink bypasslist</yellow> <gray>- List every currently-bypassed player""");
+    }
+
+    private void status(CommandSender s, String[] args) {
+        if (args.length < 2) {
+            send(s, "<red>Usage: /malink status <player></red>");
+            return;
+        }
+        OfflinePlayer target = Bukkit.getOfflinePlayer(args[1]);
+        String name = target.getName() == null ? args[1] : target.getName();
+        links.statusLine(target.getUniqueId(), name).thenAccept(line -> Bukkit.getScheduler().runTask(plugin, () -> send(s, line)));
     }
 
     private void reset(CommandSender s, String[] args) {
@@ -101,10 +113,10 @@ public final class MaLinkCommand implements CommandExecutor, TabCompleter {
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (!sender.hasPermission("makongcore.admin")) return List.of();
         if (args.length == 1) {
-            return List.of("help", "reset", "bypass", "unbypass", "bypasslist")
+            return List.of("help", "status", "reset", "bypass", "unbypass", "bypasslist")
                     .stream().filter(x -> x.startsWith(args[0].toLowerCase(Locale.ROOT))).toList();
         }
-        if (args.length == 2 && List.of("reset", "bypass", "unbypass").contains(args[0].toLowerCase(Locale.ROOT))) {
+        if (args.length == 2 && List.of("status", "reset", "bypass", "unbypass").contains(args[0].toLowerCase(Locale.ROOT))) {
             return Bukkit.getOnlinePlayers().stream().map(Player::getName)
                     .filter(x -> x.toLowerCase(Locale.ROOT).startsWith(args[1].toLowerCase(Locale.ROOT))).sorted().toList();
         }

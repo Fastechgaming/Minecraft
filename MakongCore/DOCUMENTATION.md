@@ -125,6 +125,7 @@ admin subcommands and `/makongcore` itself use.
 | Usage | What it does |
 |---|---|
 | `/malink help` | Lists everything below. |
+| `/malink status <player>` | Whether they've linked yet (and their Discord ID/Telegram chat/account type/linked-at time if so), their bypass state, and - if they're online on *this* server specifically - whether they're currently frozen and their pending code. |
 | `/malink reset <player>` | Deletes that player's `account_links` row (single-player version of `/makongcore reset verification`). If they're online right now, immediately re-runs the same join-time detection/freeze logic `onJoin` would, instead of waiting for their next actual join. |
 | `/malink bypass <player>` | Adds them to the persisted bypass list (`link_bypass` table) - they can play without ever linking, regardless of `linking.required_for_cracked` or their detected account type. Independent of `account_links`: a bypassed player is never required to link whether or not they ever actually do. |
 | `/malink unbypass <player>` | Removes them from the bypass list. |
