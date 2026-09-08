@@ -51,7 +51,7 @@ automatically by this repo's GitHub Actions workflow
 ready-made jar without needing Java/Gradle locally at all.
 
 Drop the jar into your Velocity proxy's `plugins/` folder and restart it. On
-first run it writes `plugins/makongvelocity/config.properties` with every
+first run it writes `plugins/makongcore/config.properties` with every
 setting off/blank - nothing about your proxy changes until you edit it.
 
 ## `/mc clients`
@@ -96,7 +96,7 @@ dropped is reflected immediately instead of waiting out the rest of
 On by default (`announcements.enabled=true` in `config.properties`) - no
 website bridge or nLogin needed, this is purely local to the proxy and
 reaches every player on the network regardless of which backend they're on.
-On first run it writes `plugins/makongvelocity/announcements.yml` with a
+On first run it writes `plugins/makongcore/announcements.yml` with a
 ready-to-use store + Discord example:
 
 ```yaml
@@ -228,7 +228,7 @@ locally on one server.
 
 ## Permissions
 
-- `makongvelocity.admin` - required to run `/mc clients`, `/mc ping`,
+- `macorevlc.admin` - required to run `/mc clients`, `/mc ping`,
   `/mc autorestart`/`/mc ar` or `/mc reload` as a player. The proxy console
   always has it, so a panel's scheduled console command needs no special
   grant. `/mc` also answers to `/makongcore` and `/macore`.

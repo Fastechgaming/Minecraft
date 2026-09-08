@@ -257,6 +257,11 @@ final class MakongCommand implements SimpleCommand {
 
     @Override
     public boolean hasPermission(Invocation invocation) {
-        return invocation.source().hasPermission("makongvelocity.admin");
+        // Deliberately not "makongcore.admin" - that's already the Paper
+        // MakongCore plugin's own distinct permission (/matier's admin
+        // subcommands, see plugin.yml). Reusing it here would silently grant
+        // this plugin's /mc admin powers to anyone with that one too, on any
+        // network-synced permissions setup (LuckPerms MySQL, etc.).
+        return invocation.source().hasPermission("macorevlc.admin");
     }
 }
