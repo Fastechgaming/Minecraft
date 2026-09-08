@@ -141,10 +141,10 @@ items:
     back: {slot: 22, material: IRON_DOOR, name: "<gray>ʙᴀᴄᴋ", lore: []}
 
   settings:
-    tag: {slot: 11, material: NAME_TAG, name: "<aqua><bold>ᴄʜᴀɴɢᴇ ᴛᴀɢ</bold>", lore: ["<gray>Current: <white>{tag}", "", "<yellow>Click to edit in chat."]}
-    description: {slot: 13, material: OAK_SIGN, name: "<aqua><bold>ᴄʜᴀɴɢᴇ ᴅᴇsᴄʀɪᴘᴛɪᴏɴ</bold>", lore: ["<gray>Current: <white>{description}", "", "<yellow>Click to edit in chat."]}
-    status: {slot: 15, material: ENDER_EYE, name: "<aqua><bold>ᴛᴇᴀᴍ sᴛᴀᴛᴜs</bold>", lore: ["<gray>Currently: {status}", "<gray>{status_info}", "", "<yellow>Click to toggle."]}
-    color: {slot: 17, material: CYAN_DYE, name: "<aqua><bold>ᴛᴇᴀᴍ ᴄᴏʟᴏʀ</bold>", lore: ["<gray>Current: <white>{color}", "", "<yellow>Click to change."]}
+    tag: {slot: 10, material: NAME_TAG, name: "<aqua><bold>ᴄʜᴀɴɢᴇ ᴛᴀɢ</bold>", lore: ["<gray>Current: <white>{tag}", "", "<yellow>Click to edit in chat."]}
+    description: {slot: 12, material: OAK_SIGN, name: "<aqua><bold>ᴄʜᴀɴɢᴇ ᴅᴇsᴄʀɪᴘᴛɪᴏɴ</bold>", lore: ["<gray>Current: <white>{description}", "", "<yellow>Click to edit in chat."]}
+    status: {slot: 14, material: ENDER_EYE, name: "<aqua><bold>ᴛᴇᴀᴍ sᴛᴀᴛᴜs</bold>", lore: ["<gray>Currently: {status}", "<gray>{status_info}", "", "<yellow>Click to toggle."]}
+    color: {slot: 16, material: CYAN_DYE, name: "<aqua><bold>ᴛᴇᴀᴍ ᴄᴏʟᴏʀ</bold>", lore: ["<gray>Current: <white>{color}", "", "<yellow>Click to change."]}
     back: {slot: 22, material: IRON_DOOR, name: "<gray>ʙᴀᴄᴋ", lore: []}
 
   member:

@@ -129,10 +129,10 @@ public final class GuiListener implements Listener {
 
     private void settings(Player p,int slot){
         Team t=ts.byPlayer(p.getUniqueId());if(t==null){gui.openNoTeam(p);return;}TeamMember me=t.member(p.getUniqueId());if(me==null||me.role()==TeamRole.MEMBER){gui.openTeam(p,t);return;}
-        if(slot==gui.slot("items.settings.tag.slot",11)){ChatListener.beginChangeTag(p);return;}
-        if(slot==gui.slot("items.settings.description.slot",13)){ChatListener.beginDescription(p);return;}
-        if(slot==gui.slot("items.settings.status.slot",15)){t.setPublic(!t.isPublic());ts.save(t);p.sendMessage(Text.mm("<green>Team is now "+(t.isPublic()?"<white>Public":"<white>Private")+"</white>.</green>"));gui.openSettings(p,t);return;}
-        if(slot==gui.slot("items.settings.color.slot",17)){gui.openColor(p,t);return;}
+        if(slot==gui.slot("items.settings.tag.slot",10)){ChatListener.beginChangeTag(p);return;}
+        if(slot==gui.slot("items.settings.description.slot",12)){ChatListener.beginDescription(p);return;}
+        if(slot==gui.slot("items.settings.status.slot",14)){t.setPublic(!t.isPublic());ts.save(t);p.sendMessage(Text.mm("<green>Team is now "+(t.isPublic()?"<white>Public":"<white>Private")+"</white>.</green>"));gui.openSettings(p,t);return;}
+        if(slot==gui.slot("items.settings.color.slot",16)){gui.openColor(p,t);return;}
         if(slot==gui.slot("items.settings.back.slot",22))gui.openTeam(p,t);
     }
 

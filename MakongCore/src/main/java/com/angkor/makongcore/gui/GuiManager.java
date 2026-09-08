@@ -338,9 +338,9 @@ public final class GuiManager {
     public void openSettings(Player p,Team t){
         vars("team",t.name(),"tag",t.tag(),"description",t.description(),"status",t.isPublic()?"<green>Public":"<red>Private","status_info",t.isPublic()?"anyone can send a join request.":"join requests are disabled; invite only.","color",t.color()==null?"aqua":t.color());
         Inventory inv=Bukkit.createInventory(new TeamHolder("settings"),config.size("sizes.settings",27),Text.mm(title("settings","<aqua>ᴛᴇᴀᴍ sᴇᴛᴛɪɴɢs")));
-        inv.setItem(cfgSlot("settings.tag",11),cfgItem("settings.tag",Material.NAME_TAG,"<aqua><bold>ᴄʜᴀɴɢᴇ ᴛᴀɢ</bold>",
+        inv.setItem(cfgSlot("settings.tag",10),cfgItem("settings.tag",Material.NAME_TAG,"<aqua><bold>ᴄʜᴀɴɢᴇ ᴛᴀɢ</bold>",
                 "<gray>Current: <white>"+t.tag(),"","<yellow>Click to edit in chat.</yellow>"));
-        inv.setItem(cfgSlot("settings.description",13),cfgItem("settings.description",Material.OAK_SIGN,"<aqua><bold>ᴄʜᴀɴɢᴇ ᴅᴇsᴄʀɪᴘᴛɪᴏɴ</bold>",
+        inv.setItem(cfgSlot("settings.description",12),cfgItem("settings.description",Material.OAK_SIGN,"<aqua><bold>ᴄʜᴀɴɢᴇ ᴅᴇsᴄʀɪᴘᴛɪᴏɴ</bold>",
                 "<gray>Current: <white>"+t.description(),"","<yellow>Click to edit in chat.</yellow>"));
 
         ItemStack status=cfgItem("settings.status",Material.ENDER_EYE,"<aqua><bold>ᴛᴇᴀᴍ sᴛᴀᴛᴜs</bold>",
@@ -348,9 +348,9 @@ public final class GuiManager {
                 t.isPublic()?"<gray>Anyone can send a join request.":"<gray>Join requests are disabled; invite only.",
                 "", "<yellow>Click to toggle.");
         if(!t.isPublic())status=selected(status);
-        inv.setItem(cfgSlot("settings.status",15),status);
+        inv.setItem(cfgSlot("settings.status",14),status);
 
-        inv.setItem(cfgSlot("settings.color",17),cfgItem("settings.color",colorMaterial(t.color()),"<aqua><bold>ᴛᴇᴀᴍ ᴄᴏʟᴏʀ</bold>",
+        inv.setItem(cfgSlot("settings.color",16),cfgItem("settings.color",colorMaterial(t.color()),"<aqua><bold>ᴛᴇᴀᴍ ᴄᴏʟᴏʀ</bold>",
                 "<gray>Current: <white>"+(t.color()==null?"aqua":t.color()),
                 "","<yellow>Click to change."));
 
