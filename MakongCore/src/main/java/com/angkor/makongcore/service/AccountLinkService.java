@@ -150,9 +150,14 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
             verifyDiscord(e,new Pending(row.uuid(),row.name(),code,row.expiresAt(),row.accountType(),row.discordOnly()));
         });
     }
-    private void verifyDiscord(ModalInteractionEvent e,Pending x){if(x.expiresAt<System.currentTimeMillis()){e.reply("❌ Code expired or not found. Join the server again for a new code.").setEphemeral(true).queue();return;}if(!discordAllowed(e.getUser(),e.getMember(),e.getGuild(),false)){e.reply("❌ Your Discord account does not meet the server/account-age requirements.").setEphemeral(true).queue();return;}db.findByDiscord(e.getUser().getId()).thenAccept(existing->{if(existing!=null&&!existing.uuid().equals(x.uuid)){e.reply("❌ This Discord account is already linked to another Minecraft account.").setEphemeral(true).queue();return;}completeDiscord(e,x,existing);});}
+    private void verifyDiscord(ModalInteractionEvent e,Pending x){if(x.expiresAt<System.currentTimeMillis()){e.reply("❌ Code expired or not found. Join the server again for a new code.").setEphemeral(true).queue();return;}if(!discordAllowed(e.getUser(),e.getMember(),e.getGuild())){e.reply("❌ Your Discord account does not meet the server/account-age requirements.").setEphemeral(true).queue();return;}db.findByDiscord(e.getUser().getId()).thenAccept(existing->{if(existing!=null&&!existing.uuid().equals(x.uuid)){e.reply("❌ This Discord account is already linked to another Minecraft account.").setEphemeral(true).queue();return;}completeDiscord(e,x,existing);});}
     private void completeDiscord(ModalInteractionEvent e,Pending x,Database.AccountLink existing){String telegram=existing==null?null:existing.telegramChatId();db.linkAccount(x.uuid,x.name(),e.getUser().getId(),telegram,x.accountType).thenRun(()->{pending.remove(x.code);db.removePending(x.code);playerCodes.remove(x.uuid);frozen.remove(x.uuid);Bukkit.getScheduler().runTask(plugin,()->release(x.uuid));Guild g=e.getGuild();String roleKey=x.accountType.equals("cracked")?"roles.crack":x.accountType.equals("bedrock")?"roles.bedrock":"roles.java";String roleId=cfg.s("discord."+roleKey,"");if(g!=null&&!roleId.isBlank()){Role role=g.getRoleById(roleId);if(role!=null)g.addRoleToMember(e.getUser(),role).queue();}e.reply("✅ Successfully connected to **"+x.name()+"**.").setEphemeral(true).queue();});}
-    private boolean discordAllowed(User u,Member m,Guild g,boolean staff){
+    // Player-verification gate only - account-age/membership eligibility
+    // tiers plus the optional discord.guild.required_role_id. Staff
+    // permission for /ban and /unban is a completely separate, unrelated
+    // check - see staffAllowed() below - since a moderator shouldn't need
+    // to satisfy "my Discord account is 6 months old" just to do their job.
+    private boolean discordAllowed(User u,Member m,Guild g){
         if(g==null||m==null)return false;
         String guildId=cfg.s("discord.guild.id","");
         boolean guildRequired=cfg.b("discord.guild.required",true);
@@ -160,8 +165,32 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
         long accountAgeDays=Duration.between(u.getTimeCreated().toInstant(),Instant.now()).toDays();
         long membershipDays=m.getTimeJoined()==null?-1:Duration.between(m.getTimeJoined().toInstant(),Instant.now()).toDays();
         if(!eligible(accountAgeDays,membershipDays))return false;
-        String req=cfg.s(staff?"discord.commands.staff_role_id":"discord.guild.required_role_id","");
+        String req=cfg.s("discord.guild.required_role_id","");
         return req.isBlank()||m.getRoles().stream().anyMatch(r->r.getId().equals(req));
+    }
+
+    // Who may use /ban and /unban - any ONE of discord.commands.staff_role_ids
+    // (a list, so multiple staff ranks can each be granted independently).
+    // Deliberately fails CLOSED: with no staff roles configured at all,
+    // nobody can use these commands - moderation commands shouldn't default
+    // to open just because an admin never got around to configuring them.
+    // discord.commands.staff_role_id (singular) is the old, pre-list config
+    // key - still honored if present, so upgrading an existing config never
+    // silently drops an already-working setup.
+    private boolean staffAllowed(Member m,Guild g){
+        if(g==null||m==null)return false;
+        String guildId=cfg.s("discord.guild.id","");
+        boolean guildRequired=cfg.b("discord.guild.required",true);
+        if(guildRequired&&!guildId.isBlank()&&!g.getId().equals(guildId))return false;
+        List<String> roles=staffRoleIds();
+        if(roles.isEmpty())return false;
+        return m.getRoles().stream().anyMatch(r->roles.contains(r.getId()));
+    }
+    private List<String> staffRoleIds(){
+        List<String> out=new ArrayList<>(cfg.list("discord.commands.staff_role_ids"));
+        String legacy=cfg.s("discord.commands.staff_role_id","");
+        if(!legacy.isBlank()&&!out.contains(legacy))out.add(legacy);
+        return out;
     }
 
     // A Discord account qualifies to verify if it satisfies AT LEAST ONE
@@ -180,7 +209,7 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
         }
         return false;
     }
-    @Override public void onSlashCommandInteraction(SlashCommandInteractionEvent e){if(!e.isFromGuild()){e.reply("Guild only.").setEphemeral(true).queue();return;}if(e.getName().equals("ban")||e.getName().equals("unban")){if(!cfg.b("discord.commands."+e.getName()+".enabled",true)){e.reply("❌ This Discord command is disabled.").setEphemeral(true).queue();return;}if(!discordAllowed(e.getUser(),e.getMember(),e.getGuild(),true)){e.reply("❌ You do not meet the Discord guild/role requirements.").setEphemeral(true).queue();return;}String target=e.getOption("name").getAsString(),duration=normalizeDuration(e.getOption("duration")==null?"":e.getOption("duration").getAsString()),reason=e.getOption("reason")==null?"":e.getOption("reason").getAsString();String mcName=target;db.findByDiscord(e.getUser().getId()).thenAccept(staff->{if(staff==null){e.reply("❌ Your Discord account is not linked to Minecraft.").setEphemeral(true).queue();return;}String cmd=e.getName().equals("ban")?"ban":"unban";String args=cmd+" "+target+" --sender="+staff.name()+" --sender-uuid="+staff.uuid()+(cmd.equals("ban")?" "+duration+" "+reason:" "+reason);Bukkit.getScheduler().runTask(plugin,()->Bukkit.dispatchCommand(Bukkit.getConsoleSender(),args));e.reply("✅ Executed `/"+args+"` as **"+staff.name()+"**.").setEphemeral(true).queue();});}}
+    @Override public void onSlashCommandInteraction(SlashCommandInteractionEvent e){if(!e.isFromGuild()){e.reply("Guild only.").setEphemeral(true).queue();return;}if(e.getName().equals("ban")||e.getName().equals("unban")){if(!cfg.b("discord.commands."+e.getName()+".enabled",true)){e.reply("❌ This Discord command is disabled.").setEphemeral(true).queue();return;}if(!staffAllowed(e.getMember(),e.getGuild())){e.reply("❌ You don't have a staff role permitted to use this command.").setEphemeral(true).queue();return;}String target=e.getOption("name").getAsString(),duration=normalizeDuration(e.getOption("duration")==null?"":e.getOption("duration").getAsString()),reason=e.getOption("reason")==null?"":e.getOption("reason").getAsString();String mcName=target;db.findByDiscord(e.getUser().getId()).thenAccept(staff->{if(staff==null){e.reply("❌ Your Discord account is not linked to Minecraft.").setEphemeral(true).queue();return;}String cmd=e.getName().equals("ban")?"ban":"unban";String args=cmd+" "+target+" --sender="+staff.name()+" --sender-uuid="+staff.uuid()+(cmd.equals("ban")?" "+duration+" "+reason:" "+reason);Bukkit.getScheduler().runTask(plugin,()->Bukkit.dispatchCommand(Bukkit.getConsoleSender(),args));e.reply("✅ Executed `/"+args+"` as **"+staff.name()+"**.").setEphemeral(true).queue();});}}
     private String normalizeDuration(String duration){
         String d=duration==null?"":duration.trim().toLowerCase(Locale.ROOT);
         if(d.equals("forever")||d.equals("permanent")||d.equals("perm"))return "permanent";
@@ -309,6 +338,7 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
         String s(String p,String d){return c.getString(p,d);}
         boolean b(String p,boolean d){return c.getBoolean(p,d);}
         long l(String p,long d){return c.getLong(p,d);}
+        List<String> list(String p){return c.getStringList(p);}
         // Each map entry is {minimum_account_age_days, minimum_membership_days}
         // in that order. Missing/non-numeric fields default to 0 (no minimum)
         // rather than failing the whole tier.

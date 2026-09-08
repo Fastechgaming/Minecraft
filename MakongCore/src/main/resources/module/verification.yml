@@ -45,6 +45,16 @@ discord:
     java: ""
     bedrock: ""
   commands:
+    # INFO: Discord role IDs allowed to use /ban and /unban. Add as many as
+    # INFO: you want - having ANY ONE of these roles is enough (multiple
+    # INFO: staff ranks are fine). Empty by default: with nothing configured
+    # INFO: here, NOBODY can use these commands - moderation commands stay
+    # INFO: locked down until you deliberately grant a role, not open to
+    # INFO: every verified player. staff_role_id (singular, below) is the
+    # INFO: old pre-list key - still honored if you already had it set, so
+    # INFO: upgrading never silently drops an existing setup, but new setups
+    # INFO: should use staff_role_ids instead.
+    staff_role_ids: []
     staff_role_id: ""
     ban:
       enabled: true

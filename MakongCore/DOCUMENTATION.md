@@ -347,7 +347,8 @@ because there is no way to check it.
 | `discord.guild.minimum_account_age_days` / `minimum_membership_days` | `180` / `7` | **Dead as of 1.2.21** - superseded by `eligibility_tiers` above. Still present (and untouched) in an upgraded file, but no longer read by any code. |
 | `discord.verification.channel_id` / `panel_message_id` | `""` / `""` | |
 | `discord.roles.crack` / `java` / `bedrock` | `""` each | Roles assigned by account type. |
-| `discord.commands.staff_role_id` | `""` | |
+| `discord.commands.staff_role_ids` | `[]` | Role IDs allowed to use `/ban`/`/unban` - having ANY ONE is enough. **Empty means nobody can use these commands** (fails closed, not open). Independent of `discord.guild.eligibility_tiers`/`required_role_id` - staff don't need to satisfy the player-verification age/membership checks. |
+| `discord.commands.staff_role_id` | `""` | Old, pre-list single-role key - still honored (merged into the effective role set) if set, for upgrades. Use `staff_role_ids` above for new setups. |
 | `discord.commands.ban.enabled` / `unban.enabled` | `true` / `true` | Discord `/ban` and `/unban`, with LiteBans integration. |
 | `telegram.enabled` | `false` | |
 | `telegram.bot_token` | `PUT_TELEGRAM_BOT_TOKEN_HERE` | |
