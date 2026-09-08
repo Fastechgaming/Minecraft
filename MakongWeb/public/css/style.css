@@ -2079,13 +2079,19 @@ html[lang="km"] .checkout-hint { line-height: 1.7; }
 /* A player's rank tier (M1-M9) - reported live by the plugin, or derived
    from Star via tierFor() for admin-curated fallback data (both in
    public/js/ranking.js). Teams don't get one, only their Star total. */
+/* Background color is set inline per-row (public/js/ranking.js's
+   TIER_COLORS - M9's dull stone gray through M1's pure Minecraft green,
+   same palette as the plugin's MaTierService.TIER_HEX). The dark
+   text-shadow keeps the tier code readable against every color in that
+   range, including the lighter ones (M1's bright green). */
 .board-tier {
   display: inline-block;
   margin-left: 0.4rem;
   padding: 0.05rem 0.45rem;
   border-radius: 999px;
-  background: var(--jungle);
+  border: 1.5px solid rgba(0, 0, 0, 0.35);
   color: #fff;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.55);
   font-family: "Minecraft", "Baloo 2", sans-serif;
   font-size: 0.7rem;
   font-weight: 800;

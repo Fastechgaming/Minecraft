@@ -58,10 +58,10 @@ matier:
   # INFO: Messages use MiniMessage and are intentionally here so the module is self-contained.
   messages:
     prefix: "<yellow>⭐ <bold>matier</bold></yellow> "
-    profile: "<yellow>⭐ matier profile</yellow>\n<gray>player: <white>{player}</white>\n<gray>tier: <yellow>{tier}</yellow>\n<gray>stars: <yellow>{stars}★</yellow>\n<gray>next tier: <yellow>{next_tier}</yellow>\n<gray>required: <yellow>{required}★</yellow>\n<gray>progress: <yellow>{stars} / {required}</yellow>"
+    profile: "<yellow>⭐ matier profile</yellow>\n<gray>player: <white>{player}</white>\n<gray>tier: {tier}\n<gray>stars: <yellow>{stars}★</yellow>\n<gray>next tier: {next_tier}\n<gray>required: <yellow>{required}★</yellow>\n<gray>progress: <yellow>{stars} / {required}</yellow>"
     top_header: "<gold>🏆 matier leaderboard</gold>"
-    top_entry: "<gray>#{rank} <yellow>[{tier}]</yellow> <white>{player}</white> <yellow>{stars}★</yellow>"
-    tier_up: "<yellow>⭐ matier up!</yellow>\n<white>you reached <yellow>{tier}</yellow>!\n<yellow>{stars}★</yellow>"
+    top_entry: "<gray>#{rank} [{tier}] <white>{player}</white> <yellow>{stars}★</yellow>"
+    tier_up: "<yellow>⭐ matier up!</yellow>\n<white>you reached {tier}!\n<yellow>{stars}★</yellow>"
     m1_achieved: "<gold>👑 m1 achieved!</gold>\n<white>{player}</white> has entered the top 10!\n<yellow>⭐ {stars}★</yellow>\n<gold>🏆 m1 #{rank}</gold>"
     kill: "<green>+{stars}★</green> <gray>for defeating <white>{player}</white>"
     death: "<red>-{stars}★</red> <gray>you were defeated by <white>{player}</white>"

@@ -53,6 +53,21 @@ function tierFor(star) {
   return (TIERS.find((t) => value >= t.min) || TIERS[TIERS.length - 1]).tier;
 }
 
+// Same palette as the plugin's MaTierService.TIER_HEX - kept in sync by
+// hand since it's a different codebase. M9 (dull stone gray, "the
+// beginning") through M1 (pure Minecraft green, the top).
+const TIER_COLORS = {
+  M9: "#AAAAAA",
+  M8: "#8B9A7A",
+  M7: "#6F9B4A",
+  M6: "#5FAF45",
+  M5: "#4CAF50",
+  M4: "#43A047",
+  M3: "#2E8B57",
+  M2: "#00A86B",
+  M1: "#55FF55",
+};
+
 function medalClass(rank) {
   if (rank === 1) return " rank-1";
   if (rank === 2) return " rank-2";
@@ -62,11 +77,13 @@ function medalClass(rank) {
 
 function renderRow(entry, showTier) {
   const star = Number(entry.star) || 0;
+  const tier = entry.tier || tierFor(star);
+  const tierColor = TIER_COLORS[tier] || TIER_COLORS.M9;
   return `
     <li class="board-row${medalClass(entry.rank)}">
       <span class="board-rank">${entry.rank}</span>
       <span class="board-name">${escapeHtml(entry.name)}${
-    showTier ? `<span class="board-tier">${escapeHtml(entry.tier || tierFor(star))}</span>` : ""
+    showTier ? `<span class="board-tier" style="background:${tierColor}">${escapeHtml(tier)}</span>` : ""
   }</span>
       <span class="board-points">⭐ ${star.toLocaleString()}</span>
     </li>`;

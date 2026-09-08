@@ -248,7 +248,7 @@ never need to delete a config file to "pick up" a new option.
 | `matier.inactivity.initial_penalty` | `50` | Stars lost at the grace threshold. |
 | `matier.inactivity.daily_penalty` | `10` | Stars lost per additional inactive day. Logging back in resets the counter. |
 | `matier.leaderboard.size` | `10` | Used by both `/matier top` and the leaderboard GUI's default page size. |
-| `matier.messages.*` | (12 messages) | `prefix`, `profile`, `top_header`, `top_entry`, `tier_up`, `m1_achieved`, `kill`, `death`, `reset`, `no_player`, `admin_only`, `invalid_amount`, `reload`. Placeholders: `{player}`, `{tier}`, `{stars}`, `{next_tier}`, `{required}`, `{rank}`, `{year}` (see [§10](#10-messagesyml) for which message uses which). |
+| `matier.messages.*` | (12 messages) | `prefix`, `profile`, `top_header`, `top_entry`, `tier_up`, `m1_achieved`, `kill`, `death`, `reset`, `no_player`, `admin_only`, `invalid_amount`, `reload`. Placeholders: `{player}`, `{tier}`, `{stars}`, `{next_tier}`, `{required}`, `{rank}`, `{year}` (see [§10](#10-messagesyml) for which message uses which). `{tier}`/`{next_tier}` (when it's an actual tier, not `MAX`) are already colored per `MaTierService.TIER_HEX` - don't wrap them in another color tag in the template or it'll fight the tier's own color. |
 | `matier.aura.enabled` | `true` | Colored dust-particle aura for M3/M2/M1 - no potion effects. |
 | `matier.aura.interval_ticks` | `3` | |
 | `matier.aura.M3` / `M2` / `M1` | (see file) | Each has `standing`/`moving`/`elytra` states, each with `color` (hex), `count`, `size`, `radius`. |
@@ -386,7 +386,7 @@ Optional - only registered if PlaceholderAPI is installed (see
 |---|---|
 | `%team_tag%` | The viewed player's team tag, colored in the team's own chosen color, or `team.placeholders.no_team` (`module/team.yml`, default `No Team`) if they have no team. |
 | `%team_star%` | Their team's current Stars, or `0` with no team. |
-| `%matier%` | Their current MaTier tier (`M9`-`M1`). |
+| `%matier%` | Their current MaTier tier (`M9`-`M1`), colored per the tier's fixed color - see `MaTierService.TIER_HEX`, [§7](#7-modulematieryml). Not configurable, so it always matches `/matier`'s own output and the website's Ranking page. |
 | `%matier_star%` | Their current MaTier Stars. |
 
 ---

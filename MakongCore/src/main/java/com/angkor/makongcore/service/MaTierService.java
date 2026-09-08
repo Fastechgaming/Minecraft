@@ -16,6 +16,26 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class MaTierService implements Listener {
+    // One shared palette for every tier badge (in-game text, PlaceholderAPI,
+    // the website's Ranking page) so M9 (dull stone gray, "the beginning")
+    // through M1 (pure Minecraft green, the top) always match, wherever a
+    // tier gets shown. Not admin-configurable on purpose - see the website's
+    // matching public/js/ranking.js TIER_COLORS, which has to be kept in
+    // sync by hand since it's a different codebase; a config option here
+    // would just be one more place the two could drift apart.
+    public static final Map<String,String> TIER_HEX = Map.ofEntries(
+            Map.entry("M9", "#AAAAAA"), Map.entry("M8", "#8B9A7A"),
+            Map.entry("M7", "#6F9B4A"), Map.entry("M6", "#5FAF45"),
+            Map.entry("M5", "#4CAF50"), Map.entry("M4", "#43A047"),
+            Map.entry("M3", "#2E8B57"), Map.entry("M2", "#00A86B"),
+            Map.entry("M1", "#55FF55"));
+    public static String tierHex(String tier) { return TIER_HEX.getOrDefault(tier, TIER_HEX.get("M9")); }
+    // Ready to splice into a MiniMessage template (e.g. replacing a {tier}
+    // placeholder) - the tag pair colors just the tier text itself, so it
+    // still nests correctly inside whatever surrounding tags the template
+    // already has.
+    public static String coloredTier(String tier) { String hex = tierHex(tier); return "<" + hex + ">" + tier + "</" + hex + ">"; }
+
     private final MakongCore plugin; private final Database db; private final FileConfiguration c;
     private final Map<UUID,Database.PlayerStar> players=new ConcurrentHashMap<>();
     private final Map<String,Long> farmCooldown=new ConcurrentHashMap<>();
@@ -35,7 +55,7 @@ public final class MaTierService implements Listener {
     private int tierIndex(String t){return switch(t){case "M9"->0;case "M8"->1;case "M7"->2;case "M6"->3;case "M5"->4;case "M4"->5;case "M3"->6;case "M2"->7;case "M1"->8;default->0;};}
     public void addStars(UUID u,String playerName,long delta,boolean announce){Database.PlayerStar old=players.getOrDefault(u,new Database.PlayerStar(u,playerName,0,0,0));long next=Math.max(0,old.stars()+delta);Database.PlayerStar np=new Database.PlayerStar(u,playerName==null||playerName.isBlank()?old.name():playerName,next,old.lastSeen(),old.inactivityPenaltyDays());players.put(u,np);db.upsertPlayerStars(u,np.name(),next).thenRun(()->{if(announce){Player p=Bukkit.getPlayer(u);if(p!=null&&delta!=0)p.sendMessage(Text.mm(msg(delta>0?"matier.messages.kill":"matier.messages.death").replace("{stars}",String.valueOf(Math.abs(delta))).replace("{player}",old.name())));}});}
     @EventHandler public void onDeath(PlayerDeathEvent e){if(!c.getBoolean("matier.enabled",true))return;Player victim=e.getEntity();Player killer=victim.getKiller();if(killer==null||killer.getUniqueId().equals(victim.getUniqueId()))return;String key=killer.getUniqueId()+":"+victim.getUniqueId();long now=System.currentTimeMillis(),cool=c.getLong("matier.anti_farming.same_player_cooldown_seconds",60)*1000L;boolean repeat=now-farmCooldown.getOrDefault(key,0L)<cool;farmCooldown.put(key,now);String vt=tier(victim.getUniqueId()),kt=tier(killer.getUniqueId());int diff=tierIndex(kt)-tierIndex(vt);long gain=c.getLong("matier.kill.base_stars",5)+diff;if(repeat)gain=c.getLong("matier.anti_farming.repeat_kill_reward",0);gain=Math.max(c.getLong("matier.kill.minimum_reward",0),Math.min(c.getLong("matier.kill.maximum_reward",999999),gain));long loss=c.getLong("matier.death.base_loss",4)+(-diff);if(diff>0)loss=Math.max(c.getLong("matier.death.minimum_loss",0),c.getLong("matier.death.base_loss",4)-diff);loss=Math.max(c.getLong("matier.death.minimum_loss",0),Math.min(c.getLong("matier.death.maximum_loss",999999),loss));long oldK=stars(killer.getUniqueId()),oldV=stars(victim.getUniqueId());addStars(killer.getUniqueId(),killer.getName(),gain,false);addStars(victim.getUniqueId(),victim.getName(),-loss,false);final long finalGain=gain, finalLoss=loss;final Player finalKiller=killer, finalVictim=victim;Bukkit.getScheduler().runTaskLater(plugin,()->{announceChanges(finalKiller,oldK,finalGain,finalVictim.getName());announceChanges(finalVictim,oldV,-finalLoss,finalKiller.getName());},1L);}
-    private void announceChanges(Player p,long old,long delta,String opponent){String oldTier=tierAt(p.getUniqueId(),old);String newTier=tier(p.getUniqueId());if(delta>0)p.sendMessage(Text.mm(msg("matier.messages.kill").replace("{stars}",String.valueOf(delta)) .replace("{player}",opponent)));else if(delta<0)p.sendMessage(Text.mm(msg("matier.messages.death").replace("{stars}",String.valueOf(-delta)).replace("{player}",opponent)));if(!oldTier.equals(newTier)&&tierIndex(newTier)>tierIndex(oldTier))p.sendMessage(Text.mm(msg("matier.messages.tier_up").replace("{tier}",newTier).replace("{stars}",String.valueOf(stars(p.getUniqueId())))));if(newTier.equals("M1")&&!oldTier.equals("M1"))p.sendMessage(Text.mm(msg("matier.messages.m1_achieved").replace("{player}",p.getName()).replace("{stars}",String.valueOf(stars(p.getUniqueId()))).replace("{rank}",String.valueOf(rank(p.getUniqueId())))));}
+    private void announceChanges(Player p,long old,long delta,String opponent){String oldTier=tierAt(p.getUniqueId(),old);String newTier=tier(p.getUniqueId());if(delta>0)p.sendMessage(Text.mm(msg("matier.messages.kill").replace("{stars}",String.valueOf(delta)) .replace("{player}",opponent)));else if(delta<0)p.sendMessage(Text.mm(msg("matier.messages.death").replace("{stars}",String.valueOf(-delta)).replace("{player}",opponent)));if(!oldTier.equals(newTier)&&tierIndex(newTier)>tierIndex(oldTier))p.sendMessage(Text.mm(msg("matier.messages.tier_up").replace("{tier}",coloredTier(newTier)).replace("{stars}",String.valueOf(stars(p.getUniqueId())))));if(newTier.equals("M1")&&!oldTier.equals("M1"))p.sendMessage(Text.mm(msg("matier.messages.m1_achieved").replace("{player}",p.getName()).replace("{stars}",String.valueOf(stars(p.getUniqueId()))).replace("{rank}",String.valueOf(rank(p.getUniqueId())))));}
     private String tierAt(UUID u,long st){Database.PlayerStar old=players.get(u);if(old==null)return thresholdTier(st);players.put(u,new Database.PlayerStar(u,old.name(),st,old.lastSeen(),old.inactivityPenaltyDays()));String t=tier(u);players.put(u,new Database.PlayerStar(u,old.name(),old.stars(),old.lastSeen(),old.inactivityPenaltyDays()));return t;}
     public String msg(String path){return c.getString(path,path);}
     public FileConfiguration config(){return c;}
