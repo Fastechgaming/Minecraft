@@ -142,9 +142,15 @@ public final class AutoRestartService {
             try{
                 long n=Long.parseLong(value.trim());
                 if(seconds==n){
+                    String time=format(seconds);
                     String msg=c.getString("messages.interval","<yellow>server restarting in {time}</yellow>")
-                            .replace("{time}",format(seconds));
+                            .replace("{time}",time);
                     Bukkit.broadcast(com.angkor.makongcore.util.Text.mm(msg));
+                    String actionBar=c.getString("messages.action-bar","").replace("{time}",time);
+                    if(!actionBar.isBlank()){
+                        var component=com.angkor.makongcore.util.Text.mm(actionBar);
+                        for(org.bukkit.entity.Player p:Bukkit.getOnlinePlayers())p.sendActionBar(component);
+                    }
                     break;
                 }
             }catch(NumberFormatException ignored){}

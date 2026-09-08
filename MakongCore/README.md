@@ -166,3 +166,6 @@ MaTier:
 
 ## 1.2.24 changes
 - Fixed a `zip file closed` error logged during a plugin disable/reload (server restart, or `/makongcore reload verification`) whenever the Discord bot's WebSocket connection happened to be tearing down at the same time. `AccountLinkService.stop()` called `jda.shutdownNow()` and returned immediately without waiting for JDA's background threads to actually finish - if Paper then closed the plugin's classloader before they did, the next class one of them needed to lazy-load threw that error instead of shutting down cleanly. `stop()` now blocks (up to 5s) on `jda.awaitShutdown()` first.
+
+## 1.2.25 changes
+- Added `messages.action-bar` to `module/autorestart.yml` - shown in every online player's action bar alongside the existing `messages.interval` chat broadcast, at the same `settings.messageAtIntervals` countdowns. Leave it blank (`''`) to skip the action bar and keep only the chat message.

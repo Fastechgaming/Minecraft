@@ -318,6 +318,7 @@ never need to delete a config file to "pick up" a new option.
 | `settings.restarts` | `['Daily;05;00']` | Format `Daily;HH;MM` or `DAY;HH;MM`; add more entries for multiple restarts per day. |
 | `settings.messageAtIntervals` | `['30','10','5','4','3','2']` | Countdown seconds at which `messages.interval` broadcasts. |
 | `messages.interval` | `<yellow>server restarting in <white>{time}</white>!</yellow>` | `{time}` is pre-formatted (e.g. `30s`, `2m`). |
+| `messages.action-bar` | *(added 1.2.25)* `<yellow>Restarting in <white>{time}</white>!</yellow>` | Shown in every online player's action bar alongside `messages.interval`, at the same `settings.messageAtIntervals` countdowns. Leave blank (`''`) to skip it. |
 | `messages.cancelled` | *(added 1.2.17)* `<yellow>The scheduled restart has been cancelled.</yellow>` | Broadcast by `/makongcore autorestart stop`. |
 | `format.seconds`/`second`/`minutes`/`minute`/`hours`/`hour`/`days`/`day`/`splitter` | `s`/`s`/`m `/`m `/`h `/`h `/`D `/`D `/`and ` | Used to build `{time}`. |
 

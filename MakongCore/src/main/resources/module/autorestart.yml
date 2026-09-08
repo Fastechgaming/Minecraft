@@ -44,6 +44,10 @@ settings:
 # INFO: Countdown message. {time} is replaced with the remaining time.
 messages:
   interval: '<yellow>server restarting in <white>{time}</white>!</yellow>'
+  # INFO: Shown in every online player's action bar alongside the chat
+  # INFO: message above, at the same messageAtIntervals countdown values.
+  # INFO: Leave blank ('') to skip the action bar.
+  action-bar: '<yellow>Restarting in <white>{time}</white>!</yellow>'
   # INFO: Broadcast when an ad-hoc restart (/makongcore autorestart <seconds>,
   # INFO: or MakongVelocity's /mcvlc ar now/stop relayed through the website
   # INFO: bridge) is cancelled with /makongcore autorestart stop before it fires.
