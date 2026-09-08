@@ -36,6 +36,7 @@ export const EDITABLE_SETTINGS_FIELDS = [
   'aiPersonality',
   'aiEscalationChannelId',
   'aiConfidenceThreshold',
+  'aiAutoLearnEnabled',
   'xpPerMessage',
   'xpCooldownSec',
   'xpPerVoiceMin',

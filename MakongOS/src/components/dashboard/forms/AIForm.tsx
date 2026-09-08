@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import type { GuildSettings } from '@prisma/client';
-import { Field, TextInput, Select, MultiPillSelect, SaveBar } from '../FormControls';
+import { Field, TextInput, Select, MultiPillSelect, ToggleRow, SaveBar } from '../FormControls';
 
 export function AIForm({ guildId, initialSettings, textChannels }: { guildId: string; initialSettings: GuildSettings; textChannels: { id: string; name: string }[] }) {
   const [settings, setSettings] = useState(initialSettings);
@@ -47,6 +47,14 @@ export function AIForm({ guildId, initialSettings, textChannels }: { guildId: st
         <Field label="Always-On Chat Channels" hint="AI responds to every message here, not just @mentions">
           <MultiPillSelect options={textChannels} value={settings.aiChatChannelIds} onChange={(v) => update('aiChatChannelIds', v)} prefix="#" />
         </Field>
+      </div>
+      <div className="card flex flex-col gap-3 p-4">
+        <ToggleRow
+          label="Auto-Learn Knowledge"
+          description="The AI watches staff/admin messages in every channel and decides on its own whether one reads like durable server info (a rule, price, schedule, how-to) worth saving to the knowledge base — reacts with 🧠 when it saves something. Uses one extra AI call per qualifying staff message."
+          checked={settings.aiAutoLearnEnabled}
+          onChange={(v) => update('aiAutoLearnEnabled', v)}
+        />
       </div>
       <SaveBar dirty={dirty} saving={saving} onSave={save} />
     </div>

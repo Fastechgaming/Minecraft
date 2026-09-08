@@ -10,7 +10,7 @@ npm start
 
 ## What's inside
 
-- **AI Anti-Scam & Assistant** (Gemini) — Vision-based scanning of uploaded images to auto-detect crypto scams, fake Nitro giveaways, and phishing screenshots, with configurable auto-punish and role/channel whitelists; plus a conversational assistant with a knowledge base, per-user memory, staff escalation, and free `/imagine` image generation via Pollinations.
+- **AI Anti-Scam & Assistant** (Gemini) — Vision-based scanning of uploaded images to auto-detect crypto scams, fake Nitro giveaways, and phishing screenshots, with configurable auto-punish and role/channel whitelists; plus a conversational assistant with a knowledge base, per-user memory, staff escalation, free `/imagine` image generation via Pollinations, and an optional auto-learn mode that watches staff messages and decides on its own what's worth saving to the knowledge base.
 - **Moderation** — `/warn`, `/timeout`, `/kick`, auto-incrementing `/case` management, automod (invites, bad words, spam bursts, ghost pings), and cron-expiring `/temprole`.
 - **Music** — a queue-based player backed by Lavalink, with Spotify/YouTube search, a live Now Playing embed with playback buttons, and audio filters (Bassboost, Nightcore, 8D, Vaporwave, Tremolo).
 - **Join-to-Create Voice Hub** — auto-generated temporary voice channels with an owner control panel (lock, hide, rename, limit, kick).

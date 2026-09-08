@@ -96,6 +96,7 @@ model GuildSettings {
   aiPersonality     String?
   aiEscalationChannelId String?
   aiConfidenceThreshold Float @default(0.6)
+  aiAutoLearnEnabled    Boolean @default(false) // let the AI decide, on its own, whether a staff message is worth saving to the knowledge base
 
   // ── Leveling ──────────────────────────────────────────────────────────
   xpPerMessage     Int @default(15)

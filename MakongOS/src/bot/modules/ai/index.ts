@@ -14,6 +14,7 @@ import { isStaff } from '../../../services/permissions';
 import { generateReply, escalateToStaff, buildEscalationComponents } from '../../../ai/staffAssistant';
 import { forgetMemories } from '../../../ai/memory';
 import { isPromptSafe, generateImage } from '../../../ai/pollinations';
+import { evaluateForKnowledge } from '../../../ai/gemini';
 
 async function respondInChannel(message: import('discord.js').Message, settings: import('@prisma/client').GuildSettings) {
   if (!message.inGuild()) return;
@@ -25,6 +26,37 @@ async function respondInChannel(message: import('discord.js').Message, settings:
   await message.reply(text.slice(0, 2000)).catch(() => undefined);
 
   if (unsure) await escalateToStaff(message.client, message.guildId, message.author.id, message.channelId, question, settings);
+}
+
+/**
+ * Passively watches staff/admin messages (outside the normal "ask the bot a
+ * question" flow) and lets Gemini decide whether one reads like durable server
+ * info — a rule, price, schedule, how-to — worth keeping in the knowledge base,
+ * rather than casual chat. Fails closed: any error or ambiguous call means
+ * nothing gets saved. A 🧠 reaction on the message is the only feedback — no
+ * extra chat clutter.
+ */
+async function maybeAutoLearn(message: import('discord.js').Message, settings: import('@prisma/client').GuildSettings): Promise<void> {
+  if (!message.inGuild()) return;
+  const member = message.member;
+  if (!member || !isStaff(member, settings)) return;
+
+  const text = message.content.trim();
+  if (text.length < 20 || text.split(/\s+/).length < 4) return;
+
+  const result = await evaluateForKnowledge(text);
+  if (!result?.shouldSave || !result.question.trim() || !result.answer.trim()) return;
+
+  await prisma.knowledgeBase.create({
+    data: {
+      guildId: message.guildId,
+      question: result.question.slice(0, 300),
+      answer: result.answer.slice(0, 2000),
+      category: (result.category || 'general').slice(0, 50),
+      addedById: message.author.id
+    }
+  });
+  await message.react('🧠').catch(() => undefined);
 }
 
 export const aiModule: FeatureModule = {
@@ -132,11 +164,20 @@ export const aiModule: FeatureModule = {
       const settings = await getGuildSettings(message.guildId);
       if (!settings.aiEnabled) return;
 
-      const mentioned = message.mentions.has(message.client.user!);
+      // `ignoreEveryone: true` matters here — without it, an @everyone/@here ping
+      // (from anyone, in any channel) counts as "the bot was mentioned" too, and
+      // the bot would reply to every announcement that pings the server.
+      const mentioned = message.mentions.has(message.client.user!, { ignoreEveryone: true });
       const inConfiguredChannel = settings.aiChatChannelIds.includes(message.channelId);
-      if (!mentioned && !inConfiguredChannel) return;
 
-      await respondInChannel(message, settings).catch(() => undefined);
+      if (mentioned || inConfiguredChannel) {
+        await respondInChannel(message, settings).catch(() => undefined);
+        return;
+      }
+
+      if (settings.aiAutoLearnEnabled) {
+        await maybeAutoLearn(message, settings).catch(() => undefined);
+      }
     }
   },
   components: [
