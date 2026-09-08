@@ -72,7 +72,15 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
     // for why: multiple servers all connecting the same bot_token race
     // each other to acknowledge every interaction.
     public void start(){long intervalTicks=Math.max(1,cfg.l("linking.reminder.interval_seconds",3))*20L;reminderTask=plugin.getServer().getScheduler().runTaskTimer(plugin,this::tickPending,intervalTicks,intervalTicks);if(!cfg.b("discord.enabled",false)&&!cfg.b("telegram.enabled",false))return; if(cfg.b("discord.enabled",false)&&cfg.b("discord.hub",true))startDiscord(); if(cfg.b("telegram.enabled",false))startTelegram();}
-    public void stop(){if(reminderTask!=null){reminderTask.cancel();reminderTask=null;}if(jda!=null){jda.shutdownNow();jda=null;}if(telegram!=null){telegram.shutdownNow();telegram=null;}}
+    // shutdownNow() only requests shutdown - it returns immediately while JDA's
+    // WebSocket threads are still tearing down in the background. onDisable()
+    // returning right after that lets Paper close this plugin's classloader
+    // (the jar's zip file handle) while those threads are still alive, so the
+    // next class they need to lazy-load throws "IllegalStateException: zip
+    // file closed" instead of a clean shutdown. Blocking here until JDA
+    // actually finishes (bounded, so a stuck shutdown can't hang the server)
+    // avoids the race.
+    public void stop(){if(reminderTask!=null){reminderTask.cancel();reminderTask=null;}if(jda!=null){JDA j=jda;jda=null;j.shutdownNow();try{j.awaitShutdown(5,TimeUnit.SECONDS);}catch(InterruptedException e){Thread.currentThread().interrupt();}}if(telegram!=null){telegram.shutdownNow();telegram=null;}}
     // A player can finish verifying via a DIFFERENT server's Discord/Telegram
     // connection than the one they're frozen on (see verifyDiscord/
     // verifyTelegram's db.findPending fallback) - that other server can't
