@@ -65,9 +65,7 @@ function renderRow(entry, showTier) {
   return `
     <li class="board-row${medalClass(entry.rank)}">
       <span class="board-rank">${entry.rank}</span>
-      <span class="board-name"><span class="board-avatar">${
-        entry.icon ? escapeHtml(entry.icon) : escapeHtml((entry.name || "?").charAt(0).toUpperCase())
-      }</span>${escapeHtml(entry.name)}${
+      <span class="board-name">${escapeHtml(entry.name)}${
     showTier ? `<span class="board-tier">${escapeHtml(entry.tier || tierFor(star))}</span>` : ""
   }</span>
       <span class="board-points">⭐ ${star.toLocaleString()}</span>

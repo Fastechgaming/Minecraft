@@ -2123,19 +2123,6 @@ html[lang="km"] .checkout-hint { line-height: 1.7; }
 /* Ranking page reuses this leaderboard row for both Top Team and Top Player,
    just with a stat other than points in .board-points and the top 3 rows
    picked out with a medal-colored left border. */
-.board-avatar {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.7rem;
-  height: 1.7rem;
-  margin-right: 0.5rem;
-  border-radius: 50%;
-  background: var(--input-bg);
-  border: 2px solid var(--stone-darkest);
-  font-size: 0.9rem;
-  vertical-align: middle;
-}
 .board-row.rank-1 { border-color: var(--gold-deep); box-shadow: 0 0 10px rgba(215, 255, 160, 0.35); }
 .board-row.rank-2 { border-color: #c9c9c9; }
 .board-row.rank-3 { border-color: #cd8a4c; }
