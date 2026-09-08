@@ -40,7 +40,7 @@ website:
   # INFO: Must match MAKONGCORE_SECRET in the website's .env exactly.
   secret: "change-me"
   # INFO: A short id for this server, shown on the website's /admin/servers
-  # INFO: page and used by /mateam ping <server-id>. Leave blank to reuse
+  # INFO: page and used by /makongcore ping <server-id>. Leave blank to reuse
   # INFO: network.server_id above.
   server_id: ""
   # INFO: How often (in seconds) to check the website for new commands/pings

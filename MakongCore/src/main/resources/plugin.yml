@@ -9,10 +9,13 @@ commands:
     description: Open and manage your team
     usage: /team [...]
     aliases: [teams]
+  mateam:
+    description: Team admin commands (team module only)
+    usage: /mateam <help|team|disband|forcejoin|forceleave|addpoints|setpoints|addstars|setstars>
   makongcore:
-    description: MakongCore administration
-    usage: /makongcore <help|reload|info|list|team|disband|forcejoin|forceleave|addpoints|setpoints|addstars|setstars|ping|autorestart>
-    aliases: [mateam]
+    description: MakongCore global administration - all modules
+    usage: /makongcore <help|reload|info|list|ping|autorestart|matier ...|team|disband|forcejoin|forceleave|addpoints|setpoints|addstars|setstars>
+    aliases: [macore]
   matier:
     description: Player MaTier profile and leaderboard
     usage: /matier [top|stats|set|add|remove|reset|resetall|reload]
@@ -23,8 +26,8 @@ permissions:
   mateam.use:
     default: true
   mateam.admin:
-    description: Access /mateam (/makongcore) administrative commands
+    description: Access /mateam's team-administration commands
     default: op
   makongcore.admin:
-    description: Access /matier's admin subcommands (stats/set/add/remove/reset/resetall/reload)
+    description: Access /matier's admin subcommands, and /makongcore's (/macore's) global admin commands
     default: op

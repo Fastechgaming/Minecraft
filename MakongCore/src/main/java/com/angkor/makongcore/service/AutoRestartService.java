@@ -31,7 +31,7 @@ public final class AutoRestartService {
     public void stop(){if(task!=null){task.cancel();task=null;}if(adHocTask!=null){adHocTask.cancel();adHocTask=null;}}
 
     // A one-off restart outside the configured schedule - used by
-    // /mateam autorestart <seconds> (see AdminCommand), itself normally
+    // /makongcore autorestart <seconds> (see AdminCommand), itself normally
     // triggered by the MakongVelocity companion's /mc autorestart relayed
     // through the website bridge. Reuses the same interval-broadcast
     // messages and "normal" restartCommands the scheduled path uses, just
@@ -65,7 +65,7 @@ public final class AutoRestartService {
     }
 
     // Cancels a pending triggerAdHocRestart() before it fires - used by
-    // /mateam autorestart stop (see AdminCommand), itself normally triggered
+    // /makongcore autorestart stop (see AdminCommand), itself normally triggered
     // by MakongVelocity's /mc ar stop relayed through the website bridge.
     // Only touches the ad-hoc countdown; the configured settings.restarts
     // schedule is untouched. Returns false if nothing was pending.

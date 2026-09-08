@@ -22,7 +22,7 @@ import java.util.concurrent.TimeUnit;
  *   reports each one's live player count. Requires the website bridge to be
  *   configured - that's the only source of truth this proxy has for which
  *   of its velocity.toml servers actually run MakongCore.
- * - /mc ping <server-id> mirrors MakongCore's own /mateam ping, relayed
+ * - /mc ping <server-id> mirrors MakongCore's own /makongcore ping, relayed
  *   through the website bridge.
  * - /mc autorestart <seconds> fans a restart warning out to every backend
  *   connected to the website bridge at once - see AdminCommand#autorestart

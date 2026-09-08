@@ -28,7 +28,7 @@ This is the initial foundation build. The architecture intentionally keeps GUI p
 Floodgate is an optional runtime integration. MakongCore intentionally has no compile-time Floodgate dependency; when Floodgate is installed and enabled, MakongCore detects Bedrock players through the Floodgate API using reflection. This avoids old Floodgate/Geyser/Cumulus transitive dependencies during builds.
 
 ## PlaceholderAPI
-Optional - only registered if [PlaceholderAPI](https://www.spigotmc.org/resources/placeholderapi.6245/) is installed (`softdepend`, so load order doesn't matter either way). Unlike Floodgate this is a real `compileOnly` dependency (a `PlaceholderExpansion` subclass has to exist at compile time), but it's still entirely soft at runtime - `MakongCore#registerPlaceholders` checks the plugin is actually present before registering anything, and both expansions are re-registered against the fresh `TeamService`/`MaTierService` on every `/mateam reload`.
+Optional - only registered if [PlaceholderAPI](https://www.spigotmc.org/resources/placeholderapi.6245/) is installed (`softdepend`, so load order doesn't matter either way). Unlike Floodgate this is a real `compileOnly` dependency (a `PlaceholderExpansion` subclass has to exist at compile time), but it's still entirely soft at runtime - `MakongCore#registerPlaceholders` checks the plugin is actually present before registering anything, and both expansions are re-registered against the fresh `TeamService`/`MaTierService` on every `/makongcore reload`.
 
 | Placeholder | Shows |
 |---|---|
@@ -44,12 +44,12 @@ Optional integration with the Makong Network website's store (see `../MakongWeb/
 
 Once configured (`config.yml`'s `website:` section: `enabled: true`, a real `url`, and a `secret` matching the website's `MAKONGCORE_SECRET`):
 - This server shows up on the website's `/admin/servers` page and can be sent any console command from there on demand, or automatically when a Telegram store order is Accepted for this server's gamemode.
-- `/mateam ping <server-id>` reaches any other connected server (another MakongCore instance, or the [MakongVelocity](../MakongVelocity) companion plugin, if one exists on your network), relayed through the website.
+- `/makongcore ping <server-id>` reaches any other connected server (another MakongCore instance, or the [MakongVelocity](../MakongVelocity) companion plugin, if one exists on your network), relayed through the website.
 - `server_id` defaults to `config.yml`'s `network.server_id` if left blank in `website.server_id`, so a network already using MySQL "network mode" doesn't need a second id to keep track of.
 - `website.poll_interval_seconds` (default `3`) also controls how quickly [MakongVelocity](../MakongVelocity)'s `/mc clients` sees this server come online or drop - `/mc clients` also forces an immediate poll of its own before answering, so it never waits out a full interval either way.
 - This server's live Team and MaTier Star standings (top 50 of each) are reported to the website on every poll tick, so the public `/ranking` page can show real data instead of the admin-curated fallback. Each player's tier comes straight from `MaTierService.tierForRanked()`, so the M1 top-10-only cap is respected exactly. This is read-only reporting - the website never writes Team/MaTier data back to this server.
-- `/mateam autorestart <seconds|stop>` broadcasts a countdown (reusing `module/autorestart.yml`'s interval messages) and restarts this server once it elapses - a one-off outside the normal `settings.restarts` schedule - or cancels a pending one before it fires. Normally you won't type this yourself: [MakongVelocity](../MakongVelocity)'s `/mc autorestart <seconds|stop>` (or `/mc ar now [interval]` / `/mc ar stop`) relays it through this same bridge to every connected backend at once.
-- `/mateam reload [module]` reloads everything (the same as plain `/mateam reload` always did), or - given `team`, `autorestart`, `matier`, `verification` or `gui` - just that one module. `team` and `autorestart` apply live without touching the database or reloading team data from it; `matier`, `verification` and `gui` currently fall back to a full reload to apply safely, since they're tied to registered event listeners. [MakongVelocity](../MakongVelocity)'s `/mc reload <module>` relays this to every connected backend at once.
+- `/makongcore autorestart <seconds|stop>` broadcasts a countdown (reusing `module/autorestart.yml`'s interval messages) and restarts this server once it elapses - a one-off outside the normal `settings.restarts` schedule - or cancels a pending one before it fires. Normally you won't type this yourself: [MakongVelocity](../MakongVelocity)'s `/mc autorestart <seconds|stop>` (or `/mc ar now [interval]` / `/mc ar stop`) relays it through this same bridge to every connected backend at once.
+- `/makongcore reload [module]` reloads everything (the same as plain `/makongcore reload` always did), or - given `team`, `autorestart`, `matier`, `verification` or `gui` - just that one module. `team` and `autorestart` apply live without touching the database or reloading team data from it; `matier`, `verification` and `gui` currently fall back to a full reload to apply safely, since they're tied to registered event listeners. [MakongVelocity](../MakongVelocity)'s `/mc reload <module>` relays this to every connected backend at once.
 
 This otherwise doesn't affect MaTier, Teams, or account linking - it's just a command/ping/rankings-reporting channel to and from the website.
 
@@ -64,8 +64,8 @@ Nothing here changes if MakongVelocity is never installed - both are additive an
 - `config.yml` controls storage, team limits, validation, PvP, scoring, chat, allies, cleanup, cross-server behavior, weekly rewards and the Website Bridge (see below).
 - `messages.yml` controls player-facing messages.
 - `gui.yml` controls GUI titles, sizes, slots, materials, names, lore, filler panes and navigation.
-- Run `/mateam reload` after changing configuration.
-- Updating MakongCore never leaves your existing `config.yml`/`messages.yml`/`gui.yml`/`module/*.yml` behind: on every startup (and `/mateam reload`) it compares each file against the version's shipped defaults and splices in any key you don't have yet - exactly where it sits in the shipped default, comments included - without touching anything you've already customized. Nothing to do manually after updating; check your server log for `added missing config key(s)` if you want to see what showed up.
+- Run `/makongcore reload` after changing configuration.
+- Updating MakongCore never leaves your existing `config.yml`/`messages.yml`/`gui.yml`/`module/*.yml` behind: on every startup (and `/makongcore reload`) it compares each file against the version's shipped defaults and splices in any key you don't have yet - exactly where it sits in the shipped default, comments included - without touching anything you've already customized. Nothing to do manually after updating; check your server log for `added missing config key(s)` if you want to see what showed up.
 
 Modules:
 - module/team.yml - team gameplay configuration
@@ -109,13 +109,13 @@ MaTier:
 - 1.2.10: Discord /ban duration autocomplete presets: Forever, 3d, 5d, 7d, 1month; custom duration text remains supported.
 
 ## 1.2.11 changes
-- Added `module/website.yml` and the optional Website Bridge (see above) - connects this server to the Makong Network website's `/admin/servers` page, enables sending it console commands on demand or on Telegram order Accept, and adds `/mateam ping <server-id>` for cross-server pings relayed through the website.
+- Added `module/website.yml` and the optional Website Bridge (see above) - connects this server to the Makong Network website's `/admin/servers` page, enables sending it console commands on demand or on Telegram order Accept, and adds `/makongcore ping <server-id>` for cross-server pings relayed through the website.
 
 ## 1.2.12 changes
 - The Website Bridge now also reports this server's Team and MaTier Star standings on every poll tick, so the website's public `/ranking` page can show live data (see above).
 
 ## 1.2.13 changes
-- Added `/mateam autorestart <seconds>` - a one-off broadcast-then-restart, normally triggered remotely by the new [MakongVelocity](../MakongVelocity) companion plugin's `/mc autorestart` (see "Velocity companion" above).
+- Added `/makongcore autorestart <seconds>` - a one-off broadcast-then-restart, normally triggered remotely by the new [MakongVelocity](../MakongVelocity) companion plugin's `/mc autorestart` (see "Velocity companion" above).
 - `AccountLinkService` now accepts an account-type classification forwarded by MakongVelocity (from nLogin running in proxy mode) over a `makong:accounttype` plugin message, trusting it ahead of its own Mojang API guess when present.
 
 ## 1.2.14 changes
@@ -125,20 +125,20 @@ MaTier:
 - Fixed cracked players being frozen and asked to verify even with both `discord.enabled` and `telegram.enabled` set to `false`. `linking.required_for_cracked` (default `true`) is a separate switch from those two and was never actually checking whether a bot existed for the player to verify through - with both disabled this was a silent, permanent lockout with no way to complete verification. It's now ignored unless at least one of Discord/Telegram is enabled.
 
 ## 1.2.16 changes
-- Moved the Website Bridge's settings (`enabled`, `url`, `secret`, `server_id`, `poll_interval_seconds`) from `module/website.yml` into `config.yml`'s new `website:` section - one less file to manage, and it now reloads with everything else `/mateam reload` already covers. Existing `module/website.yml` files are no longer read; re-enter your `url`/`secret` in `config.yml`.
+- Moved the Website Bridge's settings (`enabled`, `url`, `secret`, `server_id`, `poll_interval_seconds`) from `module/website.yml` into `config.yml`'s new `website:` section - one less file to manage, and it now reloads with everything else `/makongcore reload` already covers. Existing `module/website.yml` files are no longer read; re-enter your `url`/`secret` in `config.yml`.
 - Renamed `module/discord.yml` to `module/verification.yml` - the file has always covered Telegram linking and premium/cracked detection alongside Discord, not just Discord, and the old name undersold that. Its contents (including the `discord:`/`telegram:`/`linking:` sections) are unchanged.
 - Lowered the default `website.poll_interval_seconds` from `5` to `3` (and the paired website-side staleness window from 20s to 12s) so a server coming online, going offline, or reconnecting is reflected sooner. Combined with [MakongVelocity](../MakongVelocity)'s `/mc clients` now forcing a fresh poll before it answers (see that project's changelog), `/mc clients` no longer waits out a stale scheduled-poll cache on top of the staleness window.
 
 ## 1.2.17 changes
-- `/mateam autorestart` now also accepts `stop`, cancelling a pending ad-hoc restart before it fires (broadcasts `messages.cancelled` from `module/autorestart.yml`). Doesn't touch the configured `settings.restarts` schedule.
-- Added `/mateam reload [module]` - reload just `team`, `autorestart`, `matier`, `verification` or `gui` instead of everything. `team` and `autorestart` reload live in place (no database reconnect, no team-data reload); the other three currently fall back to a full reload to apply safely, since unregistering/re-registering their event listeners in isolation isn't worth the added risk for what it'd save.
+- `/makongcore autorestart` now also accepts `stop`, cancelling a pending ad-hoc restart before it fires (broadcasts `messages.cancelled` from `module/autorestart.yml`). Doesn't touch the configured `settings.restarts` schedule.
+- Added `/makongcore reload [module]` - reload just `team`, `autorestart`, `matier`, `verification` or `gui` instead of everything. `team` and `autorestart` reload live in place (no database reconnect, no team-data reload); the other three currently fall back to a full reload to apply safely, since unregistering/re-registering their event listeners in isolation isn't worth the added risk for what it'd save.
 - Both are relayed network-wide by [MakongVelocity](../MakongVelocity)'s new `/mc ar now [interval]` / `/mc ar stop` and `/mc reload <module>` - see that project's changelog.
 
 ## 1.2.18 changes
 - Added optional [PlaceholderAPI](https://www.spigotmc.org/resources/placeholderapi.6245/) support - `%team_tag%`, `%team_star%`, `%matier%`, `%matier_star%` (see "PlaceholderAPI" above). Only registered if PlaceholderAPI is installed; nothing changes otherwise.
 
 ## 1.2.19 changes
-- `config.yml`, `messages.yml`, `gui.yml` and every `module/*.yml` now auto-add any key you're missing (a newer version's default that your existing file predates) on startup and `/mateam reload`, instead of only ever writing the whole file once on first install. New `ConfigUpdater` splices missing keys back into their original position relative to your existing keys - anchored right before whichever of their original neighbors you still have - comments and all, and never touches a key, value, or comment you already have. It works on the file's raw text rather than through Bukkit's own YAML loader specifically so it doesn't strip your comments the way re-saving a `YamlConfiguration` normally would.
+- `config.yml`, `messages.yml`, `gui.yml` and every `module/*.yml` now auto-add any key you're missing (a newer version's default that your existing file predates) on startup and `/makongcore reload`, instead of only ever writing the whole file once on first install. New `ConfigUpdater` splices missing keys back into their original position relative to your existing keys - anchored right before whichever of their original neighbors you still have - comments and all, and never touches a key, value, or comment you already have. It works on the file's raw text rather than through Bukkit's own YAML loader specifically so it doesn't strip your comments the way re-saving a `YamlConfiguration` normally would.
 
 ## 1.2.20 changes
 - `%team_tag%` no longer just goes blank for a player with no team - it now shows the new `team.placeholders.no_team` setting in `module/team.yml` (default `<gray>No Team</gray>`), read live so a reload picks up a change without restarting.
@@ -148,3 +148,4 @@ MaTier:
 ## 1.2.21 changes
 - Discord verification eligibility is now tiered instead of one fixed account-age + membership-age rule: `discord.guild.eligibility_tiers` in `module/verification.yml` is a list of `{minimum_account_age_days, minimum_membership_days}` pairs, and an account qualifies if it meets **any one** tier's **both** minimums. Shipped defaults: a 180-day-old account with a 30-day membership, OR a 365-day-old account regardless of how recently it joined. Add, remove, or edit tiers freely. The old flat `minimum_account_age_days`/`minimum_membership_days` keys are no longer read (an upgraded file keeps them around, harmlessly unused, alongside the new list).
 - A verified phone number was requested as a possible third tier, but Discord doesn't expose phone-verification status to bots under any scope - it's not something this plugin (or any bot) can check, so that tier isn't offered as an option. See `DOCUMENTATION.md`'s verification section for the full explanation.
+- `/mateam` and `/makongcore` are no longer the same command under two names - `/mateam` is now team-admin only (`team`/`disband`/`forcejoin`/`forceleave`/`addpoints`/`setpoints`/`addstars`/`setstars`), while `/makongcore` (new alias `/macore`) is the global command: it keeps the server-wide subcommands (`reload`/`info`/`list`/`ping`/`autorestart`) and additionally reaches every `/mateam` subcommand *and* every `/matier` admin subcommand (via a new `/makongcore matier <...>` prefix) - so `/macore` alone can do everything across every module. Nothing is duplicated: `/makongcore` delegates straight into `/mateam`'s and `/matier`'s own command code rather than reimplementing it.

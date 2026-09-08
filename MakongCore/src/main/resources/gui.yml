@@ -12,7 +12,7 @@
 #       {joined}, {playtime}, {rank}, {metric}, {value}.
 #       Not every placeholder is available on every screen - see
 #       DOCUMENTATION.md's GUI section for which ones apply where.
-# INFO: Run /mateam reload after editing this file.
+# INFO: Run /makongcore reload after editing this file.
 # ================================================================
 
 # INFO: Global GUI filler behavior.

@@ -1,6 +1,7 @@
 package com.angkor.makongcore;
 
 import com.angkor.makongcore.command.AdminCommand;
+import com.angkor.makongcore.command.TeamAdminCommand;
 import com.angkor.makongcore.command.TeamCommand;
 import com.angkor.makongcore.config.Settings;
 import com.angkor.makongcore.config.ModuleConfig;
@@ -114,12 +115,14 @@ public final class MakongCore extends JavaPlugin {
         getServer().getMessenger().unregisterIncomingPluginChannel(this);
         TeamCommand tc=new TeamCommand(this,teams,gui);
         getCommand("team").setExecutor(tc);getCommand("team").setTabCompleter(tc);
-        AdminCommand ac=new AdminCommand(this,teams);
-        getCommand("makongcore").setExecutor(ac);getCommand("makongcore").setTabCompleter(ac);
+        TeamAdminCommand tac=new TeamAdminCommand(this,teams);
+        getCommand("mateam").setExecutor(tac);getCommand("mateam").setTabCompleter(tac);
         matier=new MaTierService(this,database,matierConfig.get());
         matierAura=new MaTierAuraService(this,matier);
         MaTierCommand mc=new MaTierCommand(this,matier);
         getCommand("matier").setExecutor(mc); getCommand("matier").setTabCompleter(mc);
+        AdminCommand ac=new AdminCommand(this,teams,tac,mc);
+        getCommand("makongcore").setExecutor(ac);getCommand("makongcore").setTabCompleter(ac);
         getCommand("link").setExecutor((sender,command,label,args)->{if(!(sender instanceof org.bukkit.entity.Player p)){sender.sendMessage("Players only.");return true;}accountLinks.optionalLink(p);return true;});
         getServer().getPluginManager().registerEvents(matier,this);
         
@@ -194,7 +197,7 @@ public final class MakongCore extends JavaPlugin {
     private static final java.util.Set<String> LIGHTWEIGHT_MODULES = java.util.Set.of("team", "autorestart");
     private static final java.util.Set<String> KNOWN_MODULES = java.util.Set.of("team", "autorestart", "matier", "verification", "gui");
 
-    /** Used by /mateam reload &lt;module&gt; (see AdminCommand) - and so, relayed, by MakongVelocity's /mc reload &lt;module&gt;. */
+    /** Used by /makongcore reload &lt;module&gt; (see AdminCommand) - and so, relayed, by MakongVelocity's /mc reload &lt;module&gt;. */
     public void reloadModule(String module, CommandSender sender) {
         if(!Bukkit.isPrimaryThread()){Bukkit.getScheduler().runTask(this,()->reloadModule(module,sender));return;}
         String m = module.toLowerCase(java.util.Locale.ROOT);

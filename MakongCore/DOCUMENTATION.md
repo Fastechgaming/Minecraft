@@ -68,16 +68,16 @@ similar but not called from anywhere in `TeamCommand.java` - the hardcoded
 text in the `onCommand` handler is what actually prints. See
 [§16](#16-known-gaps-found-while-writing-this).
 
-### `/mateam` (primary name: `/makongcore`, same command either way)
+### `/mateam` - team admin only
 
-Requires **`mateam.admin`** (default: `op`).
+Requires **`mateam.admin`** (default: `op`). Scoped to the team module only -
+nothing here reaches MaTier or server-wide admin actions; those live under
+`/makongcore` below (which can *also* reach every one of these same team
+subcommands - see that section).
 
 | Usage | What it does |
 |---|---|
 | `/mateam help` | Lists everything below. |
-| `/mateam reload [module]` | No module: full reload (config, database reconnect, team data reload, all listeners). With a module name (`team`, `autorestart`, `matier`, `verification`, `gui`): reloads just that one. `team` and `autorestart` apply live in place; the other three currently still trigger a full reload internally (see [§16](#16-known-gaps-found-while-writing-this)). |
-| `/mateam info` | Team count, member count, Floodgate status, Website Bridge status. |
-| `/mateam list` | Lists every team (tag, name, member count). |
 | `/mateam team <tag>` | Full stats for one team (ID, members, public/private, PvP, Weekly Points, Stars, kills, deaths, ally count). |
 | `/mateam disband <tag>` | Force-disbands a team, bypassing the owner-only rule. |
 | `/mateam forcejoin <player> <tag>` | Adds a player to a team as a regular member, bypassing invites. |
@@ -86,14 +86,31 @@ Requires **`mateam.admin`** (default: `op`).
 | `/mateam setweeklypoints <tag> <amount>` (alias `setpoints`) | Sets Weekly Points directly, floored the same way. |
 | `/mateam givestar <tag> <amount>` (aliases `addstars`, `givestars`) | Adds/subtracts team Stars, floored at 0. |
 | `/mateam setstars <tag> <amount>` | Sets team Stars directly, floored at 0. |
-| `/mateam ping <server-id>` | Pings another server through the Website Bridge. Requires the bridge to be configured (see [§15](#15-website-bridge--velocity-companion)). |
-| `/mateam autorestart <seconds\|stop>` | Broadcasts a countdown and restarts this server once it elapses, or (`stop`) cancels a pending one. Normally triggered remotely by MakongVelocity's `/mc ar`/`/mc autorestart`, not typed by hand. |
+
+### `/makongcore` (alias `/macore`) - global, every module
+
+Requires **`makongcore.admin`** (default: `op`). This is the "everything"
+command: server-wide admin actions live here directly, and it also reaches
+every `/mateam` team subcommand above and every `/matier` admin subcommand
+below by delegating straight into those same commands' code (so behavior is
+identical either way you reach them - nothing is duplicated).
+
+| Usage | What it does |
+|---|---|
+| `/makongcore help` | Lists everything below. |
+| `/makongcore reload [module]` | No module: full reload (config, database reconnect, team data reload, all listeners). With a module name (`team`, `autorestart`, `matier`, `verification`, `gui`): reloads just that one. `team` and `autorestart` apply live in place; the other three currently still trigger a full reload internally (see [§16](#16-known-gaps-found-while-writing-this)). |
+| `/makongcore info` | Team count, member count, Floodgate status, Website Bridge status. |
+| `/makongcore list` | Lists every team (tag, name, member count). |
+| `/makongcore ping <server-id>` | Pings another server through the Website Bridge. Requires the bridge to be configured (see [§15](#15-website-bridge--velocity-companion)). |
+| `/makongcore autorestart <seconds\|stop>` | Broadcasts a countdown and restarts this server once it elapses, or (`stop`) cancels a pending one. Normally triggered remotely by MakongVelocity's `/mc ar`/`/mc autorestart`, not typed by hand. |
+| `/makongcore team\|disband\|forcejoin\|forceleave\|addpoints\|setpoints\|addstars\|setstars ...` | Same as the identically-named `/mateam` subcommands above. |
+| `/makongcore matier <...>` | Same as the identically-named `/matier` admin subcommand below (e.g. `/makongcore matier set <player> <amount>`). |
 
 ### `/matier`
 
 Base usage (profile/leaderboard) is open to everyone; the admin subcommands
-require **`makongcore.admin`** (default: `op`) - note this is a *different*
-permission node from `/mateam`'s, see [§3](#3-permissions).
+require **`makongcore.admin`** (default: `op`) - the same node `/makongcore`
+itself requires, see [§3](#3-permissions).
 
 | Usage | Permission | What it does |
 |---|---|---|
@@ -105,7 +122,7 @@ permission node from `/mateam`'s, see [§3](#3-permissions).
 | `/matier remove <player> <amount>` | `makongcore.admin` | Subtracts Stars. |
 | `/matier reset <player>` | `makongcore.admin` | Sets one player's Stars to 0. |
 | `/matier resetall` | `makongcore.admin` | Sets *every* player's Stars to 0. |
-| `/matier reload` | `makongcore.admin` | Runs the same full reload as `/mateam reload` (not a MaTier-only reload). |
+| `/matier reload` | `makongcore.admin` | Runs the same full reload as `/makongcore reload` (not a MaTier-only reload). |
 
 ### `/link`
 
@@ -119,12 +136,17 @@ it (`AccountLinkService#optionalLink`) - see [§9](#9-moduleverificationyml).
 | Node | Default | Gates |
 |---|---|---|
 | `mateam.use` | `true` | Declared, but **not currently checked anywhere in the code** - `/team`'s own commands have no permission gate at all right now. See [§16](#16-known-gaps-found-while-writing-this). |
-| `mateam.admin` | `op` | `/mateam` (`/makongcore`) - every admin subcommand in [§2](#2-commands). |
-| `makongcore.admin` | `op` | `/matier`'s admin subcommands (`stats`/`set`/`add`/`remove`/`reset`/`resetall`/`reload`). |
+| `mateam.admin` | `op` | `/mateam` - every team admin subcommand in [§2](#2-commands). |
+| `makongcore.admin` | `op` | `/makongcore` (`/macore`) itself, and `/matier`'s admin subcommands (`stats`/`set`/`add`/`remove`/`reset`/`resetall`/`reload`). |
 
-**⚠ Note:** despite the similar names, `mateam.admin` and `makongcore.admin`
-gate two *different* commands (`/mateam` vs `/matier`'s admin subset) - they
-are not aliases of each other and granting one does not grant the other.
+**⚠ Note:** `/makongcore`'s own top-level gate is `makongcore.admin`, but
+when it delegates to a team subcommand (e.g. `/makongcore disband <tag>`)
+that delegates straight into `/mateam`'s own command code, which re-checks
+`mateam.admin` independently. In practice this is invisible to a normal
+server op (ops get both nodes via `default: op`), but a non-op admin granted
+only `makongcore.admin` through a permissions plugin needs `mateam.admin`
+too to reach the delegated team subcommands specifically - grant both if you
+want one staff member to have full `/makongcore` access.
 Before 1.2.20 `mateam.admin` wasn't declared in `plugin.yml` at all even
 though the code already checked it; see [§16](#16-known-gaps-found-while-writing-this).
 
@@ -144,7 +166,7 @@ though the code already checked it; see [§16](#16-known-gaps-found-while-writin
 
 All seven are self-healing: any key present in a newer MakongCore version's
 shipped default but missing from your file gets spliced back in automatically
-on startup and on `/mateam reload` (comments included, nothing you've
+on startup and on `/makongcore reload` (comments included, nothing you've
 customized is touched) - see [§14](#14-auto-config-migration). You should
 never need to delete a config file to "pick up" a new option.
 
@@ -265,10 +287,10 @@ never need to delete a config file to "pick up" a new option.
 | `settings.restarts` | `['Daily;05;00']` | Format `Daily;HH;MM` or `DAY;HH;MM`; add more entries for multiple restarts per day. |
 | `settings.messageAtIntervals` | `['30','10','5','4','3','2']` | Countdown seconds at which `messages.interval` broadcasts. |
 | `messages.interval` | `<yellow>server restarting in <white>{time}</white>!</yellow>` | `{time}` is pre-formatted (e.g. `30s`, `2m`). |
-| `messages.cancelled` | *(added 1.2.17)* `<yellow>The scheduled restart has been cancelled.</yellow>` | Broadcast by `/mateam autorestart stop`. |
+| `messages.cancelled` | *(added 1.2.17)* `<yellow>The scheduled restart has been cancelled.</yellow>` | Broadcast by `/makongcore autorestart stop`. |
 | `format.seconds`/`second`/`minutes`/`minute`/`hours`/`hour`/`days`/`day`/`splitter` | `s`/`s`/`m `/`m `/`h `/`h `/`D `/`D `/`and ` | Used to build `{time}`. |
 
-This module also covers the **ad-hoc** restart (`/mateam autorestart <seconds>`,
+This module also covers the **ad-hoc** restart (`/makongcore autorestart <seconds>`,
 normally triggered remotely - see [§2](#2-commands)) - it reuses
 `restartCommands`' `[normal]` entries and the same interval messages, just
 counting down from a fixed number of seconds instead of to a wall-clock time.
@@ -429,10 +451,10 @@ and matching `secret`:
 
 - This server appears on the website's `/admin/servers` page and can be sent
   console commands on demand (or automatically on a Telegram store order Accept).
-- `/mateam ping <server-id>` reaches any other connected server.
+- `/makongcore ping <server-id>` reaches any other connected server.
 - This server's live Team/MaTier standings are reported every poll tick for
   the public `/ranking` page (read-only - the website never writes back).
-- `/mateam autorestart`/`/mateam reload <module>` can be triggered
+- `/makongcore autorestart`/`/makongcore reload <module>` can be triggered
   network-wide from the [MakongVelocity](../MakongVelocity) proxy plugin's
   `/mc ar`, `/mc autorestart`, and `/mc reload` commands.
 
@@ -468,7 +490,7 @@ anything) you want changed:
 5. **Two GUI lore lines have an unclosed `</yellow` tag** - see the note at
    the end of [§11](#11-guiyml). Cosmetically harmless (MiniMessage tolerates
    it) but worth fixing if you're already editing those lines.
-6. **`/mateam reload matier|verification|gui` isn't actually lightweight
+6. **`/makongcore reload matier|verification|gui` isn't actually lightweight
    yet** - it silently falls back to a full reload (database reconnect
    included) rather than a true single-module reload. Functionally correct,
    just not as fast as the module name implies; see 1.2.17's changelog entry.
