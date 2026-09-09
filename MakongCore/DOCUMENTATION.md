@@ -303,7 +303,7 @@ never need to delete a config file to "pick up" a new option.
 | `settings.enabled` | `true` | The whole module. |
 | `settings.restartCommands` | 4 entries | Commands run before a *scheduled* restart. Supports `[normal]`, `[time:N]` (N seconds before), `[proxy:N]`/`[proxydelay:N]`, and a `[DAYNAME]` tag - see the file's own header comment for exact syntax. |
 | `settings.commandsAfterReboot` | 2 entries | Run once after this server boots. |
-| `settings.restarts` | `['Daily;05;00']` | Format `Daily;HH;MM` or `DAY;HH;MM`; add more entries for multiple restarts per day. |
+| `settings.restarts` | *(changed 1.2.39, was `['Daily;05;00']`)* `[]` | Format `Daily;HH;MM` or `DAY;HH;MM`; add entries for scheduled restarts, one per line, multiple entries for more than one per day. Empty by default - no scheduled restarts happen until you add some. This doesn't affect the ad-hoc `/makongcore autorestart <seconds>` / MakongVelocity's `/mcvlc ar` relay, which work regardless of this list. |
 | `settings.messageAtIntervals` | `['30','10','5','4','3','2']` | Countdown seconds at which `messages.interval` broadcasts. |
 | `messages.interval` | `<yellow>server restarting in <white>{time}</white>!</yellow>` | `{time}` is pre-formatted (e.g. `30s`, `2m`). |
 | `messages.action-bar` | *(added 1.2.25)* `<yellow>Restarting in <white>{time}</white>!</yellow>` | Shown in every online player's action bar alongside `messages.interval`, at the same `settings.messageAtIntervals` countdowns. Leave blank (`''`) to skip it. |

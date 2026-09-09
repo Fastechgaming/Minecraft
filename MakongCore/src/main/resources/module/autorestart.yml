@@ -27,10 +27,10 @@ settings:
     - '[time:3] mavote execute'
     - '[time:8] whitelist off'
 
-  # INFO: Restart schedule.
-  # INFO: Add multiple entries to restart more than once per day.
-  restarts:
-    - 'Daily;05;00'
+  # INFO: Restart schedule. Empty by default - no scheduled restarts happen
+  # INFO: unless you add entries here. Add multiple entries to restart more
+  # INFO: than once per day, e.g. 'Daily;05;00' or 'FRIDAY;03;30'.
+  restarts: []
 
   # INFO: Countdown values at which the interval message is broadcast.
   messageAtIntervals:
