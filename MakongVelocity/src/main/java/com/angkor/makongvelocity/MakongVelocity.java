@@ -48,7 +48,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * 3. Periodic network-wide announcements (store/Discord plugs, etc.) - see
  *    AnnouncementService and announcements.yml.
  */
-@Plugin(id = "makongcore", name = "MaCoreVLC", version = "1.3.4", authors = {"Angkor"})
+@Plugin(id = "makongcore", name = "MaCoreVLC", version = "1.3.5", authors = {"Angkor"})
 public final class MakongVelocity {
 
     static final MinecraftChannelIdentifier ACCOUNT_TYPE_CHANNEL = MinecraftChannelIdentifier.create("makong", "accounttype");
@@ -218,18 +218,27 @@ public final class MakongVelocity {
     // data and true whole-network online status (any player connected
     // through it, regardless of which backend they're actually on).
     private void answerProfileRequest(WebsiteBridge.ProfileRequest req) {
+        logger.info("/profile: got a lookup request for '" + req.playerName + "' from '" + req.from + "' (request " + req.id + ").");
         Map<String, Object> data = new LinkedHashMap<>();
         Optional<Player> online = server.getPlayer(req.playerName);
         data.put("online", online.isPresent());
         online.ifPresent(p -> data.put("currentServer",
                 p.getCurrentServer().map(s -> s.getServerInfo().getName()).orElse(null)));
         nLoginAPI api = nLoginAPI.getApi();
-        if (api != null && api.isAvailable()) {
-            api.getAccount(Identity.ofKnownName(req.playerName)).ifPresent(acc -> {
-                data.put("registeredAt", acc.getCreationDate().toEpochMilli());
-                data.put("lastLogin", acc.getLastLogin().toEpochMilli());
-            });
+        if (api == null || !api.isAvailable()) {
+            logger.info("/profile: nLogin API is not available on this proxy (installed? running in proxy mode?) - registeredAt/lastLogin will be omitted.");
+        } else {
+            Optional<AccountData> account = api.getAccount(Identity.ofKnownName(req.playerName));
+            if (account.isEmpty()) {
+                logger.info("/profile: nLogin has no account for '" + req.playerName + "' - registeredAt/lastLogin will be omitted.");
+            } else {
+                account.ifPresent(acc -> {
+                    data.put("registeredAt", acc.getCreationDate().toEpochMilli());
+                    data.put("lastLogin", acc.getLastLogin().toEpochMilli());
+                });
+            }
         }
+        logger.info("/profile: answering request " + req.id + " with " + data);
         bridge.answerProfile(req.from, req.id, data);
     }
 

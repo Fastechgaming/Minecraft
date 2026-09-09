@@ -156,7 +156,12 @@ public final class WebsiteBridgeService {
 
         for (WebsiteBridge.ProfileAnswer answer : result.profileAnswers) {
             Consumer<Map<String, Object>> onAnswer = pendingProfileRequests.remove(answer.id);
-            if (onAnswer != null) Bukkit.getScheduler().runTask(plugin, () -> onAnswer.accept(answer.data));
+            if (onAnswer != null) {
+                plugin.getLogger().info("/profile: got an answer for request " + answer.id + " from '" + answer.from + "': " + answer.data);
+                Bukkit.getScheduler().runTask(plugin, () -> onAnswer.accept(answer.data));
+            } else {
+                plugin.getLogger().info("/profile: got an answer for request " + answer.id + " from '" + answer.from + "', but it already timed out or was already handled - ignoring.");
+            }
         }
     }
 
@@ -215,28 +220,37 @@ public final class WebsiteBridgeService {
      */
     public void requestProfile(String playerName, Consumer<Map<String, Object>> onAnswer, long timeoutMillis) {
         if (bridge == null || !connected) {
+            plugin.getLogger().info("/profile " + playerName + ": website bridge not connected - skipping network lookup.");
             onAnswer.accept(Map.of());
             return;
         }
-        String velocityId = knownServers.stream()
+        List<WebsiteBridge.ServerInfo> servers = knownServers;
+        String velocityId = servers.stream()
                 .filter(s -> "velocity".equals(s.kind))
                 .map(s -> s.serverId)
                 .findFirst()
                 .orElse(null);
         if (velocityId == null) {
+            plugin.getLogger().info("/profile " + playerName + ": no connected 'velocity' server in the last poll (saw: "
+                    + servers.stream().map(s -> s.serverId + "/" + s.kind).toList() + ") - skipping network lookup.");
             onAnswer.accept(Map.of());
             return;
         }
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             String requestId = bridge.requestProfile(velocityId, playerName);
             if (requestId == null) {
+                plugin.getLogger().warning("/profile " + playerName + ": POST /api/plugin/profile-request to the website failed.");
                 Bukkit.getScheduler().runTask(plugin, () -> onAnswer.accept(Map.of()));
                 return;
             }
+            plugin.getLogger().info("/profile " + playerName + ": requested from '" + velocityId + "' (request " + requestId + "), waiting for an answer...");
             pendingProfileRequests.put(requestId, onAnswer);
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
                 Consumer<Map<String, Object>> stillPending = pendingProfileRequests.remove(requestId);
-                if (stillPending != null) stillPending.accept(Map.of());
+                if (stillPending != null) {
+                    plugin.getLogger().warning("/profile " + playerName + ": request " + requestId + " to '" + velocityId + "' timed out with no answer.");
+                    stillPending.accept(Map.of());
+                }
             }, Math.max(1, timeoutMillis / 50));
         });
     }
