@@ -332,7 +332,7 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
         String accountType=displayAccountType(link.accountType());
         String tagline=cfg.s("discord.profile.tagline","Play. Improve. Be Better.");
 
-        CompletableFuture<BufferedImage> skinFuture=fetchSkinRender(uuid);
+        CompletableFuture<BufferedImage> skinFuture=fetchSkinRender(uuid,link.accountType());
         CompletableFuture<Map<String,Object>> bridgeFuture=new CompletableFuture<>();
         plugin.websiteBridge().requestProfile(link.name(),bridgeFuture::complete,8000);
 
@@ -354,8 +354,18 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
             hook.editOriginalAttachments(FileUpload.fromData(png,"profile.png")).setEmbeds(embed).queue();
         });
     }
-    private CompletableFuture<BufferedImage> fetchSkinRender(UUID uuid){
-        HttpRequest req=HttpRequest.newBuilder(URI.create("https://crafatar.com/renders/body/"+uuid+"?overlay&size=300"))
+    // NameMC's own renders come from this same service (NMSR - see
+    // https://github.com/NickAcPT/nmsr-rs) rather than the flatter Crafatar
+    // look. A cracked/bedrock account's stored UUID is a local offline-mode
+    // UUID with no real skin behind it - rather than let the renderer guess
+    // at a fallback, always request the vanilla default Steve skin for
+    // those account types (STEVE_UUID is Mojang's own reference "no skin
+    // set" UUID, the same one most skin viewers use for this).
+    private static final String STEVE_UUID="c06f8906-4c8a-4911-9c29-ea1dbd1aab82";
+    private CompletableFuture<BufferedImage> fetchSkinRender(UUID uuid,String accountType){
+        boolean hasRealSkin="java".equalsIgnoreCase(accountType);
+        String who=hasRealSkin?uuid.toString():STEVE_UUID;
+        HttpRequest req=HttpRequest.newBuilder(URI.create("https://nmsr.nickac.dev/fullbody/"+who))
                 .timeout(Duration.ofSeconds(6)).GET().build();
         return http.sendAsync(req,HttpResponse.BodyHandlers.ofByteArray())
                 .thenApply(res->{

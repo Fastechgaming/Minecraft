@@ -454,7 +454,7 @@ particular font or emoji support installed. It shows:
 - **Team** name, or "No Team" (`TeamService#byPlayer`).
 - **Account type** (Premium/Cracked/Bedrock/Unknown, from the account link).
 - **Time Registered** and **Last Login** - both a relative duration (`274d 13h 55m` / `5h 20m ago`) and an absolute timestamp underneath.
-- A skin render, fetched live from `crafatar.com` (falls back to no render, not an error, if that fetch fails).
+- A skin render, fetched live from `nmsr.nickac.dev` (the same renderer NameMC's own site uses - falls back to no render, not an error, if that fetch fails). Cracked/Bedrock accounts always render the vanilla default Steve skin instead of attempting a lookup - their stored UUID is a local offline-mode one with no real skin behind it.
 
 Team/MaTier/account-type/skin come from this server alone, same as
 everything else in this file. **Online status and Time Registered/Last
