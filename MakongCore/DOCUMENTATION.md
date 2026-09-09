@@ -139,11 +139,11 @@ itself requires, see [§3](#3-permissions).
 |---|---|---|
 | `/matier` | none | Your own MaTier profile (tier, Stars, progress to next tier). |
 | `/matier top` | none | The Stars leaderboard (top `matier.leaderboard.size`, default 10). |
-| `/matier stats <player>` | `makongcore.admin` | Another player's profile. |
-| `/matier set <player> <amount>` | `makongcore.admin` | Sets a player's Stars. |
-| `/matier add <player> <amount>` | `makongcore.admin` | Adds Stars (negative to subtract). |
-| `/matier remove <player> <amount>` | `makongcore.admin` | Subtracts Stars. |
-| `/matier reset <player>` | `makongcore.admin` | Sets one player's Stars to 0. |
+| `/matier stats <player>` | `makongcore.admin` | Another player's profile. *(changed 1.2.38)* `<player>` no longer has to be online - works for anyone who has ever played on this server. |
+| `/matier set <player> <amount>` | `makongcore.admin` | Sets a player's Stars. *(changed 1.2.38)* Offline players supported too - see above. |
+| `/matier add <player> <amount>` | `makongcore.admin` | Adds Stars (negative to subtract). *(changed 1.2.38)* Offline players supported too - see above. |
+| `/matier remove <player> <amount>` | `makongcore.admin` | Subtracts Stars. *(changed 1.2.38)* Offline players supported too - see above. |
+| `/matier reset <player>` | `makongcore.admin` | Sets one player's Stars to 0. *(changed 1.2.38)* Offline players supported too - see above. |
 | `/matier resetall` | `makongcore.admin` | Sets *every* player's Stars to 0. |
 | `/matier reload` | `makongcore.admin` | Runs the same full reload as `/makongcore reload` (not a MaTier-only reload). |
 
