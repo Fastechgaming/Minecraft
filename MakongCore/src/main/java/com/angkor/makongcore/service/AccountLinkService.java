@@ -20,6 +20,7 @@ import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.Command;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
+import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback;
 import net.dv8tion.jda.api.modals.Modal;
 import net.dv8tion.jda.api.components.textinput.TextInput;
 import net.dv8tion.jda.api.components.textinput.TextInputStyle;
@@ -144,7 +145,15 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
     }
     private void startDiscord(){String token=cfg.s("discord.bot_token","");if(token.isBlank()||token.startsWith("PUT_")){plugin.getLogger().warning("Discord enabled but bot_token is not configured.");return;}try{jda=JDABuilder.createDefault(token).addEventListeners(this).build();plugin.getLogger().info("Discord hook starting...");}catch(Exception e){plugin.getLogger().severe("Discord hook failed: "+e.getMessage());}}
     @Override public void onReady(ReadyEvent e){registerCommands();sendVerificationPanel();plugin.getLogger().info("Discord hook connected as "+e.getJDA().getSelfUser().getName()+".");}
-    private void registerCommands(){if(jda==null)return; jda.updateCommands().addCommands(Commands.slash("ban","Ban a Minecraft player").addOption(OptionType.STRING,"name","Minecraft name",true).addOption(OptionType.STRING,"duration","Duration (choose a preset or type your own)",true,true).addOption(OptionType.STRING,"reason","Reason",true),Commands.slash("unban","Unban a Minecraft player").addOption(OptionType.STRING,"name","Minecraft name",true).addOption(OptionType.STRING,"reason","Reason",true),Commands.slash("profile","Show a linked player's Makong Network profile").addOption(OptionType.USER,"user","The Discord user to look up (defaults to you)",false)).queue();}
+    private void registerCommands(){if(jda==null)return; jda.updateCommands().addCommands(Commands.slash("ban","Ban a Minecraft player").addOption(OptionType.STRING,"name","Minecraft name",true).addOption(OptionType.STRING,"duration","Duration (choose a preset or type your own)",true,true).addOption(OptionType.STRING,"reason","Reason",true),Commands.slash("unban","Unban a Minecraft player").addOption(OptionType.STRING,"name","Minecraft name",true).addOption(OptionType.STRING,"reason","Reason",true),Commands.slash("profile","Show a linked player's Makong Network profile").addOption(OptionType.USER,"user","The Discord user to look up (defaults to you)",false),linkCommand("link"),linkCommand("verify")).queue();}
+    // /link and /verify are identical aliases - a slash-command shortcut for
+    // someone who'd rather not go find the verification channel and click
+    // its button. With no `code` given, opens the same modal the "Verify
+    // Code" button does; with `code` given, skips the modal entirely and
+    // verifies straight from the command itself.
+    private net.dv8tion.jda.api.interactions.commands.build.SlashCommandData linkCommand(String name){
+        return Commands.slash(name,"Link your Minecraft account to Discord").addOption(OptionType.STRING,"code","Your 6-digit code from /verify in-game (leave blank to open a form instead)",false);
+    }
     @Override public void onCommandAutoCompleteInteraction(CommandAutoCompleteInteractionEvent e){
         if(!e.getName().equals("ban")||!e.getFocusedOption().getName().equals("duration"))return;
         String input=e.getFocusedOption().getValue().toLowerCase(Locale.ROOT);
@@ -158,7 +167,7 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
         e.replyChoices(choices.stream().filter(c->c.getName().toLowerCase(Locale.ROOT).contains(input)||c.getAsString().contains(input)).limit(25).toList()).queue();
     }
 
-    private void sendVerificationPanel(){String channelId=cfg.s("discord.verification.channel_id","");if(channelId.isBlank()||jda==null)return;TextChannel ch=jda.getTextChannelById(channelId);if(ch==null)return;var embed=new net.dv8tion.jda.api.EmbedBuilder().setTitle("🔐 Makong Minecraft Verification").setDescription("Link your Minecraft account to Discord securely.\n\n**How to verify:**\n1. Join the Makong Minecraft server.\n2. Use the verification command to receive your **6-digit code**.\n3. Click **Verify Code** below and enter your code.\n\n> 🔒 Your Discord account will be linked to your Minecraft account after successful verification.").setColor(new java.awt.Color(0x58,0xA6,0xFF)).build();String configured=cfg.s("discord.verification.panel_message_id","");if(!configured.isBlank()){editPanel(ch,configured,embed);return;}db.meta("discord_verification_panel_message_id").thenAccept(id->{if(id!=null&&!id.isBlank())editPanel(ch,id,embed);else ch.sendMessageEmbeds(embed).setComponents(ActionRow.of(Button.primary("makong:verify","Verify Code"))).queue(msg->db.setMeta("discord_verification_panel_message_id",msg.getId()));});}
+    private void sendVerificationPanel(){String channelId=cfg.s("discord.verification.channel_id","");if(channelId.isBlank()||jda==null)return;TextChannel ch=jda.getTextChannelById(channelId);if(ch==null)return;var embed=new net.dv8tion.jda.api.EmbedBuilder().setTitle("🔐 Makong Minecraft Verification").setDescription("Link your Minecraft account to Discord securely.\n\n**How to verify:**\n1. Join the Makong Minecraft server.\n2. Use the verification command to receive your **6-digit code**.\n3. Click **Verify Code** below and enter your code - or, from anywhere, run **/link** (or **/verify**) and either fill in the same form or add `code:` to skip it entirely.\n\n> 🔒 Your Discord account will be linked to your Minecraft account after successful verification.").setColor(new java.awt.Color(0x58,0xA6,0xFF)).build();String configured=cfg.s("discord.verification.panel_message_id","");if(!configured.isBlank()){editPanel(ch,configured,embed);return;}db.meta("discord_verification_panel_message_id").thenAccept(id->{if(id!=null&&!id.isBlank())editPanel(ch,id,embed);else ch.sendMessageEmbeds(embed).setComponents(ActionRow.of(Button.primary("makong:verify","Verify Code"))).queue(msg->db.setMeta("discord_verification_panel_message_id",msg.getId()));});}
     private void editPanel(TextChannel ch,String id,net.dv8tion.jda.api.entities.MessageEmbed embed){ch.retrieveMessageById(id).queue(msg->msg.editMessageEmbeds(embed).setComponents(ActionRow.of(Button.primary("makong:verify","Verify Code"))).queue(),err->ch.sendMessageEmbeds(embed).setComponents(ActionRow.of(Button.primary("makong:verify","Verify Code"))).queue(msg->db.setMeta("discord_verification_panel_message_id",msg.getId())));}
     @Override public void onButtonInteraction(ButtonInteractionEvent e){
         if(e.getComponentId().equals("makong:verify")){TextInput code=TextInput.create("code",TextInputStyle.SHORT).setPlaceholder("123456").setMinLength(6).setMaxLength(6).build();e.replyModal(Modal.create("makong:verify","Minecraft Verification").addComponents(Label.of("Verification Code",code)).build()).queue();return;}
@@ -195,12 +204,18 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
         });
     }
     @Override public void onModalInteraction(ModalInteractionEvent e){if(!e.getModalId().equals("makong:verify"))return;String code=e.getValue("code")==null?"":e.getValue("code").getAsString().trim();if(!CODE.matcher(code).matches()){e.reply("❌ Invalid code.").setEphemeral(true).queue();return;} verifyDiscord(e,code);}
+    // Shared by the verification-channel modal (either opened by its button
+    // or by /link's/verify's own no-argument form) AND /link's/verify's
+    // `code` option, which skips the modal entirely - both a
+    // ModalInteractionEvent and a SlashCommandInteractionEvent implement
+    // IReplyCallback (and, through it, Interaction's getUser/getMember/
+    // getGuild), so one code path replies correctly either way.
     // Every Discord-enabled server shares the same bot token and connection,
-    // so this modal submit can land on a different server than the one that
-    // generated the code (see Database#putPending's javadoc). Try the local,
-    // fast in-memory map first; only fall back to the shared DB lookup if
-    // this server doesn't recognize the code itself.
-    private void verifyDiscord(ModalInteractionEvent e,String code){
+    // so this can land on a different server than the one that generated
+    // the code (see Database#putPending's javadoc). Try the local, fast
+    // in-memory map first; only fall back to the shared DB lookup if this
+    // server doesn't recognize the code itself.
+    private void verifyDiscord(IReplyCallback e,String code){
         Pending local=pending.get(code);
         if(local!=null){verifyDiscord(e,local);return;}
         db.findPending(code).thenAccept(row->{
@@ -208,8 +223,8 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
             verifyDiscord(e,new Pending(row.uuid(),row.name(),code,row.expiresAt(),row.accountType(),row.discordOnly()));
         });
     }
-    private void verifyDiscord(ModalInteractionEvent e,Pending x){if(x.expiresAt<System.currentTimeMillis()){e.reply("❌ Code expired or not found. Join the server again for a new code.").setEphemeral(true).queue();return;}if(!discordAllowed(e.getUser(),e.getMember(),e.getGuild())){e.reply("❌ Your Discord account does not meet the server/account-age requirements.").setEphemeral(true).queue();return;}db.findByDiscord(e.getUser().getId()).thenAccept(existing->{if(existing!=null&&!existing.uuid().equals(x.uuid)){e.reply("❌ This Discord account is already linked to another Minecraft account.").setEphemeral(true).queue();return;}completeDiscord(e,x,existing);});}
-    private void completeDiscord(ModalInteractionEvent e,Pending x,Database.AccountLink existing){String telegram=existing==null?null:existing.telegramChatId();db.linkAccount(x.uuid,x.name(),e.getUser().getId(),telegram,x.accountType).thenRun(()->{pending.remove(x.code);db.removePending(x.code);playerCodes.remove(x.uuid);frozen.remove(x.uuid);Bukkit.getScheduler().runTask(plugin,()->release(x.uuid));Guild g=e.getGuild();String roleKey=x.accountType.equals("cracked")?"roles.crack":x.accountType.equals("bedrock")?"roles.bedrock":"roles.java";String roleId=cfg.s("discord."+roleKey,"");if(g!=null&&!roleId.isBlank()){Role role=g.getRoleById(roleId);if(role!=null)g.addRoleToMember(e.getUser(),role).queue();}e.reply("✅ Successfully connected to **"+x.name()+"**.").setEphemeral(true).queue();});}
+    private void verifyDiscord(IReplyCallback e,Pending x){if(x.expiresAt<System.currentTimeMillis()){e.reply("❌ Code expired or not found. Join the server again for a new code.").setEphemeral(true).queue();return;}if(!discordAllowed(e.getUser(),e.getMember(),e.getGuild())){e.reply("❌ Your Discord account does not meet the server/account-age requirements.").setEphemeral(true).queue();return;}db.findByDiscord(e.getUser().getId()).thenAccept(existing->{if(existing!=null&&!existing.uuid().equals(x.uuid)){e.reply("❌ This Discord account is already linked to another Minecraft account.").setEphemeral(true).queue();return;}completeDiscord(e,x,existing);});}
+    private void completeDiscord(IReplyCallback e,Pending x,Database.AccountLink existing){String telegram=existing==null?null:existing.telegramChatId();db.linkAccount(x.uuid,x.name(),e.getUser().getId(),telegram,x.accountType).thenRun(()->{pending.remove(x.code);db.removePending(x.code);playerCodes.remove(x.uuid);frozen.remove(x.uuid);Bukkit.getScheduler().runTask(plugin,()->release(x.uuid));Guild g=e.getGuild();String roleKey=x.accountType.equals("cracked")?"roles.crack":x.accountType.equals("bedrock")?"roles.bedrock":"roles.java";String roleId=cfg.s("discord."+roleKey,"");if(g!=null&&!roleId.isBlank()){Role role=g.getRoleById(roleId);if(role!=null)g.addRoleToMember(e.getUser(),role).queue();}e.reply("✅ Successfully connected to **"+x.name()+"**.").setEphemeral(true).queue();});}
     // Player-verification gate only - account-age/membership eligibility
     // tiers plus the optional discord.guild.required_role_id. Staff
     // permission for /ban and /unban is a completely separate, unrelated
@@ -283,6 +298,7 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
     @Override public void onSlashCommandInteraction(SlashCommandInteractionEvent e){
         if(!e.isFromGuild()){e.reply("Guild only.").setEphemeral(true).queue();return;}
         if(e.getName().equals("profile")){handleProfile(e);return;}
+        if(e.getName().equals("link")||e.getName().equals("verify")){handleLinkCommand(e);return;}
         if(!e.getName().equals("ban")&&!e.getName().equals("unban"))return;
         boolean ban=e.getName().equals("ban");
         if(!cfg.b("discord.commands."+e.getName()+".enabled",true)){e.reply("❌ This Discord command is disabled.").setEphemeral(true).queue();return;}
@@ -310,6 +326,23 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
             e.replyEmbeds(embed.build()).setComponents(ActionRow.of(Button.danger("makong:modreq:deny:"+id,"Deny"),Button.success("makong:modreq:accept:"+id,"Accept"))).queue();
         });
     }
+    // /link (and its /verify alias) - a slash-command shortcut for the same
+    // thing the verification channel's "Verify Code" button does, for anyone
+    // who'd rather not go find that channel. No `code` option: opens the
+    // identical modal (same modal id, so onModalInteraction() handles it the
+    // same way either way it was opened). A `code` option: skips the modal
+    // and verifies immediately, straight off this one command.
+    private void handleLinkCommand(SlashCommandInteractionEvent e){
+        OptionMapping opt=e.getOption("code");
+        if(opt==null){
+            TextInput code=TextInput.create("code",TextInputStyle.SHORT).setPlaceholder("123456").setMinLength(6).setMaxLength(6).build();
+            e.replyModal(Modal.create("makong:verify","Minecraft Verification").addComponents(Label.of("Verification Code",code)).build()).queue();
+            return;
+        }
+        String code=opt.getAsString().trim();
+        if(!CODE.matcher(code).matches()){e.reply("❌ Invalid code. It should be exactly 6 digits.").setEphemeral(true).queue();return;}
+        verifyDiscord(e,code);
+    }
     // /profile @user - looks up the target's linked Minecraft account, then
     // gathers Team/MaTier data locally (this server already has it) and
     // nLogin registration/last-login + true whole-network online status via
@@ -325,7 +358,7 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
                 String who=self?"You're":"<@"+target.getId()+"> is";
                 String channelId=cfg.s("discord.verification.channel_id","");
                 String where=channelId.isBlank()?"in this server":"in <#"+channelId+">";
-                e.reply("❌ "+who+" not linked to a Minecraft account yet. Run **/verify** in-game to get a code, then click **Verify Code** "+where+" to link it.").queue();
+                e.reply("❌ "+who+" not linked to a Minecraft account yet. Run **/verify** in-game to get a code, then either click **Verify Code** "+where+", or run **/link** (or **/verify**) here and enter it.").queue();
                 return;
             }
             e.deferReply().queue();

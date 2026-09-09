@@ -432,8 +432,10 @@ open to everyone in the channel, not staff-gated. `user` is optional
 
 If the target isn't linked yet, the reply (publicly visible, not
 ephemeral *(changed 1.2.34)*) points them at how to fix it: run `/verify`
-in-game for a code, then click **Verify Code** in `discord.verification.channel_id`
-(falls back to "in this server" if that's unset) to link it.
+in-game for a code, then either click **Verify Code** in
+`discord.verification.channel_id` (falls back to "in this server" if
+that's unset), or *(added 1.2.36)* run `/link`/`/verify` right there
+instead - see [§9.4](#94-link-and-verify-discord-slash-commands).
 
 The card is rendered entirely by `ProfileCard` (`java.awt`/`Graphics2D`, no
 external dependency) - the network's own bundled pixel font
@@ -461,6 +463,29 @@ and `WebsiteBridgeService.java`), with an 8-second timeout. Without a
 connected Velocity companion (or with the website bridge unconfigured
 entirely), those three fields just show "Unknown"/offline - the rest of the
 card still renders normally.
+
+### 9.4 `/link` and `/verify` (Discord slash commands)
+
+*(added 1.2.36)* Two identical slash commands - `/verify` is just an alias
+of `/link` - that do exactly what the verification channel's **Verify
+Code** button does, for anyone who'd rather not go find that channel and
+click it:
+
+- Run with no arguments: opens the same modal the button opens (enter your
+  6-digit code, hit submit).
+- Run with `code:<your code>`: skips the modal entirely and verifies
+  immediately, straight off the one command.
+
+Both forms share the exact same verification logic the button's modal
+uses (`AccountLinkService#verifyDiscord`) - same expiry check, same
+account-age/membership eligibility gate (`discordAllowed`), same
+already-linked-to-another-account check, same role assignment on success.
+Nothing in `module/verification.yml` configures these two specifically;
+they're always available whenever `discord.enabled` is `true` and the bot
+is connected, same as the button.
+
+Not staff-gated (any guild member can run either), guild-only like every
+other command here.
 
 ---
 
