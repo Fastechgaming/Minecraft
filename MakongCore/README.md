@@ -195,3 +195,6 @@ MaTier:
 
 ## 1.2.33 changes
 - `/profile`'s network lookup (online status, Time Registered, Last Login) now logs every step on both this server's console and the connected [MakongVelocity](../MakongVelocity)'s - whether the website bridge saw a connected Velocity server at all, the request/answer ids, what nLogin actually returned (or why it didn't: API unavailable, or no account found for that name), and what finally came back. Was previously silent at every hop, which made "why is this always Unknown" impossible to diagnose from logs alone. No behavior change, purely observability.
+
+## 1.2.34 changes
+- `/profile`'s `user` option is now optional - `/profile` with nothing tagged shows your own profile. The "not linked" reply is also no longer ephemeral (visible to everyone in the channel, not just whoever ran the command), and now actually tells you what to do about it: run `/verify` in-game for a code, then click **Verify Code** in `discord.verification.channel_id` (falls back to "in this server" if that's left unset) to link it.

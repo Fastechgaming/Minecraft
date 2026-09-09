@@ -17,6 +17,7 @@ import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.events.session.ReadyEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
+import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.Command;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import net.dv8tion.jda.api.modals.Modal;
@@ -143,7 +144,7 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
     }
     private void startDiscord(){String token=cfg.s("discord.bot_token","");if(token.isBlank()||token.startsWith("PUT_")){plugin.getLogger().warning("Discord enabled but bot_token is not configured.");return;}try{jda=JDABuilder.createDefault(token).addEventListeners(this).build();plugin.getLogger().info("Discord hook starting...");}catch(Exception e){plugin.getLogger().severe("Discord hook failed: "+e.getMessage());}}
     @Override public void onReady(ReadyEvent e){registerCommands();sendVerificationPanel();plugin.getLogger().info("Discord hook connected as "+e.getJDA().getSelfUser().getName()+".");}
-    private void registerCommands(){if(jda==null)return; jda.updateCommands().addCommands(Commands.slash("ban","Ban a Minecraft player").addOption(OptionType.STRING,"name","Minecraft name",true).addOption(OptionType.STRING,"duration","Duration (choose a preset or type your own)",true,true).addOption(OptionType.STRING,"reason","Reason",true),Commands.slash("unban","Unban a Minecraft player").addOption(OptionType.STRING,"name","Minecraft name",true).addOption(OptionType.STRING,"reason","Reason",true),Commands.slash("profile","Show a linked player's Makong Network profile").addOption(OptionType.USER,"user","The Discord user to look up",true)).queue();}
+    private void registerCommands(){if(jda==null)return; jda.updateCommands().addCommands(Commands.slash("ban","Ban a Minecraft player").addOption(OptionType.STRING,"name","Minecraft name",true).addOption(OptionType.STRING,"duration","Duration (choose a preset or type your own)",true,true).addOption(OptionType.STRING,"reason","Reason",true),Commands.slash("unban","Unban a Minecraft player").addOption(OptionType.STRING,"name","Minecraft name",true).addOption(OptionType.STRING,"reason","Reason",true),Commands.slash("profile","Show a linked player's Makong Network profile").addOption(OptionType.USER,"user","The Discord user to look up (defaults to you)",false)).queue();}
     @Override public void onCommandAutoCompleteInteraction(CommandAutoCompleteInteractionEvent e){
         if(!e.getName().equals("ban")||!e.getFocusedOption().getName().equals("duration"))return;
         String input=e.getFocusedOption().getValue().toLowerCase(Locale.ROOT);
@@ -316,9 +317,17 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
     // connected Velocity companion has that), in parallel with fetching a
     // skin render, before compositing it all into one PNG (ProfileCard).
     private void handleProfile(SlashCommandInteractionEvent e){
-        User target=e.getOption("user").getAsUser();
+        OptionMapping opt=e.getOption("user");
+        User target=opt!=null?opt.getAsUser():e.getUser();
+        boolean self=target.getId().equals(e.getUser().getId());
         db.findByDiscord(target.getId()).thenAccept(link->{
-            if(link==null){e.reply("❌ <@"+target.getId()+"> is not linked to a Minecraft account.").setEphemeral(true).queue();return;}
+            if(link==null){
+                String who=self?"You're":"<@"+target.getId()+"> is";
+                String channelId=cfg.s("discord.verification.channel_id","");
+                String where=channelId.isBlank()?"in this server":"in <#"+channelId+">";
+                e.reply("❌ "+who+" not linked to a Minecraft account yet. Run **/verify** in-game to get a code, then click **Verify Code** "+where+" to link it.").queue();
+                return;
+            }
             e.deferReply().queue();
             buildProfileCard(link,e.getHook());
         });

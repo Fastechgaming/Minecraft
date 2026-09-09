@@ -438,10 +438,15 @@ this file's other in-memory Discord state (see §9.1 above).
 
 ### 9.3 `/profile`
 
-*(added 1.2.29)* `/profile @user` posts a generated profile card (a PNG
+*(added 1.2.29)* `/profile [user]` posts a generated profile card (a PNG
 embed image) for whichever Minecraft account that Discord user has linked -
-open to everyone in the channel, not staff-gated. Replies "not linked to a
-Minecraft account" (ephemerally) if they haven't run `/verify`.
+open to everyone in the channel, not staff-gated. `user` is optional
+*(added 1.2.34)* - omit it to look up yourself.
+
+If the target isn't linked yet, the reply (publicly visible, not
+ephemeral *(changed 1.2.34)*) points them at how to fix it: run `/verify`
+in-game for a code, then click **Verify Code** in `discord.verification.channel_id`
+(falls back to "in this server" if that's unset) to link it.
 
 The card is rendered entirely by `ProfileCard` (`java.awt`/`Graphics2D`, no
 external dependency) - the network's own bundled pixel font
