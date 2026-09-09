@@ -60,9 +60,17 @@ public final class WebsiteBridge {
     return res != null && Boolean.TRUE.equals(res.get("ok"));
   }
 
+  // Sending `kind` here (not just once in connect()) matters: a website
+  // restart wipes its in-memory server registry, and nothing else ever
+  // re-sends this server's kind afterward since connect() only runs once
+  // per plugin process lifetime - without it, the website's registry would
+  // silently default this server to "paper" (its entry() fallback) and
+  // never self-correct until this plugin itself restarts, permanently
+  // breaking anything that specifically looks for the "velocity" server
+  // (like MakongCore's /profile network lookup).
   /** The repeating heartbeat/work call - also doubles as a liveness ping. */
   public PollResult poll() {
-    Map<String, Object> res = get("/api/plugin/poll?serverId=" + urlEncode(serverId));
+    Map<String, Object> res = get("/api/plugin/poll?serverId=" + urlEncode(serverId) + "&kind=" + urlEncode(kind));
     if (res == null) return null;
     PollResult result = new PollResult();
     result.servers = parseServers(listOf(res.get("servers")));

@@ -609,6 +609,17 @@ and matching `secret`:
   network-wide from the [MakongVelocity](../MakongVelocity) proxy plugin's
   `/mcvlc ar`, `/mcvlc autorestart`, and `/mcvlc reload` commands.
 
+*(changed 1.2.37)* Every poll now re-sends this server's `kind` (`paper`,
+or `velocity` from the MakongVelocity side), not just the one-time initial
+`connect()`. The website's server registry is in-memory and resets on
+every website restart; without resending `kind` on every poll, a server
+already connected before that restart would get silently defaulted back
+to `kind: "paper"` by `pluginBridge.js`'s `entry()` the instant anything
+referenced it again, and never self-correct until that plugin process
+itself restarted - permanently breaking anything that specifically needs
+the `velocity`-kind server (like `/profile`'s network lookup - see
+[§9.3](#93-profile)) after any website deploy.
+
 See `../MakongVelocity/README.md` and `../MakongWeb/lib/pluginBridge.js` for
 the other two sides of this.
 

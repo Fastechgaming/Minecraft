@@ -33,10 +33,22 @@ router.post("/connect", (req, res) => {
 // the heartbeat that keeps it showing "online", and hands back anything
 // queued for it since the last poll: commands to run, pings to answer, and
 // pongs answering pings it sent earlier.
+//
+// Also re-affirms `kind` on every single poll (not just the one-time
+// /connect) by upserting through register() instead of a bare heartbeat -
+// connect() only ever runs once per plugin process lifetime, so without
+// this a website restart (which wipes the in-memory server registry) would
+// leave every already-running plugin stuck showing pluginBridge.js's
+// entry() default of "paper" forever, even a real Velocity proxy, until
+// that plugin itself restarts. `kind` is optional so an older plugin build
+// that doesn't send it yet still degrades to the old heartbeat-only
+// behavior instead of erroring.
 router.get("/poll", (req, res) => {
   const serverId = String(req.query.serverId || "");
   if (!serverId) return res.status(400).json({ error: "serverId is required" });
-  pluginBridge.heartbeat(serverId);
+  const kind = req.query.kind;
+  if (kind) pluginBridge.register(serverId, String(kind));
+  else pluginBridge.heartbeat(serverId);
   res.json({
     ok: true,
     servers: pluginBridge.listServers(),
