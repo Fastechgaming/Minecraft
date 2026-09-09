@@ -1,8 +1,37 @@
 # Account verification - cracked-player Discord/Telegram linking, premium
 # detection, and the Discord staff commands that ride along with it.
 # INFO: Keep bot tokens private. Never publish them or commit them to Git.
+#
+# ================================================================
+# QUICK REFERENCE - what to configure where, on a multi-server network
+# sharing one Discord bot (a single-server setup can ignore this and just
+# fill everything in once):
+#
+#   EVERY SERVER (set the same everywhere):
+#     discord.enabled, discord.invite, telegram.* (but only actually
+#     ENABLE Telegram on one server - see the note by telegram.enabled),
+#     everything under linking.*
+#
+#   HUB SERVER ONLY (the one server with discord.hub: true - every other
+#   server never reads these at all, so just leave them as shipped):
+#     discord.hub, discord.bot_token, discord.guild.*,
+#     discord.verification.*, discord.roles.*, discord.commands.*,
+#     discord.profile.*
+#
+# Why: only the hub server ever opens a live connection to Discord, so
+# only it ever receives a slash command, button click, or modal submit -
+# everything in the "hub only" list is exclusively read from inside
+# those. discord.enabled itself is the one exception living in the
+# discord: block below - it controls /verify and the cracked-player
+# freeze locally on THIS server, independent of who holds the connection.
+# ================================================================
+
 discord:
+  # ---- every server ----
   enabled: false
+  invite: "discord.gg/makong"
+
+  # ---- hub server only (below this line) ----
   # INFO: If MULTIPLE servers share this same bot_token (a network with one
   # INFO: bot for all servers), only ONE of them should actually open a
   # INFO: connection to Discord - otherwise every connected server receives
@@ -10,7 +39,7 @@ discord:
   # INFO: reply, producing "10062 Unknown interaction" / "40060 already
   # INFO: acknowledged" errors in the console. Set hub: true on exactly ONE
   # INFO: server (its config already carries a real channel_id/panel below)
-  # INFO: and hub: false everywhere else. discord.enabled itself stays true
+  # INFO: and hub: false everywhere else. discord.enabled above stays true
   # INFO: on every server regardless - it controls whether linking is
   # INFO: required/available and whether /verify works, not the connection;
   # INFO: a player on a non-hub server still gets a code via /verify, and it's
@@ -19,7 +48,6 @@ discord:
   # INFO: default), leave this alone.
   hub: true
   bot_token: "PUT_DISCORD_BOT_TOKEN_HERE"
-  invite: "discord.gg/makong"
   guild:
     id: ""
     required: true
@@ -91,11 +119,19 @@ discord:
   profile:
     tagline: "Play. Improve. Be Better."
 
+# ---- every server ----
 telegram:
   enabled: false
+  # INFO: Unlike discord.hub above, Telegram has no hub flag (yet) - every
+  # INFO: server with enabled: true here runs its OWN independent poller
+  # INFO: against the same bot_token. On a multi-server network, only turn
+  # INFO: this on for ONE server, the same practical rule as discord.hub,
+  # INFO: just not enforced by the plugin - two servers both polling would
+  # INFO: race each other the same way an un-hubbed Discord bot would.
   bot_token: "PUT_TELEGRAM_BOT_TOKEN_HERE"
   username: "makongmcbot"
 
+# ---- every server ----
 linking:
   # INFO: Cracked players must verify with Discord OR Telegram. Only takes
   # INFO: effect when at least one of discord.enabled / telegram.enabled
