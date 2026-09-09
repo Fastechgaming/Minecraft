@@ -24,12 +24,19 @@ import java.util.Locale;
  * no website bridge or nLogin involved.
  */
 final class AnnouncementService {
+    private final Object plugin;
     private final ProxyServer server;
     private final Logger logger;
     private final List<ScheduledTask> tasks = new ArrayList<>();
     private List<AnnouncementsConfig.Announcement> announcements = List.of();
 
-    AnnouncementService(ProxyServer server, Logger logger) {
+    // `plugin` must be the actual @Plugin-annotated MakongVelocity instance -
+    // Velocity's scheduler rejects buildTask() unless its first argument is
+    // the exact object registered in its plugin container, so passing
+    // `this` (this service, not the plugin) here throws "plugin is not
+    // registered" the moment start() below tries to schedule anything.
+    AnnouncementService(Object plugin, ProxyServer server, Logger logger) {
+        this.plugin = plugin;
         this.server = server;
         this.logger = logger;
     }
@@ -49,7 +56,7 @@ final class AnnouncementService {
             Sound sound = buildSound(a.sound());
             Duration interval = Duration.ofSeconds(a.intervalSeconds());
 
-            ScheduledTask task = server.getScheduler().buildTask(this, () -> {
+            ScheduledTask task = server.getScheduler().buildTask(plugin, () -> {
                 server.sendMessage(message);
                 if (actionBar != null) server.sendActionBar(actionBar);
                 if (sound != null) server.playSound(sound);
