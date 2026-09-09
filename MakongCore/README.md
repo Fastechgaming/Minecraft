@@ -172,3 +172,6 @@ MaTier:
 
 ## 1.2.26 changes
 - Discord's `/ban` and `/unban` now actually report whether the command succeeded, instead of always replying "✅ Executed" the instant it was dispatched regardless of outcome. If `Bukkit.dispatchCommand` (LiteBans' own `/ban`/`/unban` under the hood) returns false - unknown player, bad duration, LiteBans not installed, etc. - the Discord reply now says so and points to the server console instead of falsely confirming success.
+
+## 1.2.27 changes
+- Discord's `/ban`/`/unban` result message (the success/failure reply from 1.2.26) is no longer ephemeral ("only you can see this") - it now posts visibly in the channel, so other staff can see who ran a ban/unban and whether it actually worked. The earlier permission checks (command disabled, no staff role, Discord not linked) are still ephemeral - those are per-user errors, not results worth broadcasting.
