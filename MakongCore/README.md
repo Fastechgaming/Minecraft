@@ -169,3 +169,6 @@ MaTier:
 
 ## 1.2.25 changes
 - Added `messages.action-bar` to `module/autorestart.yml` - shown in every online player's action bar alongside the existing `messages.interval` chat broadcast, at the same `settings.messageAtIntervals` countdowns. Leave it blank (`''`) to skip the action bar and keep only the chat message.
+
+## 1.2.26 changes
+- Discord's `/ban` and `/unban` now actually report whether the command succeeded, instead of always replying "✅ Executed" the instant it was dispatched regardless of outcome. If `Bukkit.dispatchCommand` (LiteBans' own `/ban`/`/unban` under the hood) returns false - unknown player, bad duration, LiteBans not installed, etc. - the Discord reply now says so and points to the server console instead of falsely confirming success.
