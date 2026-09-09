@@ -35,7 +35,7 @@ export async function generateReply(guildId: string, userId: string, channelId: 
   const personality = settings.aiPersonality ? `\nPersonality notes: ${settings.aiPersonality}` : '';
   const knowledgeBlock = knowledge.length > 0 ? `\n\nRelevant server knowledge:\n${knowledge.map((k) => `Q: ${k.question}\nA: ${k.answer}`).join('\n\n')}` : '';
   const memoryBlock = memories.length > 0 ? `\n\nThings you remember about this user:\n${memories.map((m) => `- ${m}`).join('\n')}` : '';
-  const systemInstruction = `${modePrompt}${personality}${knowledgeBlock}${memoryBlock}\n\nIf you genuinely don't know the answer and it's not in the knowledge base, say so plainly rather than guessing.`;
+  const systemInstruction = `${modePrompt}${personality}${knowledgeBlock}${memoryBlock}\n\nIf you genuinely don't know the answer and it's not in the knowledge base above, say so plainly and suggest asking staff — never invent a placeholder value (like a made-up IP, domain, price, or date) as if it were real.`;
 
   const historyContent: Content[] = history.map((turn) => ({ role: turn.role === 'user' ? 'user' : 'model', parts: [{ text: turn.content }] }));
 

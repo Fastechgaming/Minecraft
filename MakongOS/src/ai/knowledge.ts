@@ -1,12 +1,14 @@
 import { prisma } from '../database/prisma';
 
+// Short common Discord abbreviations (ip, id, vc, tp, op...) are real search
+// terms here, not noise — only filter out single-character tokens.
 function tokenize(text: string): Set<string> {
   return new Set(
     text
       .toLowerCase()
       .replace(/[^a-z0-9\s]/g, ' ')
       .split(/\s+/)
-      .filter((w) => w.length > 2)
+      .filter((w) => w.length > 1)
   );
 }
 
