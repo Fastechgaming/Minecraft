@@ -41,6 +41,10 @@ public final class TeamAdminCommand implements CommandExecutor, TabCompleter {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        if (!teams.settings().enabled()) {
+            send(sender, "<red>Teams are disabled on this server.</red>");
+            return true;
+        }
         if (!sender.hasPermission("mateam.admin")) {
             send(sender, "<red>You don't have permission to use this command.</red>");
             return true;

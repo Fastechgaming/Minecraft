@@ -2,6 +2,12 @@
 # INFO: Everything below controls the /team system.
 # INFO: Change these values instead of editing Java code.
 team:
+  # INFO: Enable/disable the ENTIRE Team module - /team, /mateam, the team
+  # INFO: GUI, team chat, team PvP, weekly points/rewards, and the
+  # INFO: %team_tag%/%team_star% placeholders. Set false on a gamemode
+  # INFO: where teams don't make sense (Arcade, Practice, etc.) - /team and
+  # INFO: /mateam just reply that teams are disabled instead of running.
+  enabled: true
   # INFO: Team size and naming limits.
   limits:
     max_team_size: 36

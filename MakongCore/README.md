@@ -186,3 +186,6 @@ MaTier:
 
 ## 1.2.30 changes
 - `/profile`'s skin render now comes from `nmsr.nickac.dev` instead of Crafatar - the same renderer NameMC's own site uses for its full-body skin views, a noticeably nicer render than Crafatar's. Cracked/Bedrock accounts always render the vanilla default Steve skin now, rather than attempting a lookup with their local offline-mode UUID (which has no real skin behind it and would previously have rendered whatever fallback the render service happened to pick).
+
+## 1.2.31 changes
+- Added `team.enabled` to `module/team.yml` - turns off the entire Team module (`/team`, `/mateam`, the team GUI, team chat, team PvP, weekly points/rewards, `%team_*%` placeholders) for gamemodes where teams don't make sense, e.g. Arcade or Practice. `/team` and `/mateam` still exist as commands with it off, they just reply that teams are disabled instead of doing anything. Defaults to `true` (unchanged behavior for everyone not using this). Toggling it via `/makongcore reload team` now triggers a full reload automatically (every other `team.yml` key still reloads live) - the team-only listeners need registering or tearing down to actually match the new value.

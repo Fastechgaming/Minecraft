@@ -232,6 +232,7 @@ never need to delete a config file to "pick up" a new option.
 
 | Key | Default | Notes |
 |---|---|---|
+| `team.enabled` | *(added 1.2.31)* `true` | Disables the ENTIRE Team module - `/team`, `/mateam`, the team GUI, team chat, team PvP, weekly points/rewards, `%team_*%` placeholders. `/team` and `/mateam` still work as commands when `false`, they just reply that teams are disabled. Toggling this specifically (unlike other `team.yml` keys) triggers a full reload even via `/makongcore reload team`, since the team-only listeners need registering/unregistering to match. |
 | `team.limits.max_team_size` | `36` | |
 | `team.limits.min_name_length` / `max_name_length` | `3` / `15` | |
 | `team.limits.min_tag_length` / `max_tag_length` | `2` / `5` | |

@@ -136,13 +136,23 @@ public final class MakongCore extends JavaPlugin {
         getCommand("verify").setExecutor((sender,command,label,args)->{if(!(sender instanceof org.bukkit.entity.Player p)){sender.sendMessage("Players only.");return true;}accountLinks.optionalLink(p);return true;});
         getServer().getPluginManager().registerEvents(matier,this);
 
-        getServer().getPluginManager().registerEvents(new GuiListener(this,teams,gui),this);
-        getServer().getPluginManager().registerEvents(new ChatListener(this,teams),this);
-        getServer().getPluginManager().registerEvents(new com.angkor.makongcore.listener.TeamPvpListener(teams),this);
+        // Team is a fully optional module (team.yml's team.enabled, default
+        // true) - everything below is exclusively team-scoped (the GUI, team
+        // chat/creation flow, team PvP, weekly points/rewards, team stats
+        // tracking), so none of it registers at all when it's off. /team and
+        // /mateam still work as commands - they just reply that teams are
+        // disabled (see TeamCommand/TeamAdminCommand) - and plugin.teams()
+        // stays a valid, simply always-empty TeamService for anything else
+        // that reads it unconditionally (e.g. website rankings reporting).
+        if(teams.settings().enabled()){
+            getServer().getPluginManager().registerEvents(new GuiListener(this,teams,gui),this);
+            getServer().getPluginManager().registerEvents(new ChatListener(this,teams),this);
+            getServer().getPluginManager().registerEvents(new com.angkor.makongcore.listener.TeamPvpListener(teams),this);
+            weeklyRewards=new WeeklyRewardService(this,teams); weeklyRewards.start();
+            teamStats=new TeamStatsListener(this,teams); getServer().getPluginManager().registerEvents(teamStats,this); teamStats.start();
+        }
         matierAura.start();
         accountLinks.start();
-        weeklyRewards=new WeeklyRewardService(this,teams); weeklyRewards.start();
-        teamStats=new TeamStatsListener(this,teams); getServer().getPluginManager().registerEvents(teamStats,this); teamStats.start();
         autoRestart=new AutoRestartService(this,autoRestartConfig.get()); autoRestart.start();
         matier.start();
         websiteBridge=new WebsiteBridgeService(this,getConfig()); websiteBridge.start();
@@ -220,8 +230,20 @@ public final class MakongCore extends JavaPlugin {
         }
         switch(m){
             case "team" -> {
+                boolean wasEnabled=teams!=null&&teams.settings().enabled();
                 teamConfig.reload();
                 if(teams!=null) teams.updateSettings(Settings.load(teamConfig.get()));
+                boolean nowEnabled=teams!=null&&teams.settings().enabled();
+                if(wasEnabled!=nowEnabled){
+                    // team.enabled flipping needs the team-only listeners
+                    // (GUI, chat, PvP, stats, weekly rewards) registered or
+                    // torn down to match - same "needs a full reload" reason
+                    // as matier/verification/gui above, just conditional on
+                    // this one specific key instead of the whole module.
+                    sendAdmin(sender,"<yellow>Team module "+(nowEnabled?"enabled":"disabled")+" - reloading everything to apply...</yellow>");
+                    reloadMakongCore(sender);
+                    return;
+                }
             }
             case "autorestart" -> {
                 autoRestartConfig.reload();
