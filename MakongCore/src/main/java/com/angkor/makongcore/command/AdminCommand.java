@@ -89,7 +89,7 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
                 <yellow>/makongcore ping <server-id></yellow> <gray>- Ping another server on the website bridge
                 <yellow>/makongcore autorestart <seconds|stop></yellow> <gray>- Broadcast a countdown and restart this server after it elapses, or cancel a pending one
                 <yellow>/makongcore reset <mateam|matier|verification|all> confirm</yellow> <gray>- <red>Irreversible.</red> Wipes that module's data entirely - see help output for exactly what
-                <gray>Team admin (team/disband/forcejoin/forceleave/addpoints/setpoints/addstars/setstars) works here too - see <yellow>/mateam help</yellow>
+                <gray>Team admin (team/disband/forcejoin/forceleave/addstars/setstars) works here too - see <yellow>/mateam help</yellow>
                 <yellow>/makongcore matier <...></yellow> <gray>- Everything /matier's admin subcommands do - see <yellow>/matier</yellow>
                 <yellow>/makongcore malink <...></yellow> <gray>- Everything /malink does - see <yellow>/malink help</yellow>""");
     }
@@ -123,7 +123,7 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
 
     private String resetWarning(String scope) {
         return switch (scope) {
-            case "mateam" -> "This disbands EVERY team - all teams, members, allies, points and Stars, gone.";
+            case "mateam" -> "This disbands EVERY team - all teams, members, allies and Stars, gone.";
             case "matier" -> "This wipes ALL MaTier data - every player's Stars AND every season's tier-history record, gone.";
             case "verification" -> "This unlinks EVERY player's Discord/Telegram account.";
             case "all" -> "This disbands every team, wipes all MaTier data, AND unlinks every player - everything, gone.";
@@ -201,7 +201,7 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
         if (!sender.hasPermission("makongcore.admin")) return List.of();
         if (args.length == 1) {
             return List.of("help", "reload", "info", "list", "ping", "autorestart", "reset", "matier", "malink",
-                    "team", "disband", "forcejoin", "forceleave", "addweeklypoints", "setweeklypoints", "addpoints", "setpoints", "addstars", "givestars", "givestar", "setstars")
+                    "team", "disband", "forcejoin", "forceleave", "addstars", "givestars", "givestar", "setstars")
                     .stream().filter(x -> x.startsWith(args[0].toLowerCase(Locale.ROOT))).toList();
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("reload")) {

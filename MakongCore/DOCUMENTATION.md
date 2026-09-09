@@ -78,12 +78,10 @@ subcommands - see that section).
 | Usage | What it does |
 |---|---|
 | `/mateam help` | Lists everything below. |
-| `/mateam team <tag>` | Full stats for one team (ID, members, public/private, PvP, Weekly Points, Stars, kills, deaths, ally count). |
+| `/mateam team <tag>` | Full stats for one team (ID, members, public/private, PvP, Stars, kills, deaths, ally count). |
 | `/mateam disband <tag>` | Force-disbands a team, bypassing the owner-only rule. |
 | `/mateam forcejoin <player> <tag>` | Adds a player to a team as a regular member, bypassing invites. |
 | `/mateam forceleave <player>` | Removes a player from their team. Refuses if they're the owner (transfer or disband first). |
-| `/mateam addweeklypoints <tag> <amount>` (alias `addpoints`) | Adds (or subtracts, with a negative amount) Weekly Points, floored at `team.scoring.minimum_points`. |
-| `/mateam setweeklypoints <tag> <amount>` (alias `setpoints`) | Sets Weekly Points directly, floored the same way. |
 | `/mateam givestar <tag> <amount>` (aliases `addstars`, `givestars`) | Adds/subtracts team Stars, floored at 0. |
 | `/mateam setstars <tag> <amount>` | Sets team Stars directly, floored at 0. |
 
@@ -103,7 +101,7 @@ identical either way you reach them - nothing is duplicated).
 | `/makongcore list` | Lists every team (tag, name, member count). |
 | `/makongcore ping <server-id>` | Pings another server through the Website Bridge. Requires the bridge to be configured (see [§15](#15-website-bridge--velocity-companion)). |
 | `/makongcore autorestart <seconds\|stop>` | Broadcasts a countdown and restarts this server once it elapses, or (`stop`) cancels a pending one. Normally triggered remotely by MakongVelocity's `/mcvlc ar`/`/mcvlc autorestart`, not typed by hand. |
-| `/makongcore team\|disband\|forcejoin\|forceleave\|addpoints\|setpoints\|addstars\|setstars ...` | Same as the identically-named `/mateam` subcommands above. |
+| `/makongcore team\|disband\|forcejoin\|forceleave\|addstars\|setstars ...` | Same as the identically-named `/mateam` subcommands above. |
 | `/makongcore matier <...>` | Same as the identically-named `/matier` admin subcommand below (e.g. `/makongcore matier set <player> <amount>`). |
 | `/makongcore malink <...>` | Same as the identically-named `/malink` subcommand below (e.g. `/makongcore malink bypass <player>`). |
 | `/makongcore reset <mateam\|matier\|verification\|all> confirm` | **Irreversible.** Wipes that module's persisted data entirely - see the table below. The `confirm` argument is required; running it without one just prints a warning of exactly what would be destroyed and does nothing. |
@@ -112,7 +110,7 @@ identical either way you reach them - nothing is duplicated).
 
 | Scope | What gets destroyed |
 |---|---|
-| `mateam` | **Every team, period** - not just points/Stars. Deletes every row in `teams`, `team_members`, `team_allies`. Equivalent to force-disbanding every team that exists. |
+| `mateam` | **Every team, period** - not just Stars. Deletes every row in `teams`, `team_members`, `team_allies`. Equivalent to force-disbanding every team that exists. |
 | `matier` | **All MaTier data** - every player's Stars *and* every past season's tier/rank history (`matier_players` and `matier_history` both wiped). This is a bigger wipe than `/matier resetall`, which only zeroes Stars and leaves history intact. |
 | `verification` | **Every account link** - the entire `account_links` table. Every previously-verified player becomes unverified again and, if `linking.required_for_cracked` applies to them, gets frozen and re-coded the next time they join. Doesn't touch the bypass list (see `/malink` below) or in-progress verification codes. |
 | `all` | All three of the above, together. |
@@ -188,7 +186,7 @@ though the code already checked it; see [§16](#16-known-gaps-found-while-writin
 | File | Covers |
 |---|---|
 | `config.yml` | Storage/database, network mode, Website Bridge, debug logging. |
-| `module/team.yml` | Everything about `/team`: limits, PvP, allies, chat, weekly points/rewards, disband, scoring, PlaceholderAPI's no-team text. |
+| `module/team.yml` | Everything about `/team`: limits, PvP, allies, chat, Star scoring, annual Star reset, disband, PlaceholderAPI's no-team text. |
 | `module/matier.yml` | The MaTier ranking system: tiers, kill/death rewards, anti-farming, inactivity decay, aura particles, and MaTier's own messages. |
 | `module/autorestart.yml` | Scheduled + ad-hoc restarts, countdown messages. |
 | `module/verification.yml` | Discord/Telegram bots, cracked-player verification, premium detection. |
@@ -232,7 +230,7 @@ never need to delete a config file to "pick up" a new option.
 
 | Key | Default | Notes |
 |---|---|---|
-| `team.enabled` | *(added 1.2.31)* `true` | Disables the ENTIRE Team module - `/team`, `/mateam`, the team GUI, team chat, team PvP, weekly points/rewards, `%team_*%` placeholders. `/team` and `/mateam` still work as commands when `false`, they just reply that teams are disabled. Toggling this specifically (unlike other `team.yml` keys) triggers a full reload even via `/makongcore reload team`, since the team-only listeners need registering/unregistering to match. |
+| `team.enabled` | *(added 1.2.31)* `true` | Disables the ENTIRE Team module - `/team`, `/mateam`, the team GUI, team chat, team PvP, the annual Star reset, `%team_*%` placeholders. `/team` and `/mateam` still work as commands when `false`, they just reply that teams are disabled. Toggling this specifically (unlike other `team.yml` keys) triggers a full reload even via `/makongcore reload team`, since the team-only listeners need registering/unregistering to match. |
 | `team.limits.max_team_size` | `36` | |
 | `team.limits.min_name_length` / `max_name_length` | `3` / `15` | |
 | `team.limits.min_tag_length` / `max_tag_length` | `2` / `5` | |
@@ -248,26 +246,15 @@ never need to delete a config file to "pick up" a new option.
 | `team.chat.character_enabled` | `true` | Whether the `character` prefix (below) triggers team chat in normal chat. |
 | `team.chat.character` | `#` | |
 | `team.rename.cooldown_seconds` | `604800` | 7 days. |
-| `team.weekly_points.reset_enabled` | `true` | |
-| `team.weekly_points.reset_day` | `SUNDAY` | A Java `DayOfWeek` name. |
-| `team.weekly_points.reset_hour` / `reset_minute` | `0` / `0` | |
-| `team.weekly_rewards.enabled` | `true` | Paid out from the *completed* previous week, before Weekly Points reset. |
-| `team.weekly_rewards.payout_day` / `payout_hour` / `payout_minute` | `SUNDAY` / `0` / `0` | |
-| `team.weekly_rewards.top_1_stars` | `40` | |
-| `team.weekly_rewards.top_2_stars` | `30` | |
-| `team.weekly_rewards.top_3_stars` | `25` | |
-| `team.weekly_rewards.top_4_5_stars` | `20` | Ranks 4-5. |
-| `team.weekly_rewards.top_6_20_stars_start` | `15` | Rank 6's reward; each subsequent rank down to 20 decreases by... |
-| `team.weekly_rewards.top_6_20_stars_decrement` | `1` | ...this amount. |
 | `team.annual_star_reset.enabled` | `true` | |
 | `team.annual_star_reset.month` / `day` / `hour` / `minute` | `1` / `1` / `0` / `0` | New Year's Day at midnight. |
 | `team.disband.auto_disband` | `false` | Auto-disband inactive teams. |
 | `team.disband.inactive_days` | `15` | |
 | `team.disband.check_interval_minutes` | `360` | |
-| `team.scoring.enabled` | `true` | Whether member activity earns Weekly Points at all. |
-| `team.scoring.minimum_points` | `0` | Floor used by `/mateam addpoints`/`setpoints` too. |
+| `team.scoring.enabled` | `true` | Whether member activity earns Stars at all. *(changed 1.2.35)* Stars are now awarded straight to the team in real time (MaTier-style, minus named tiers), not accumulated toward a weekly payout - see the 1.2.35 changelog entry in `README.md`. |
+| `team.scoring.minimum_stars` | *(renamed 1.2.35, was `minimum_points`)* `0` | Floor applied to a single death's Star loss (see `events.death`/`death_spam` below) - unrelated to `/mateam givestar`/`setstars`, which floor at 0 directly. |
 | `team.scoring.spam_threshold_seconds` | `60` | |
-| `team.scoring.events.playtime_per_hour` | `1` | Points per hour played. |
+| `team.scoring.events.playtime_per_hour` | `1` | Stars per hour played. |
 | `team.scoring.events.kill` | `1` | |
 | `team.scoring.events.kill_spam` | `0` | Reduced reward once `spam_threshold_seconds` triggers. |
 | `team.scoring.events.death` | `0` | |
@@ -488,7 +475,7 @@ Player-facing categories: permission/usage errors (`no_permission`,
 `ally_request_received`, `ally_limit`), validation (`invalid_tag`,
 `invalid_name`, `duplicate_tag`, `duplicate_name`, `team_full`,
 `team_not_found`), chat-input prompts (`input_cancelled`, `input_tag`,
-`input_name`), and a `gui_create_color` / `leaderboard_points` /
+`input_name`), and a `gui_create_color` / `leaderboard_stars` /
 `leaderboard_kills` / `leaderboard_kdr` group for GUI/leaderboard text.
 
 **⚠ Note:** see [§16](#16-known-gaps-found-while-writing-this) - most of
@@ -508,14 +495,14 @@ apply everywhere; `titles` and `items` are per-screen.
 | Screen (`items.<name>`) | Placeholders available | What it is |
 |---|---|---|
 | `no_team` | none | The 4 buttons a teamless player sees: create/browse/top/invites. |
-| `team` | `{team} {tag} {members} {max} {points} {kills} {deaths} {kdr} {stars} {pvp}` | Main team management screen. |
+| `team` | `{team} {tag} {members} {max} {kills} {deaths} {kdr} {stars} {pvp}` | Main team management screen. |
 | `color` | none | The 16-dye-color picker shown right after team creation. |
-| `leaderboard` | `{page} {pages} {team} {tag} {members} {max} {metric} {value} {rank}` | Stars/Points/Kills/KDR leaderboard, paginated. |
-| `browse` | `{page} {pages} {team} {tag} {members} {max} {status} {points}` | Every public team, paginated. |
-| `team_info` | `{team} {tag} {members} {max} {points} {kills} {deaths} {kdr} {stars} {status} {description}` | A specific team's public info card. |
+| `leaderboard` | `{page} {pages} {team} {tag} {members} {max} {metric} {value} {rank}` | *(changed 1.2.35, was Stars/Points/Kills/KDR)* Stars/Kills/KDR leaderboard, paginated. |
+| `browse` | `{page} {pages} {team} {tag} {members} {max} {status} {stars}` | Every public team, paginated. |
+| `team_info` | `{team} {tag} {members} {max} {kills} {deaths} {kdr} {stars} {status} {description}` | A specific team's public info card. |
 | `invites` | `{team} {tag} {members} {max}` | Your pending invitations. |
 | `settings` | `{team} {tag} {description} {status} {status_info} {color}` | Owner/admin settings (tag, description, public/private, color). |
-| `member` | `{target} {role} {joined} {points} {kills} {deaths} {playtime}` | One member's profile within the team screen. |
+| `member` | `{target} {role} {joined} {kills} {deaths} {playtime}` | One member's profile within the team screen. |
 | `join_requests` | none applied¹ | Pending join requests (owner/admin view). |
 | `allies` | `{team} {tag} {members}` | Allied teams list. |
 | `confirm` | `{target}` | Generic yes/no confirmation (disband/leave/transfer/kick/ally-remove). |

@@ -19,7 +19,7 @@ import com.angkor.makongcore.hook.TeamPlaceholders;
 import com.angkor.makongcore.listener.ChatListener;
 import com.angkor.makongcore.listener.GuiListener;
 import com.angkor.makongcore.service.TeamService;
-import com.angkor.makongcore.service.WeeklyRewardService;
+import com.angkor.makongcore.service.TeamStarResetService;
 import com.angkor.makongcore.service.AutoRestartService;
 import com.angkor.makongcore.service.WebsiteBridgeService;
 import com.angkor.makongcore.listener.TeamStatsListener;
@@ -34,7 +34,7 @@ public final class MakongCore extends JavaPlugin {
     private TeamService teams;
     private GuiManager gui;
     private FloodgateHook floodgate;
-    private WeeklyRewardService weeklyRewards;
+    private TeamStarResetService teamStarReset;
     private ModuleConfig teamConfig;
     private ModuleConfig matierConfig;
     private ModuleConfig autoRestartConfig;
@@ -100,7 +100,7 @@ public final class MakongCore extends JavaPlugin {
         try {
             database=new Database(getConfig(),getDataFolder());
             teams=new TeamService(database,Settings.load(teamConfig.get()));
-            gui=new GuiManager(this,teams); weeklyRewards=null;
+            gui=new GuiManager(this,teams); teamStarReset=null;
             teams.load().thenRun(()->Bukkit.getScheduler().runTask(this,this::registerRuntime));
         } catch(Exception e) {
             getLogger().severe("Database startup failed: "+e.getMessage());
@@ -138,7 +138,7 @@ public final class MakongCore extends JavaPlugin {
 
         // Team is a fully optional module (team.yml's team.enabled, default
         // true) - everything below is exclusively team-scoped (the GUI, team
-        // chat/creation flow, team PvP, weekly points/rewards, team stats
+        // chat/creation flow, team PvP, the annual Star reset, team stats
         // tracking), so none of it registers at all when it's off. /team and
         // /mateam still work as commands - they just reply that teams are
         // disabled (see TeamCommand/TeamAdminCommand) - and plugin.teams()
@@ -148,7 +148,7 @@ public final class MakongCore extends JavaPlugin {
             getServer().getPluginManager().registerEvents(new GuiListener(this,teams,gui),this);
             getServer().getPluginManager().registerEvents(new ChatListener(this,teams),this);
             getServer().getPluginManager().registerEvents(new com.angkor.makongcore.listener.TeamPvpListener(teams),this);
-            weeklyRewards=new WeeklyRewardService(this,teams); weeklyRewards.start();
+            teamStarReset=new TeamStarResetService(this,teams); teamStarReset.start();
             teamStats=new TeamStatsListener(this,teams); getServer().getPluginManager().registerEvents(teamStats,this); teamStats.start();
         }
         matierAura.start();
@@ -181,6 +181,7 @@ public final class MakongCore extends JavaPlugin {
         sendAdmin(sender,"<yellow>Reloading MakongCore...</yellow>");
         HandlerList.unregisterAll(this);
         if(teamStats!=null) teamStats.stop();
+        if(teamStarReset!=null) teamStarReset.stop();
         if(autoRestart!=null) autoRestart.stop();
         if(matierAura!=null) matierAura.stop();
         if(accountLinks!=null) accountLinks.stop();
@@ -194,7 +195,7 @@ public final class MakongCore extends JavaPlugin {
                 Database db=new Database(getConfig(),getDataFolder());
                 TeamService ts=new TeamService(db,Settings.load(teamConfig.get()));ts.load().join();
                 Bukkit.getScheduler().runTask(this,()->{
-                    database=db;teams=ts;gui=new GuiManager(this,teams);gui.reloadConfig(); weeklyRewards=null; matier=new MaTierService(this,database,matierConfig.get());
+                    database=db;teams=ts;gui=new GuiManager(this,teams);gui.reloadConfig(); teamStarReset=null; matier=new MaTierService(this,database,matierConfig.get());
         matierAura=new MaTierAuraService(this,matier);
                     floodgate=new FloodgateHook(this);floodgate.enable();registerRuntime();
                     sendAdmin(sender,"<green>MakongCore reloaded successfully. Teams loaded: <white>"+teams.all().size()+"</white>.</green>");
@@ -236,7 +237,7 @@ public final class MakongCore extends JavaPlugin {
                 boolean nowEnabled=teams!=null&&teams.settings().enabled();
                 if(wasEnabled!=nowEnabled){
                     // team.enabled flipping needs the team-only listeners
-                    // (GUI, chat, PvP, stats, weekly rewards) registered or
+                    // (GUI, chat, PvP, stats, annual Star reset) registered or
                     // torn down to match - same "needs a full reload" reason
                     // as matier/verification/gui above, just conditional on
                     // this one specific key instead of the whole module.
@@ -256,6 +257,6 @@ public final class MakongCore extends JavaPlugin {
     }
 
     private void sendAdmin(CommandSender s,String m){s.sendMessage(Text.mm("<green>[ᴍᴀᴛᴇᴀᴍ]</green> "+m));}
-    @Override public void onDisable(){HandlerList.unregisterAll(this);if(teamStats!=null)teamStats.stop();if(autoRestart!=null)autoRestart.stop();if(matierAura!=null)matierAura.stop();if(accountLinks!=null)accountLinks.stop();if(websiteBridge!=null)websiteBridge.stop();if(teamPlaceholders!=null)teamPlaceholders.unregister();if(matierPlaceholders!=null)matierPlaceholders.unregister();if(database!=null)database.close();}
+    @Override public void onDisable(){HandlerList.unregisterAll(this);if(teamStats!=null)teamStats.stop();if(teamStarReset!=null)teamStarReset.stop();if(autoRestart!=null)autoRestart.stop();if(matierAura!=null)matierAura.stop();if(accountLinks!=null)accountLinks.stop();if(websiteBridge!=null)websiteBridge.stop();if(teamPlaceholders!=null)teamPlaceholders.unregister();if(matierPlaceholders!=null)matierPlaceholders.unregister();if(database!=null)database.close();}
     public TeamService teams(){return teams;} public GuiManager gui(){return gui;} public FloodgateHook floodgate(){return floodgate;} public ModuleConfig teamConfig(){return teamConfig;} public ModuleConfig matierConfig(){return matierConfig;} public MaTierService matier(){return matier;} public WebsiteBridgeService websiteBridge(){return websiteBridge;} public AutoRestartService autoRestart(){return autoRestart;}
 }

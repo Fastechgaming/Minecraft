@@ -90,7 +90,7 @@ public final class GuiManager {
         Inventory inv=Bukkit.createInventory(new TeamHolder("no-team"),config.size("sizes.no_team",27),Text.mm(title("no_team","ᴛᴇᴀᴍ ᴍᴇɴᴜ")));
         inv.setItem(cfgSlot("no_team.create",11),cfgItem("no_team.create",Material.WRITABLE_BOOK,"<aqua><bold>ᴄʀᴇᴀᴛᴇ ᴀ ᴛᴇᴀᴍ</bold>","<gray>Create a team for you and your friends.","","<yellow>Click to begin.</yellow>"));
         inv.setItem(cfgSlot("no_team.browse",13),cfgItem("no_team.browse",Material.BEACON,"<aqua><bold>ʙʀᴏᴡsᴇ ᴛᴇᴀᴍs</bold>","<gray>Browse every team on the server.","","<yellow>Click to browse.</yellow>"));
-        inv.setItem(cfgSlot("no_team.top",15),cfgItem("no_team.top",Material.EMERALD,"<green><bold>ᴛᴏᴘ ᴛᴇᴀᴍs</bold>","<gray>View Weekly Points, Kills and KDR.","","<yellow>Click to view.</yellow>"));
+        inv.setItem(cfgSlot("no_team.top",15),cfgItem("no_team.top",Material.EMERALD,"<green><bold>ᴛᴏᴘ ᴛᴇᴀᴍs</bold>","<gray>View Stars, Kills and KDR.","","<yellow>Click to view.</yellow>"));
         inv.setItem(cfgSlot("no_team.invites",22),cfgItem("no_team.invites",Material.PAPER,"<yellow><bold>ɪɴᴠɪᴛᴀᴛɪᴏɴs</bold>","<gray>View pending invitations.","","<yellow>Click to view.</yellow>"));
         fill(inv);open(p,inv);
     }
@@ -98,12 +98,12 @@ public final class GuiManager {
     public void openTeam(Player p,Team t){ openTeam(p,t,"join_date"); }
 
     public void openTeam(Player p,Team t,String filter){
-        vars("team",t.name(),"tag",t.tag(),"members",t.members().size(),"max",teams.settings().maxSize(),"points",t.points(),"kills",t.kills(),"deaths",t.deaths(),"kdr",kdr(t),"stars",t.stars(),"pvp",t.pvp()?"<green>ON":"<red>OFF");
-        List<String> filterModes=config.cfgList("items.team.filter.modes",List.of("join_date","points","name"));
+        vars("team",t.name(),"tag",t.tag(),"members",t.members().size(),"max",teams.settings().maxSize(),"kills",t.kills(),"deaths",t.deaths(),"kdr",kdr(t),"stars",t.stars(),"pvp",t.pvp()?"<green>ON":"<red>OFF");
+        List<String> filterModes=config.cfgList("items.team.filter.modes",List.of("join_date","kills","name"));
         String mode=filterModes.contains(filter)?filter:(filterModes.isEmpty()?"join_date":filterModes.get(0));
         List<TeamMember> members=new ArrayList<>(t.members());
         Comparator<TeamMember> cmp=switch(mode){
-            case "points" -> Comparator.comparingLong(TeamMember::points).reversed()
+            case "kills" -> Comparator.comparingLong(TeamMember::kills).reversed()
                     .thenComparingLong(TeamMember::joinedAt)
                     .thenComparing(m->safeName(m,Bukkit.getOfflinePlayer(m.uuid())),String.CASE_INSENSITIVE_ORDER);
             case "name" -> Comparator.comparing((TeamMember m)->safeName(m,Bukkit.getOfflinePlayer(m.uuid())),String.CASE_INSENSITIVE_ORDER)
@@ -128,7 +128,6 @@ public final class GuiManager {
             String manage=canManage?"<yellow>Click to manage.":null;
             inv.setItem(slot++,head(op,role+" <white>"+safeName(m,op),status,
                     "<gray>Joined: <white>"+formatDate(m.joinedAt()),
-                    "<gray>Weekly Points: <white>"+m.points(),
                     "<gray>Kills: <white>"+m.kills(),
                     "<gray>Deaths: <white>"+m.deaths(),
                     "<gray>Playtime: <white>"+m.playtimeMinutes()+"m",manage));
@@ -138,7 +137,7 @@ public final class GuiManager {
 
         inv.setItem(cfgSlot("team.info",45),cfgItem("team.info",Material.NETHER_STAR,"<aqua><bold>ᴛᴇᴀᴍ ɪɴғᴏ</bold>",
                 "<gray>Members: <white>"+t.members().size()+"/"+teams.settings().maxSize(),
-                "<gray>Weekly Points: <white>"+t.points(),"<gray>Kills: <white>"+t.kills(),
+                "<gray>Kills: <white>"+t.kills(),
                 "<gray>Deaths: <white>"+t.deaths(),"<gray>KDR: <white>"+kdr(t),"<gray>Stars: <yellow>⭐ "+t.stars()));
 
         inv.setItem(cfgSlot("team.pvp",46),cfgItem("team.pvp",Material.DIAMOND_SWORD,"<aqua><bold>ᴛᴇᴀᴍ ᴘᴠᴘ</bold>",
@@ -155,7 +154,7 @@ public final class GuiManager {
         List<String> filterLore=new ArrayList<>();
         for(String f:modes){
             String label=switch(f){
-                case "points"->"Weekly Points";
+                case "kills"->"Kills";
                 case "name"->"Name A-Z";
                 default->"Join Date";
             };
@@ -172,7 +171,7 @@ public final class GuiManager {
                 "<gray>Browse other teams.","","<yellow>Click to browse."));
 
         inv.setItem(cfgSlot("team.leaderboard",52),cfgItem("team.leaderboard",Material.EMERALD,"<green><bold>ʟᴇᴀᴅᴇʀʙᴏᴀʀᴅ</bold>",
-                "<gray>View the top teams.","<gray>Weekly Points, Kills and KDR.","","<yellow>Click to view."));
+                "<gray>View the top teams.","<gray>Stars, Kills and KDR.","","<yellow>Click to view."));
 
         inv.setItem(cfgSlot("team.leave",53),cfgItem("team.leave",me!=null&&me.role()==TeamRole.OWNER?Material.TNT:Material.DARK_OAK_DOOR,
                 me!=null&&me.role()==TeamRole.OWNER?"<red><bold>ᴅɪsʙᴀɴᴅ ᴛᴇᴀᴍ</bold>":"<red><bold>ʟᴇᴀᴠᴇ ᴛᴇᴀᴍ</bold>","<gray>Click to continue."));
@@ -223,13 +222,12 @@ public final class GuiManager {
 
     public void openLeaderboard(Player p,int page,String mode){
         vars("page",page,"pages",1);
-        String m=Set.of("stars","points","kills","kdr").contains(mode)?mode:"stars";
+        String m=Set.of("stars","kills","kdr").contains(mode)?mode:"stars";
         List<Team> list=new ArrayList<>(teams.all());
         Comparator<Team> cmp=switch(m){
-            case "stars"->Comparator.comparingLong(Team::stars).reversed();
             case "kills"->Comparator.comparingLong(Team::kills).reversed();
             case "kdr"->Comparator.comparingDouble(GuiManager::kdrValue).reversed();
-            default->Comparator.comparingLong(Team::points).reversed();
+            default->Comparator.comparingLong(Team::stars).reversed();
         };
         list.sort(cmp.thenComparing(Team::name,String.CASE_INSENSITIVE_ORDER));
         int max=Math.max(1,(list.size()+35)/36);page=Math.min(Math.max(1,page),max);vars("page",page,"pages",max);
@@ -240,20 +238,17 @@ public final class GuiManager {
         fillRange(inv,0,8);
         fillRange(inv,45,53);
 
-        inv.setItem(cfgSlot("leaderboard.star",1),m.equals("stars")
+        inv.setItem(cfgSlot("leaderboard.star",2),m.equals("stars")
                 ?selected(cfgItem("leaderboard.star",Material.NETHER_STAR,"<yellow><bold>Top Star</bold>","<green>Selected"))
                 :cfgItem("leaderboard.star",Material.NETHER_STAR,"<yellow><bold>Top Star</bold>","<yellow>Click to select."));
-        inv.setItem(cfgSlot("leaderboard.points",3),m.equals("points")
-                ?selected(cfgItem("leaderboard.points",Material.BELL,"<green><bold>Top Points</bold>","<green>Selected"))
-                :cfgItem("leaderboard.points",Material.BELL,"<green><bold>Top Points</bold>","<yellow>Click to select."));
-        inv.setItem(cfgSlot("leaderboard.kills",5),m.equals("kills")
+        inv.setItem(cfgSlot("leaderboard.kills",4),m.equals("kills")
                 ?selected(cfgItem("leaderboard.kills",Material.SKELETON_SKULL,"<aqua><bold>Top Kill</bold>","<green>Selected"))
                 :cfgItem("leaderboard.kills",Material.SKELETON_SKULL,"<aqua><bold>Top Kill</bold>","<yellow>Click to select."));
-        inv.setItem(cfgSlot("leaderboard.kdr",7),m.equals("kdr")
+        inv.setItem(cfgSlot("leaderboard.kdr",6),m.equals("kdr")
                 ?selected(cfgItem("leaderboard.kdr",Material.TNT,"<red><bold>Top KDR</bold>","<green>Selected"))
                 :cfgItem("leaderboard.kdr",Material.TNT,"<red><bold>Top KDR</bold>","<yellow>Click to select."));
 
-        int selectedSlot=switch(m){case "stars"->cfgSlot("leaderboard.star",1);case "points"->cfgSlot("leaderboard.points",3);case "kills"->cfgSlot("leaderboard.kills",5);default->cfgSlot("leaderboard.kdr",7);};
+        int selectedSlot=switch(m){case "stars"->cfgSlot("leaderboard.star",2);case "kills"->cfgSlot("leaderboard.kills",4);default->cfgSlot("leaderboard.kdr",6);};
         inv.setItem(selectedSlot-1,cfgItem("leaderboard.selected_left",Material.LIME_STAINED_GLASS_PANE," "));
         inv.setItem(selectedSlot+1,cfgItem("leaderboard.selected_right",Material.LIME_STAINED_GLASS_PANE," "));
 
@@ -261,15 +256,14 @@ public final class GuiManager {
         for(int i=0;i<36&&start+i<list.size();i++){
             Team tm=list.get(start+i);int rank=start+i+1;
             String value=switch(m){
-                case "stars"->String.valueOf(tm.stars());
                 case "kills"->String.valueOf(tm.kills());
                 case "kdr"->String.format(Locale.US,"%.2f",kdrValue(tm));
-                default->String.valueOf(tm.points());
+                default->String.valueOf(tm.stars());
             };
-            vars("team",tm.name(),"tag",tm.tag(),"members",tm.members().size(),"max",teams.settings().maxSize(),"metric",m.equals("stars")?"Stars":m.equals("points")?"Weekly Points":m.equals("kills")?"Kills":"KDR","value",value,"rank",rank,"page",page,"pages",max);
+            vars("team",tm.name(),"tag",tm.tag(),"members",tm.members().size(),"max",teams.settings().maxSize(),"metric",m.equals("kills")?"Kills":m.equals("kdr")?"KDR":"Stars","value",value,"rank",rank,"page",page,"pages",max);
             inv.setItem(9+i,cfgItem("leaderboard.entry",Material.BEACON,"<green>#"+rank+" <white>"+tm.name()+" <gray>["+tm.tag()+"]",
                     "<gray>Members: <white>"+tm.members().size()+"/"+teams.settings().maxSize(),
-                    "<gray>"+(m.equals("stars")?"Stars":m.equals("points")?"Weekly Points":m.equals("kills")?"Kills":"KDR")+": <white>"+value,
+                    "<gray>"+(m.equals("kills")?"Kills":m.equals("kdr")?"KDR":"Stars")+": <white>"+value,
                     "","<yellow>Click for team info.</yellow>"));
         }
         inv.setItem(cfgSlot("leaderboard.previous",45),cfgItem("leaderboard.previous",Material.ARROW,"<yellow>← Previous","<gray>Page "+page+"/"+max));
@@ -286,11 +280,11 @@ public final class GuiManager {
         int start=(page-1)*45;
         for(int i=0;i<45&&start+i<list.size();i++){
             Team tm=list.get(start+i);
-            vars("team",tm.name(),"tag",tm.tag(),"members",tm.members().size(),"max",teams.settings().maxSize(),"status",tm.isPublic()?"<green>Public":"<red>Private","points",tm.points());
+            vars("team",tm.name(),"tag",tm.tag(),"members",tm.members().size(),"max",teams.settings().maxSize(),"status",tm.isPublic()?"<green>Public":"<red>Private","stars",tm.stars());
             inv.setItem(i,cfgItem("browse.entry",Material.BEACON,"<aqua><bold>"+tm.name()+"</bold> <gray>["+tm.tag()+"]",
                     "<gray>Members: <white>"+tm.members().size()+"/"+teams.settings().maxSize(),
                     "<gray>Status: "+(tm.isPublic()?"<green>Public":"<red>Private"),
-                    "<gray>Weekly Points: <white>"+tm.points(),"","<yellow>Click for info.</yellow>"));
+                    "<gray>Stars: <yellow>⭐ "+tm.stars(),"","<yellow>Click for info.</yellow>"));
         }
         fillRange(inv,45,53);
         inv.setItem(cfgSlot("browse.previous",45),cfgItem("browse.previous",Material.ARROW,"<yellow>← Previous"));
@@ -300,12 +294,12 @@ public final class GuiManager {
     }
 
     public void openTeamInfo(Player p,Team t,boolean canJoin){
-        vars("team",t.name(),"tag",t.tag(),"members",t.members().size(),"max",teams.settings().maxSize(),"points",t.points(),"kills",t.kills(),"deaths",t.deaths(),"kdr",kdr(t),"stars",t.stars(),"status",t.isPublic()?"<green>Public":"<red>Private");
+        vars("team",t.name(),"tag",t.tag(),"members",t.members().size(),"max",teams.settings().maxSize(),"kills",t.kills(),"deaths",t.deaths(),"kdr",kdr(t),"stars",t.stars(),"status",t.isPublic()?"<green>Public":"<red>Private");
         Inventory inv=Bukkit.createInventory(new TeamHolder("team-info",1,t.id().toString()),config.size("sizes.team_info",27),Text.mm(title("team_info","<aqua>"+t.name()+" ["+t.tag()+"]")));
         inv.setItem(cfgSlot("team_info.summary",10),cfgItem("team_info.summary",Material.BEACON,"<aqua><bold>"+t.name()+"</bold>","<gray>Tag: <white>"+t.tag(),"<gray>Members: <white>"+t.members().size()+"/"+teams.settings().maxSize(),"<gray>Status: "+(t.isPublic()?"<green>Public":"<red>Private")));
         TeamMember owner=t.members().stream().filter(m->m.role()==TeamRole.OWNER).findFirst().orElse(null);
         if(owner!=null)inv.setItem(12,head(Bukkit.getOfflinePlayer(owner.uuid()),"<gold>Owner: <white>"+safeName(owner,Bukkit.getOfflinePlayer(owner.uuid()))));
-        inv.setItem(cfgSlot("team_info.stats",14),cfgItem("team_info.stats",Material.NETHER_STAR,"<gold><bold>ᴛᴇᴀᴍ sᴛᴀᴛs</bold>","<gray>Weekly Points: <white>"+t.points(),"<gray>Kills: <white>"+t.kills(),"<gray>Deaths: <white>"+t.deaths(),"<gray>KDR: <white>"+kdr(t),"<gray>Stars: <yellow>⭐ "+t.stars()));
+        inv.setItem(cfgSlot("team_info.stats",14),cfgItem("team_info.stats",Material.NETHER_STAR,"<gold><bold>ᴛᴇᴀᴍ sᴛᴀᴛs</bold>","<gray>Kills: <white>"+t.kills(),"<gray>Deaths: <white>"+t.deaths(),"<gray>KDR: <white>"+kdr(t),"<gray>Stars: <yellow>⭐ "+t.stars()));
         inv.setItem(cfgSlot("team_info.description",16),cfgItem("team_info.description",Material.OAK_SIGN,"<yellow><bold>ᴅᴇsᴄʀɪᴘᴛɪᴏɴ</bold>","<gray>"+t.description()));
         if(canJoin&&t.isPublic())inv.setItem(cfgSlot("team_info.join",20),cfgItem("team_info.join",Material.LIME_DYE,"<green><bold>ʀᴇǫᴜᴇsᴛ ᴛᴏ ᴊᴏɪɴ</bold>","<yellow>Click to send a request."));
         inv.setItem(cfgSlot("team_info.back",22),cfgItem("team_info.back",Material.IRON_DOOR,"<gray>ʙᴀᴄᴋ"));fill(inv);open(p,inv);
@@ -362,17 +356,16 @@ public final class GuiManager {
         if(member==null||me==null){openTeam(p,t);return;}
         boolean owner=me.role()==TeamRole.OWNER,admin=me.role()==TeamRole.ADMIN;
         vars("target",member.name(),"role",member.role(),"joined",formatDate(member.joinedAt()),
-                "points",member.points(),"kills",member.kills(),"deaths",member.deaths(),"playtime",member.playtimeMinutes());
+                "kills",member.kills(),"deaths",member.deaths(),"playtime",member.playtimeMinutes());
         Inventory inv=Bukkit.createInventory(new TeamHolder("member",1,target.toString()),config.size("sizes.member",27),Text.mm(title("member","<aqua>ᴍᴇᴍʙᴇʀ • "+member.name())));
         OfflinePlayer op=Bukkit.getOfflinePlayer(target);
         inv.setItem(cfgSlot("member.profile",10),cfgItem("member.profile",Material.PLAYER_HEAD,
                 "<gold><bold>{target}</bold>",
                 "<gray>Role: <white>{role}",
                 "<gray>Joined: <white>{joined}",
-                "<gray>Weekly Points: <white>{points}",
                 "<gray>Kills: <white>{kills}",
                 "<gray>Deaths: <white>{deaths}",
-                "<gray>Playtime: <white>{playtime}m")); 
+                "<gray>Playtime: <white>{playtime}m"));
         ItemStack profile=inv.getItem(cfgSlot("member.profile",10));
         if(profile!=null&&profile.getItemMeta() instanceof SkullMeta sm){sm.setOwningPlayer(op);profile.setItemMeta(sm);}
         if(owner&&member.role()==TeamRole.MEMBER)inv.setItem(cfgSlot("member.promote",12),cfgItem("member.promote",Material.LIME_DYE,"<green>ᴘʀᴏᴍᴏᴛᴇ","<yellow>Promote to admin."));

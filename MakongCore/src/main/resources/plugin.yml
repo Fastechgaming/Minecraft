@@ -11,10 +11,10 @@ commands:
     aliases: [teams]
   mateam:
     description: Team admin commands (team module only)
-    usage: /mateam <help|team|disband|forcejoin|forceleave|addpoints|setpoints|addstars|setstars>
+    usage: /mateam <help|team|disband|forcejoin|forceleave|addstars|setstars>
   makongcore:
     description: MakongCore global administration - all modules
-    usage: /makongcore <help|reload|info|list|ping|autorestart|reset|matier ...|malink ...|team|disband|forcejoin|forceleave|addpoints|setpoints|addstars|setstars>
+    usage: /makongcore <help|reload|info|list|ping|autorestart|reset|matier ...|malink ...|team|disband|forcejoin|forceleave|addstars|setstars>
     aliases: [macore]
   matier:
     description: Player MaTier profile and leaderboard

@@ -3,7 +3,7 @@
 # INFO: Change these values instead of editing Java code.
 team:
   # INFO: Enable/disable the ENTIRE Team module - /team, /mateam, the team
-  # INFO: GUI, team chat, team PvP, weekly points/rewards, and the
+  # INFO: GUI, team chat, team PvP, the annual Star reset, and the
   # INFO: %team_tag%/%team_star% placeholders. Set false on a gamemode
   # INFO: where teams don't make sense (Arcade, Practice, etc.) - /team and
   # INFO: /mateam just reply that teams are disabled instead of running.
@@ -39,24 +39,6 @@ team:
   # INFO: Rename cooldown in seconds.
   rename:
     cooldown_seconds: 604800
-  # INFO: Weekly Points reset and weekend Star rewards. Weekly Points are cleared every payout/reset cycle.
-  weekly_points:
-    reset_enabled: true
-    reset_day: SUNDAY
-    reset_hour: 0
-    reset_minute: 0
-  # INFO: Weekly Star rewards are paid from the completed previous week before Weekly Points are cleared.
-  weekly_rewards:
-    enabled: true
-    payout_day: SUNDAY
-    payout_hour: 0
-    payout_minute: 0
-    top_1_stars: 40
-    top_2_stars: 30
-    top_3_stars: 25
-    top_4_5_stars: 20
-    top_6_20_stars_start: 15
-    top_6_20_stars_decrement: 1
   # INFO: Annual reset for team Stars.
   annual_star_reset:
     enabled: true
@@ -69,12 +51,13 @@ team:
     auto_disband: false
     inactive_days: 15
     check_interval_minutes: 360
-  # INFO: Player statistics and Weekly Point scoring.
-  # INFO: Every team member has weekly points, kills, deaths and playtime.
-  # INFO: These individual stats are combined into the team's Weekly Points.
+  # INFO: Team Stars (added 1.2.35). Real-time, MaTier-style: every kill,
+  # INFO: death and hour of playtime awards/deducts Stars straight to the
+  # INFO: team the instant it happens - there's no weekly payout cycle.
+  # INFO: Every team member also tracks kills, deaths and playtime.
   scoring:
     enabled: true
-    minimum_points: 0
+    minimum_stars: 0
     spam_threshold_seconds: 60
     events:
       playtime_per_hour: 1

@@ -12,7 +12,7 @@ import org.bukkit.command.*;
 import java.util.*;
 
 // /mateam's own handler - team-module admin actions ONLY (inspect/disband a
-// team, force a player in or out, adjust points/Stars). Everything that
+// team, force a player in or out, adjust Stars). Everything that
 // isn't team-specific (reload/info/list/ping/autorestart) lives on
 // AdminCommand instead, which is /makongcore's (/macore's) global command -
 // it delegates the subcommands here back into this same class so the logic
@@ -35,7 +35,6 @@ public final class TeamAdminCommand implements CommandExecutor, TabCompleter {
     // info, list, ping, autorestart) never get misrouted here.
     public static boolean handles(String sub) {
         return Set.of("help", "team", "disband", "forcejoin", "forceleave",
-                "addpoints", "setpoints", "addweeklypoints", "setweeklypoints",
                 "addstars", "givestars", "givestar", "setstars").contains(sub.toLowerCase(Locale.ROOT));
     }
 
@@ -60,8 +59,6 @@ public final class TeamAdminCommand implements CommandExecutor, TabCompleter {
             case "disband" -> disband(sender, args);
             case "forcejoin" -> forceJoin(sender, args);
             case "forceleave" -> forceLeave(sender, args);
-            case "addpoints", "addweeklypoints" -> points(sender, args, false);
-            case "setpoints", "setweeklypoints" -> points(sender, args, true);
             case "addstars", "givestars", "givestar" -> stars(sender, args, false);
             case "setstars" -> stars(sender, args, true);
             default -> send(sender, "<red>Unknown team command. Use <yellow>/mateam help</yellow>.</red>");
@@ -76,9 +73,6 @@ public final class TeamAdminCommand implements CommandExecutor, TabCompleter {
                 <yellow>/mateam disband <tag></yellow> <gray>- Force disband a team
                 <yellow>/mateam forcejoin <player> <tag></yellow> <gray>- Force a player into a team
                 <yellow>/mateam forceleave <player></yellow> <gray>- Remove a player from their team
-                <yellow>/mateam addweeklypoints <tag> <amount></yellow> <gray>- Add/subtract Weekly Points
-                <yellow>/mateam setweeklypoints <tag> <amount></yellow> <gray>- Set Weekly Points
-                <gray>/mateam addpoints and setpoints remain aliases
                 <yellow>/mateam givestar <tag> <amount></yellow> <gray>- Give/remove Stars
                 <yellow>/mateam setstars <tag> <amount></yellow> <gray>- Set Stars
                 <gray>Server-wide admin commands (reload/info/list/ping/autorestart) moved to <yellow>/makongcore</yellow> (<yellow>/macore</yellow>).""");
@@ -99,7 +93,6 @@ public final class TeamAdminCommand implements CommandExecutor, TabCompleter {
                 + "\n<gray>Members: <white>" + t.members().size() + "/" + teams.settings().maxSize()
                 + "\n<gray>Public: <white>" + t.isPublic()
                 + "\n<gray>PvP: <white>" + t.pvp()
-                + "\n<gray>Weekly Points: <white>" + t.points()
                 + "\n<gray>Stars: <yellow>⭐ " + t.stars()
                 + "\n<gray>Kills: <white>" + t.kills()
                 + "\n<gray>Deaths: <white>" + t.deaths()
@@ -163,30 +156,6 @@ public final class TeamAdminCommand implements CommandExecutor, TabCompleter {
         send(s, "<green>Removed <white>" + (player.getName() == null ? args[1] : player.getName()) + "</white> from <white>" + team.name() + "</white>.</green>");
     }
 
-    private void points(CommandSender s, String[] args, boolean set) {
-        if (args.length < 3) {
-            send(s, "<red>Usage: /mateam " + (set ? "setpoints" : "addpoints") + " <tag> <amount></red>");
-            return;
-        }
-        Team t = teams.byTag(args[1]);
-        if (t == null) {
-            send(s, "<red>Team not found.</red>");
-            return;
-        }
-        final long amount;
-        try {
-            amount = Long.parseLong(args[2]);
-        } catch (NumberFormatException e) {
-            send(s, "<red>Amount must be a whole number.</red>");
-            return;
-        }
-        long minimum = plugin.teamConfig().get().getLong("team.scoring.minimum_points", 0L);
-        long value = set ? Math.max(minimum, amount) : Math.max(minimum, t.points() + amount);
-        t.setStats(value, t.kills(), t.deaths(), t.playtime());
-        teams.save(t);
-        send(s, "<green>Team <white>" + t.tag() + "</white> points are now <white>" + value + "</white>.</green>");
-    }
-
     private void stars(CommandSender s,String[] args,boolean set){
         if(args.length<3){send(s,"<red>Usage: /mateam "+(set?"setstars":"addstars")+" <tag> <amount></red>");return;}
         Team t=teams.byTag(args[1]);if(t==null){send(s,"<red>Team not found.</red>");return;}
@@ -200,10 +169,10 @@ public final class TeamAdminCommand implements CommandExecutor, TabCompleter {
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (!sender.hasPermission("mateam.admin")) return List.of();
         if (args.length == 1) {
-            return List.of("help", "team", "disband", "forcejoin", "forceleave", "addweeklypoints", "setweeklypoints", "addpoints", "setpoints", "addstars", "givestars", "givestar", "setstars")
+            return List.of("help", "team", "disband", "forcejoin", "forceleave", "addstars", "givestars", "givestar", "setstars")
                     .stream().filter(x -> x.startsWith(args[0].toLowerCase(Locale.ROOT))).toList();
         }
-        if (args.length == 2 && List.of("team", "disband", "addweeklypoints", "setweeklypoints", "addpoints", "setpoints", "addstars", "givestars", "givestar", "setstars").contains(args[0].toLowerCase(Locale.ROOT))) {
+        if (args.length == 2 && List.of("team", "disband", "addstars", "givestars", "givestar", "setstars").contains(args[0].toLowerCase(Locale.ROOT))) {
             return teams.all().stream().map(Team::tag).filter(x -> x.toLowerCase(Locale.ROOT).startsWith(args[1].toLowerCase(Locale.ROOT))).sorted().toList();
         }
         if (args.length == 2 && List.of("forcejoin", "forceleave").contains(args[0].toLowerCase(Locale.ROOT))) {

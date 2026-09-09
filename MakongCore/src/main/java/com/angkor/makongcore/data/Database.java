@@ -28,8 +28,8 @@ public final class Database implements Closeable {
    s.executeUpdate("CREATE INDEX IF NOT EXISTS idx_pending_links_uuid ON pending_links(uuid)");
    s.executeUpdate("CREATE TABLE IF NOT EXISTS link_bypass(uuid VARCHAR(36) PRIMARY KEY,name VARCHAR(64) NOT NULL,added_at BIGINT NOT NULL)");
   }}
- public CompletableFuture<List<Team>> loadTeams(){return CompletableFuture.supplyAsync(()->{List<Team> out=new ArrayList<>();try(Connection c=ds.getConnection();PreparedStatement p=c.prepareStatement("SELECT * FROM teams");ResultSet r=p.executeQuery()){while(r.next()){Team t=new Team(UUID.fromString(r.getString("id")),r.getString("tag"),r.getString("name"),r.getString("description"),r.getString("color"),r.getBoolean("public_team"),r.getBoolean("pvp"));t.setStats(r.getLong("points"),r.getLong("kills"),r.getLong("deaths"),r.getLong("playtime"));t.setStars(r.getLong("stars"));loadMembers(c,t);loadAllies(c,t);out.add(t);}}catch(SQLException e){throw new CompletionException(e);}return out;},io);}
- private void loadMembers(Connection c,Team t)throws SQLException{try(PreparedStatement p=c.prepareStatement("SELECT * FROM team_members WHERE team_id=?")){p.setString(1,t.id().toString());try(ResultSet r=p.executeQuery()){while(r.next())t.addMember(new TeamMember(UUID.fromString(r.getString("uuid")),r.getString("name"),TeamRole.valueOf(r.getString("role")),r.getLong("joined_at"),r.getLong("last_seen"),r.getString("server"),r.getLong("points"),r.getLong("kills"),r.getLong("deaths"),r.getLong("playtime_minutes")));}}}
+ public CompletableFuture<List<Team>> loadTeams(){return CompletableFuture.supplyAsync(()->{List<Team> out=new ArrayList<>();try(Connection c=ds.getConnection();PreparedStatement p=c.prepareStatement("SELECT * FROM teams");ResultSet r=p.executeQuery()){while(r.next()){Team t=new Team(UUID.fromString(r.getString("id")),r.getString("tag"),r.getString("name"),r.getString("description"),r.getString("color"),r.getBoolean("public_team"),r.getBoolean("pvp"));t.setStats(r.getLong("kills"),r.getLong("deaths"),r.getLong("playtime"));t.setStars(r.getLong("stars"));loadMembers(c,t);loadAllies(c,t);out.add(t);}}catch(SQLException e){throw new CompletionException(e);}return out;},io);}
+ private void loadMembers(Connection c,Team t)throws SQLException{try(PreparedStatement p=c.prepareStatement("SELECT * FROM team_members WHERE team_id=?")){p.setString(1,t.id().toString());try(ResultSet r=p.executeQuery()){while(r.next())t.addMember(new TeamMember(UUID.fromString(r.getString("uuid")),r.getString("name"),TeamRole.valueOf(r.getString("role")),r.getLong("joined_at"),r.getLong("last_seen"),r.getString("server"),r.getLong("kills"),r.getLong("deaths"),r.getLong("playtime_minutes")));}}}
  private void loadAllies(Connection c,Team t)throws SQLException{try(PreparedStatement p=c.prepareStatement("SELECT ally_id FROM team_allies WHERE team_id=?")){p.setString(1,t.id().toString());try(ResultSet r=p.executeQuery()){while(r.next())t.addAlly(UUID.fromString(r.getString(1)));}}}
  public CompletableFuture<Void> save(Team t) {
   return CompletableFuture.runAsync(() -> {
@@ -45,7 +45,7 @@ public final class Database implements Closeable {
       p.setString(4, t.color());
       p.setBoolean(5, t.isPublic());
       p.setBoolean(6, t.pvp());
-      p.setLong(7, t.points());
+      p.setLong(7, 0L); // "points" column - retired, see TeamStarResetService/team.yml scoring changes
       p.setLong(8, t.kills());
       p.setLong(9, t.deaths());
       p.setLong(10, t.playtime());
@@ -63,7 +63,7 @@ public final class Database implements Closeable {
        p.setString(5, t.color());
        p.setBoolean(6, t.isPublic());
        p.setBoolean(7, t.pvp());
-       p.setLong(8, t.points());
+       p.setLong(8, 0L); // "points" column - retired, see TeamStarResetService/team.yml scoring changes
        p.setLong(9, t.kills());
        p.setLong(10, t.deaths());
        p.setLong(11, t.playtime());
@@ -85,7 +85,7 @@ public final class Database implements Closeable {
        p.setLong(5, m.joinedAt());
        p.setLong(6, m.lastSeen());
        p.setString(7, m.server());
-       p.setLong(8, m.points());
+       p.setLong(8, 0L); // "points" column - retired, see TeamStarResetService/team.yml scoring changes
        p.setLong(9, m.kills());
        p.setLong(10, m.deaths());
        p.setLong(11, m.playtimeMinutes());

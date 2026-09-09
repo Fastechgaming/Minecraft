@@ -40,6 +40,6 @@ duplicate_name: "<red>that team name is already in use.</red>"
 
 # GUI and leaderboard messages
 gui_create_color: "<yellow>choose a color for your team.</yellow>"
-leaderboard_points: "<green>team points</green>"
+leaderboard_stars: "<green>team stars</green>"
 leaderboard_kills: "<aqua>team kills</aqua>"
 leaderboard_kdr: "<gold>team kdr</gold>"
