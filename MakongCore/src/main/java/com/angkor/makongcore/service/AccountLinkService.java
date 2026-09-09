@@ -38,12 +38,18 @@ import java.net.http.*;
 import java.time.*;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public final class AccountLinkService extends ListenerAdapter implements Listener, org.bukkit.plugin.messaging.PluginMessageListener {
     private final MakongCore plugin; private final Database db; private final FloodgateHook floodgate;
     private final FileConfigurationBridge cfg;
     private final Map<String,Pending> pending=new ConcurrentHashMap<>();
+    // Requests awaiting a higher-tier staff member's Accept/Deny click (the
+    // moderation-request embed's buttons) - see staffTier()/requiredApprover()
+    // and onSlashCommandInteraction()'s /ban, /unban handling below. Keyed by
+    // a short random id embedded in the button's component id.
+    private final Map<String,ModRequest> modRequests=new ConcurrentHashMap<>();
     private final Map<UUID,String> playerCodes=new ConcurrentHashMap<>(); private final Set<UUID> frozen=ConcurrentHashMap.newKeySet();
     // Populated by the optional MakongVelocity companion's "makong:accounttype"
     // plugin message, keyed by player UUID - "java"|"cracked"|"bedrock". When
@@ -146,7 +152,40 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
 
     private void sendVerificationPanel(){String channelId=cfg.s("discord.verification.channel_id","");if(channelId.isBlank()||jda==null)return;TextChannel ch=jda.getTextChannelById(channelId);if(ch==null)return;var embed=new net.dv8tion.jda.api.EmbedBuilder().setTitle("🔐 Makong Minecraft Verification").setDescription("Link your Minecraft account to Discord securely.\n\n**How to verify:**\n1. Join the Makong Minecraft server.\n2. Use the verification command to receive your **6-digit code**.\n3. Click **Verify Code** below and enter your code.\n\n> 🔒 Your Discord account will be linked to your Minecraft account after successful verification.").setColor(new java.awt.Color(0x58,0xA6,0xFF)).build();String configured=cfg.s("discord.verification.panel_message_id","");if(!configured.isBlank()){editPanel(ch,configured,embed);return;}db.meta("discord_verification_panel_message_id").thenAccept(id->{if(id!=null&&!id.isBlank())editPanel(ch,id,embed);else ch.sendMessageEmbeds(embed).setComponents(ActionRow.of(Button.primary("makong:verify","Verify Code"))).queue(msg->db.setMeta("discord_verification_panel_message_id",msg.getId()));});}
     private void editPanel(TextChannel ch,String id,net.dv8tion.jda.api.entities.MessageEmbed embed){ch.retrieveMessageById(id).queue(msg->msg.editMessageEmbeds(embed).setComponents(ActionRow.of(Button.primary("makong:verify","Verify Code"))).queue(),err->ch.sendMessageEmbeds(embed).setComponents(ActionRow.of(Button.primary("makong:verify","Verify Code"))).queue(msg->db.setMeta("discord_verification_panel_message_id",msg.getId())));}
-    @Override public void onButtonInteraction(ButtonInteractionEvent e){if(!e.getComponentId().equals("makong:verify"))return;TextInput code=TextInput.create("code",TextInputStyle.SHORT).setPlaceholder("123456").setMinLength(6).setMaxLength(6).build();e.replyModal(Modal.create("makong:verify","Minecraft Verification").addComponents(Label.of("Verification Code",code)).build()).queue();}
+    @Override public void onButtonInteraction(ButtonInteractionEvent e){
+        if(e.getComponentId().equals("makong:verify")){TextInput code=TextInput.create("code",TextInputStyle.SHORT).setPlaceholder("123456").setMinLength(6).setMaxLength(6).build();e.replyModal(Modal.create("makong:verify","Minecraft Verification").addComponents(Label.of("Verification Code",code)).build()).queue();return;}
+        if(e.getComponentId().startsWith("makong:modreq:"))onModRequestButton(e);
+    }
+    // makong:modreq:accept:<id> / makong:modreq:deny:<id> - the pending
+    // moderation-request embed's buttons (see onSlashCommandInteraction()'s
+    // /ban, /unban handling below). Whoever clicks needs staffTier() at
+    // least the request's minApprover to act on it; the request is consumed
+    // (removed from modRequests) on the first valid click either way, so a
+    // second click - even from someone equally qualified - just sees "no
+    // longer pending".
+    private void onModRequestButton(ButtonInteractionEvent e){
+        String[] parts=e.getComponentId().split(":");
+        String action=parts.length>2?parts[2]:"";
+        String id=parts.length>3?parts[3]:"";
+        ModRequest req=modRequests.get(id);
+        if(req==null){e.reply("❌ This request is no longer pending (already handled or expired).").setEphemeral(true).queue();return;}
+        StaffTier clicker=staffTier(e.getMember(),e.getGuild());
+        if(clicker==StaffTier.NONE||clicker.ordinal()<req.minApprover().ordinal()){e.reply("❌ You don't have permission to decide this request.").setEphemeral(true).queue();return;}
+        modRequests.remove(id);
+        String clickerMention="<@"+e.getUser().getId()+">";
+        String staffMention="<@"+req.requester().discordId()+">";
+        if(action.equals("deny")){
+            var embed=modEmbed(req.ban(),true,req.target(),req.duration(),req.reason(),staffMention,"🔴","Denied by "+clickerMention,0xE74C3C);
+            e.editMessageEmbeds(embed.build()).setComponents(List.of()).queue();
+            return;
+        }
+        runModCommand(req.ban(),req.target(),req.duration(),req.reason(),req.requester(),ok->{
+            var embed=ok
+                ?modEmbed(req.ban(),false,req.target(),req.duration(),req.reason(),staffMention,"🟢","Accepted by "+clickerMention,0x2ECC71)
+                :modEmbed(req.ban(),true,req.target(),req.duration(),req.reason(),staffMention,"🔴","Accepted by "+clickerMention+", but failed to apply - check console",0xE74C3C);
+            e.editMessageEmbeds(embed.build()).setComponents(List.of()).queue();
+        });
+    }
     @Override public void onModalInteraction(ModalInteractionEvent e){if(!e.getModalId().equals("makong:verify"))return;String code=e.getValue("code")==null?"":e.getValue("code").getAsString().trim();if(!CODE.matcher(code).matches()){e.reply("❌ Invalid code.").setEphemeral(true).queue();return;} verifyDiscord(e,code);}
     // Every Discord-enabled server shares the same bot token and connection,
     // so this modal submit can land on a different server than the one that
@@ -166,7 +205,7 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
     // Player-verification gate only - account-age/membership eligibility
     // tiers plus the optional discord.guild.required_role_id. Staff
     // permission for /ban and /unban is a completely separate, unrelated
-    // check - see staffAllowed() below - since a moderator shouldn't need
+    // check - see staffTier() below - since a moderator shouldn't need
     // to satisfy "my Discord account is 6 months old" just to do their job.
     private boolean discordAllowed(User u,Member m,Guild g){
         if(g==null||m==null)return false;
@@ -180,22 +219,35 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
         return req.isBlank()||m.getRoles().stream().anyMatch(r->r.getId().equals(req));
     }
 
-    // Who may use /ban and /unban - any ONE of discord.commands.staff_role_ids
-    // (a list, so multiple staff ranks can each be granted independently).
-    // Deliberately fails CLOSED: with no staff roles configured at all,
-    // nobody can use these commands - moderation commands shouldn't default
-    // to open just because an admin never got around to configuring them.
-    // discord.commands.staff_role_id (singular) is the old, pre-list config
-    // key - still honored if present, so upgrading an existing config never
-    // silently drops an already-working setup.
-    private boolean staffAllowed(Member m,Guild g){
-        if(g==null||m==null)return false;
+    // Who may use /ban and /unban, and at which of three tiers - see
+    // discord.commands.roles in module/verification.yml for the full
+    // per-tier behavior table (Manager runs both commands immediately;
+    // Helper's /ban runs immediately but /unban needs a Manager to
+    // Accept/Deny; Trial Helper needs approval for both). Deliberately
+    // fails CLOSED: a member matching none of the three role lists (and not
+    // covered by the legacy staff_role_ids/staff_role_id below, which
+    // counts as Manager) is StaffTier.NONE and can't use either command at
+    // all - moderation commands shouldn't default to open just because an
+    // admin never got around to configuring them.
+    private enum StaffTier{NONE,TRIAL_HELPER,HELPER,MANAGER}
+    // A pending /ban or /unban awaiting a higher-tier staff member's
+    // Accept/Deny click. `requester` is who ran the original command (their
+    // linked Minecraft account - needed for LiteBans' --sender/--sender-uuid
+    // and the embed's "Staff:" line); `minApprover` is the minimum tier
+    // allowed to decide it - see requiredApprover().
+    private record ModRequest(boolean ban,String target,String duration,String reason,Database.AccountLink requester,StaffTier minApprover){}
+    private StaffTier staffTier(Member m,Guild g){
+        if(g==null||m==null)return StaffTier.NONE;
         String guildId=cfg.s("discord.guild.id","");
         boolean guildRequired=cfg.b("discord.guild.required",true);
-        if(guildRequired&&!guildId.isBlank()&&!g.getId().equals(guildId))return false;
-        List<String> roles=staffRoleIds();
-        if(roles.isEmpty())return false;
-        return m.getRoles().stream().anyMatch(r->roles.contains(r.getId()));
+        if(guildRequired&&!guildId.isBlank()&&!g.getId().equals(guildId))return StaffTier.NONE;
+        if(hasAnyRole(m,cfg.list("discord.commands.roles.manager_role_ids"))||hasAnyRole(m,staffRoleIds()))return StaffTier.MANAGER;
+        if(hasAnyRole(m,cfg.list("discord.commands.roles.helper_role_ids")))return StaffTier.HELPER;
+        if(hasAnyRole(m,cfg.list("discord.commands.roles.trial_helper_role_ids")))return StaffTier.TRIAL_HELPER;
+        return StaffTier.NONE;
+    }
+    private boolean hasAnyRole(Member m,List<String> roleIds){
+        return roleIds!=null&&!roleIds.isEmpty()&&m.getRoles().stream().anyMatch(r->roleIds.contains(r.getId()));
     }
     private List<String> staffRoleIds(){
         List<String> out=new ArrayList<>(cfg.list("discord.commands.staff_role_ids"));
@@ -220,7 +272,109 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
         }
         return false;
     }
-    @Override public void onSlashCommandInteraction(SlashCommandInteractionEvent e){if(!e.isFromGuild()){e.reply("Guild only.").setEphemeral(true).queue();return;}if(e.getName().equals("ban")||e.getName().equals("unban")){if(!cfg.b("discord.commands."+e.getName()+".enabled",true)){e.reply("❌ This Discord command is disabled.").setEphemeral(true).queue();return;}if(!staffAllowed(e.getMember(),e.getGuild())){e.reply("❌ You don't have a staff role permitted to use this command.").setEphemeral(true).queue();return;}String target=e.getOption("name").getAsString(),duration=normalizeDuration(e.getOption("duration")==null?"":e.getOption("duration").getAsString()),reason=e.getOption("reason")==null?"":e.getOption("reason").getAsString();db.findByDiscord(e.getUser().getId()).thenAccept(staff->{if(staff==null){e.reply("❌ Your Discord account is not linked to Minecraft.").setEphemeral(true).queue();return;}String cmd=e.getName().equals("ban")?"ban":"unban";String args=cmd+" "+target+" --sender="+staff.name()+" --sender-uuid="+staff.uuid()+(cmd.equals("ban")?" "+duration+" "+reason:" "+reason);Bukkit.getScheduler().runTask(plugin,()->{boolean ok=Bukkit.dispatchCommand(Bukkit.getConsoleSender(),args);String msg=ok?("✅ Executed `/"+args+"` as **"+staff.name()+"**."):("❌ `/"+args+"` failed - check this server's console (unknown player, LiteBans not installed, bad duration, etc).");e.reply(msg).queue();});});}}
+    @Override public void onSlashCommandInteraction(SlashCommandInteractionEvent e){
+        if(!e.isFromGuild()){e.reply("Guild only.").setEphemeral(true).queue();return;}
+        if(!e.getName().equals("ban")&&!e.getName().equals("unban"))return;
+        boolean ban=e.getName().equals("ban");
+        if(!cfg.b("discord.commands."+e.getName()+".enabled",true)){e.reply("❌ This Discord command is disabled.").setEphemeral(true).queue();return;}
+        StaffTier tier=staffTier(e.getMember(),e.getGuild());
+        if(tier==StaffTier.NONE){e.reply("❌ You don't have a staff role permitted to use this command.").setEphemeral(true).queue();return;}
+        String target=e.getOption("name").getAsString();
+        String duration=ban?normalizeDuration(e.getOption("duration")==null?"":e.getOption("duration").getAsString()):null;
+        String reason=e.getOption("reason")==null?"":e.getOption("reason").getAsString();
+        StaffTier minApprover=requiredApprover(ban,tier);
+        db.findByDiscord(e.getUser().getId()).thenAccept(staff->{
+            if(staff==null){e.reply("❌ Your Discord account is not linked to Minecraft.").setEphemeral(true).queue();return;}
+            String staffMention="<@"+staff.discordId()+">";
+            if(minApprover==null){
+                runModCommand(ban,target,duration,reason,staff,ok->{
+                    var embed=ok
+                        ?modEmbed(ban,false,target,duration,reason,staffMention,"🟢",(ban?"Ban":"Unban")+" applied successfully",0x2ECC71)
+                        :modEmbed(ban,true,target,duration,reason,staffMention,"🔴","Failed to apply - check this server's console",0xE74C3C);
+                    e.replyEmbeds(embed.build()).queue();
+                });
+                return;
+            }
+            String id=UUID.randomUUID().toString().substring(0,8);
+            modRequests.put(id,new ModRequest(ban,target,duration,reason,staff,minApprover));
+            var embed=modEmbed(ban,true,target,duration,reason,staffMention,"🟡","Wait for Higher staff to decide",0xF1C40F);
+            e.replyEmbeds(embed.build()).setComponents(ActionRow.of(Button.danger("makong:modreq:deny:"+id,"Deny"),Button.success("makong:modreq:accept:"+id,"Accept"))).queue();
+        });
+    }
+    // null = this tier's request runs immediately, no approval needed.
+    // Otherwise the MINIMUM tier allowed to Accept/Deny it - see
+    // discord.commands.roles in module/verification.yml for the table:
+    // Manager needs nothing; Helper's /ban runs immediately but its /unban
+    // needs a Manager; Trial Helper needs a Helper-or-above for /ban and a
+    // Manager specifically for /unban.
+    private StaffTier requiredApprover(boolean ban,StaffTier requester){
+        if(requester==StaffTier.MANAGER)return null;
+        if(ban)return requester==StaffTier.TRIAL_HELPER?StaffTier.HELPER:null;
+        return StaffTier.MANAGER;
+    }
+    // Runs the actual ban/unban command on this server's console (LiteBans
+    // under the hood) and hands the raw success/failure boolean to `onDone`
+    // - shared by the immediate-execute path above and the Accept button
+    // (onModRequestButton()), which each build their own embed around it.
+    private void runModCommand(boolean ban,String target,String duration,String reason,Database.AccountLink staff,java.util.function.Consumer<Boolean> onDone){
+        String cmd=ban?"ban":"unban";
+        String args=cmd+" "+target+" --sender="+staff.name()+" --sender-uuid="+staff.uuid()+(ban?" "+duration+" "+reason:" "+reason);
+        Bukkit.getScheduler().runTask(plugin,()->onDone.accept(Bukkit.dispatchCommand(Bukkit.getConsoleSender(),args)));
+    }
+    // Builds the moderation-request embed for every state this file uses -
+    // pending (Accept/Deny buttons attached separately by the caller), and
+    // resolved (executed/accepted, or denied/failed). `pending` picks the
+    // title's tense ("Banning"/"Unbanning" vs "Banned"/"Unbanned") since a
+    // denied or failed request never actually happened.
+    private net.dv8tion.jda.api.EmbedBuilder modEmbed(boolean ban,boolean pending,String target,String duration,String reason,String staffMention,String statusEmoji,String statusText,int color){
+        String title=(ban?"🔨 Player ":"🔓 Player ")+(pending?(ban?"Banning":"Unbanning"):(ban?"Banned":"Unbanned"));
+        StringBuilder sb=new StringBuilder();
+        sb.append("**Player:** ").append(target).append('\n');
+        if(ban)sb.append("**Duration:** ").append(durationText(duration)).append('\n');
+        sb.append("**Reason:** ").append(reason==null||reason.isBlank()?"*No reason given*":reason).append('\n');
+        sb.append("**Staff:** ").append(staffMention).append('\n');
+        if(ban)sb.append("**Expires:** ").append(expiresText(duration)).append('\n');
+        sb.append('\n').append(statusEmoji).append(" Status: ").append(statusText);
+        return new net.dv8tion.jda.api.EmbedBuilder().setTitle(title).setDescription(sb.toString()).setColor(color);
+    }
+    // Human-readable form of a normalized duration ("7d" -> "7 days",
+    // "permanent" -> "Permanent") for the embed's Duration field. Falls back
+    // to echoing the raw value if it doesn't match the expected
+    // <number><unit> shape - a free-typed /ban duration LiteBans itself
+    // understands but this display helper doesn't need to fully parse.
+    private String durationText(String duration){
+        if(duration==null||duration.isBlank())return "Permanent";
+        String d=duration.trim().toLowerCase(Locale.ROOT);
+        if(d.equals("permanent")||d.equals("forever")||d.equals("perm"))return "Permanent";
+        Matcher m=Pattern.compile("^(\\d+)(mo|[smhdwy])$").matcher(d);
+        if(!m.matches())return duration;
+        long amount=Long.parseLong(m.group(1));
+        String unit=switch(m.group(2)){case "s"->"second";case "m"->"minute";case "h"->"hour";case "d"->"day";case "w"->"week";case "mo"->"month";default->"year";};
+        return amount+" "+unit+(amount==1?"":"s");
+    }
+    // Same <number><unit> duration parsed into a calendar date ("September
+    // 16, 2026") for the embed's Expires field - purely cosmetic, LiteBans
+    // does its own duration math independently when it actually applies the
+    // ban, so this never needs to be exact to the second.
+    private String expiresText(String duration){
+        if(duration==null||duration.isBlank())return "Never";
+        String d=duration.trim().toLowerCase(Locale.ROOT);
+        if(d.equals("permanent")||d.equals("forever")||d.equals("perm"))return "Never";
+        Matcher m=Pattern.compile("^(\\d+)(mo|[smhdwy])$").matcher(d);
+        if(!m.matches())return "Unknown";
+        long amount=Long.parseLong(m.group(1));
+        ZonedDateTime now=ZonedDateTime.now();
+        ZonedDateTime target=switch(m.group(2)){
+            case "s"->now.plusSeconds(amount);
+            case "m"->now.plusMinutes(amount);
+            case "h"->now.plusHours(amount);
+            case "d"->now.plusDays(amount);
+            case "w"->now.plusWeeks(amount);
+            case "mo"->now.plusMonths(amount);
+            default->now.plusYears(amount);
+        };
+        return target.format(java.time.format.DateTimeFormatter.ofPattern("MMMM d, yyyy",Locale.ENGLISH));
+    }
     private String normalizeDuration(String duration){
         String d=duration==null?"":duration.trim().toLowerCase(Locale.ROOT);
         if(d.equals("forever")||d.equals("permanent")||d.equals("perm"))return "permanent";

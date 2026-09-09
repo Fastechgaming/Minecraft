@@ -56,6 +56,27 @@ discord:
     # INFO: should use staff_role_ids instead.
     staff_role_ids: []
     staff_role_id: ""
+    # INFO: Three-tier permission model for /ban and /unban. A member's
+    # INFO: HIGHEST matching role below decides what happens - having a role
+    # INFO: in staff_role_ids/staff_role_id above (with nothing set here)
+    # INFO: counts as Manager, so an existing pre-3-tier setup keeps working
+    # INFO: exactly as before (both commands run immediately, nothing to
+    # INFO: accept/deny):
+    # INFO:
+    # INFO:   Manager      - /ban and /unban both run immediately.
+    # INFO:   Helper       - /ban runs immediately; /unban is posted as a
+    # INFO:                  request (an embed with Accept/Deny buttons, in
+    # INFO:                  the same channel) that only a Manager can decide.
+    # INFO:   Trial Helper - both /ban and /unban are always a request:
+    # INFO:                  /ban can be Accepted/Denied by a Helper OR a
+    # INFO:                  Manager, /unban needs a Manager specifically.
+    # INFO:
+    # INFO: Each list works the same as staff_role_ids above - any ONE
+    # INFO: matching role is enough, multiple ranks per tier are fine.
+    roles:
+      trial_helper_role_ids: []
+      helper_role_ids: []
+      manager_role_ids: []
     ban:
       enabled: true
     unban:

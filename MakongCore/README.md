@@ -175,3 +175,7 @@ MaTier:
 
 ## 1.2.27 changes
 - Discord's `/ban`/`/unban` result message (the success/failure reply from 1.2.26) is no longer ephemeral ("only you can see this") - it now posts visibly in the channel, so other staff can see who ran a ban/unban and whether it actually worked. The earlier permission checks (command disabled, no staff role, Discord not linked) are still ephemeral - those are per-user errors, not results worth broadcasting.
+
+## 1.2.28 changes
+- Added a three-tier staff permission model for Discord's `/ban`/`/unban`: `discord.commands.roles.trial_helper_role_ids`/`helper_role_ids`/`manager_role_ids` in `module/verification.yml`. Manager runs both commands immediately, same as before; Helper's `/ban` also runs immediately but `/unban` needs a Manager's approval; Trial Helper needs approval for both (`/ban` from a Helper-or-above, `/unban` from a Manager). An approval-gated command posts an embed with Deny/Accept buttons instead of running right away, and the same message is edited in place once someone with enough permission decides it - see `DOCUMENTATION.md`'s new §9.2 for the exact embed states. An existing `staff_role_ids`/`staff_role_id` setup (with none of the three new lists configured) is treated as Manager, so nothing changes for anyone who hasn't opted into the new tiers.
+- The `/ban`/`/unban` reply (both the immediate-execute and the approval-request paths) is now a proper embed instead of a plain text message - Player/Duration/Reason/Staff/Expires fields plus a colored status line, matching the request embed's look.

@@ -356,6 +356,7 @@ because there is no way to check it.
 | `discord.roles.crack` / `java` / `bedrock` | `""` each | Roles assigned by account type. |
 | `discord.commands.staff_role_ids` | `[]` | Role IDs allowed to use `/ban`/`/unban` - having ANY ONE is enough. **Empty means nobody can use these commands** (fails closed, not open). Independent of `discord.guild.eligibility_tiers`/`required_role_id` - staff don't need to satisfy the player-verification age/membership checks. |
 | `discord.commands.staff_role_id` | `""` | Old, pre-list single-role key - still honored (merged into the effective role set) if set, for upgrades. Use `staff_role_ids` above for new setups. |
+| `discord.commands.roles.trial_helper_role_ids` / `helper_role_ids` / `manager_role_ids` | `[]` each | *(added 1.2.28)* Three-tier permission model on top of `/ban`/`/unban`. A member's HIGHEST matching role decides what happens: **Manager** - both commands run immediately. **Helper** - `/ban` runs immediately, `/unban` is posted as a Manager-only Accept/Deny request. **Trial Helper** - both are always a request (`/ban` needs Helper-or-above, `/unban` needs Manager). Holding a role in `staff_role_ids`/`staff_role_id` above (with none of these three set) counts as Manager, so an existing setup keeps its old immediate-execute behavior unchanged. See [§9.2](#92-ban-unban-approval-requests). |
 | `discord.commands.ban.enabled` / `unban.enabled` | `true` / `true` | Discord `/ban` and `/unban`, with LiteBans integration. |
 | `telegram.enabled` | `false` | |
 | `telegram.bot_token` | `PUT_TELEGRAM_BOT_TOKEN_HERE` | |
@@ -398,6 +399,40 @@ both are handled:
   in the first place, while `discord.enabled` stays `true` everywhere so
   `/verify` and the required-verification freeze keep working on every
   server regardless of which one holds the connection.
+
+### 9.2 `/ban`/`/unban` approval requests
+
+*(added 1.2.28)* With `discord.commands.roles` configured, a Trial Helper's
+or Helper's `/ban`/`/unban` doesn't run immediately - it posts an embed in
+the same channel with **Deny**/**Accept** buttons instead, and waits:
+
+```
+🔨 Player Banning
+Player: Steve
+Duration: 7 days
+Reason: Hacking
+Staff: @Admin
+🟡 Status: Wait for Higher staff to decide
+[Deny] [Accept]
+```
+
+Whoever has at least the required tier (a Helper-or-above for a Trial
+Helper's `/ban`, a Manager for anything else needing approval) clicks
+Accept or Deny. The same message is then edited in place - no new message,
+no leftover buttons:
+
+- **Accept** actually runs the command and shows the real outcome:
+  `🟢 Status: Accepted by @Staff` on success, or `🔴 Status: Accepted by
+  @Staff, but failed to apply - check console` if the underlying `/ban`/
+  `/unban` (LiteBans) itself failed.
+- **Deny** never touches the server at all: `🔴 Status: Denied by @Staff`.
+
+A Manager's `/ban`/`/unban`, and a Helper's `/ban`, skip all of this and run
+immediately - the reply embed goes straight to `🟢 Status: Ban applied
+successfully` (or `🔴 Status: Failed to apply...` on failure), with no
+buttons. Requests are held in memory only (`AccountLinkService#modRequests`)
+- a request still pending across a plugin reload/restart is lost, same as
+this file's other in-memory Discord state (see §9.1 above).
 
 ---
 
