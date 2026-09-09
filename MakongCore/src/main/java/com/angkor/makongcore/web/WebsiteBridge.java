@@ -65,6 +65,8 @@ public final class WebsiteBridge {
     result.commands = parseCommands(listOf(res.get("commands")));
     result.pings = parsePings(listOf(res.get("pings")));
     result.pongs = parsePongs(listOf(res.get("pongs")));
+    result.profileRequests = parseProfileRequests(listOf(res.get("profileRequests")));
+    result.profileAnswers = parseProfileAnswers(listOf(res.get("profileAnswers")));
     return result;
   }
 
@@ -93,6 +95,33 @@ public final class WebsiteBridge {
     body.put("target", target);
     body.put("pingId", pingId);
     post("/api/plugin/pong", body);
+  }
+
+  /**
+   * Asks the website to queue a profile lookup for `target`'s next poll -
+   * same relay shape as ping()/pong() above, used by MakongCore's /profile
+   * Discord command to ask the connected Velocity companion (the only side
+   * with nLogin registration/last-login data and true whole-network online
+   * status) about a player. Returns the request id to watch for in a later
+   * poll()'s profileAnswers, or null if the website call itself failed.
+   */
+  public String requestProfile(String target, String playerName) {
+    Map<String, Object> body = new LinkedHashMap<>();
+    body.put("serverId", serverId);
+    body.put("target", target);
+    body.put("playerName", playerName);
+    Map<String, Object> res = post("/api/plugin/profile-request", body);
+    return res == null ? null : str(res, "requestId");
+  }
+
+  /** Answers a profile-request this server saw in its own poll(). */
+  public void answerProfile(String target, String requestId, Map<String, Object> data) {
+    Map<String, Object> body = new LinkedHashMap<>();
+    body.put("serverId", serverId);
+    body.put("target", target);
+    body.put("requestId", requestId);
+    body.put("data", data);
+    post("/api/plugin/profile-answer", body);
   }
 
   /**
@@ -229,11 +258,39 @@ public final class WebsiteBridge {
     return list;
   }
 
+  private static List<ProfileRequest> parseProfileRequests(List<Object> arr) {
+    List<ProfileRequest> list = new ArrayList<>();
+    for (Object el : arr) {
+      Map<String, Object> o = mapOf(el);
+      ProfileRequest r = new ProfileRequest();
+      r.id = str(o, "id");
+      r.from = str(o, "from");
+      r.playerName = str(o, "playerName");
+      list.add(r);
+    }
+    return list;
+  }
+
+  private static List<ProfileAnswer> parseProfileAnswers(List<Object> arr) {
+    List<ProfileAnswer> list = new ArrayList<>();
+    for (Object el : arr) {
+      Map<String, Object> o = mapOf(el);
+      ProfileAnswer a = new ProfileAnswer();
+      a.id = str(o, "id");
+      a.from = str(o, "from");
+      a.data = mapOf(o.get("data"));
+      list.add(a);
+    }
+    return list;
+  }
+
   public static final class PollResult {
     public List<ServerInfo> servers = List.of();
     public List<QueuedCommand> commands = List.of();
     public List<Ping> pings = List.of();
     public List<Pong> pongs = List.of();
+    public List<ProfileRequest> profileRequests = List.of();
+    public List<ProfileAnswer> profileAnswers = List.of();
   }
 
   public static final class ServerInfo {
@@ -255,5 +312,17 @@ public final class WebsiteBridge {
   public static final class Pong {
     public String id;
     public String from;
+  }
+
+  public static final class ProfileRequest {
+    public String id;
+    public String from;
+    public String playerName;
+  }
+
+  public static final class ProfileAnswer {
+    public String id;
+    public String from;
+    public Map<String, Object> data = Map.of();
   }
 }

@@ -43,6 +43,8 @@ router.get("/poll", (req, res) => {
     commands: pluginBridge.drainCommands(serverId),
     pings: pluginBridge.drainPings(serverId),
     pongs: pluginBridge.drainPongs(serverId),
+    profileRequests: pluginBridge.drainProfileRequests(serverId),
+    profileAnswers: pluginBridge.drainProfileAnswers(serverId),
   });
 });
 
@@ -71,6 +73,40 @@ router.post("/pong", (req, res) => {
   res.json({ ok: true });
 });
 
+// A plugin (MakongCore's /profile) asking another connected server
+// (normally the one with kind "velocity", the only one with nLogin +
+// whole-network online data) about a player by name. Same relay shape as
+// ping/pong above - see lib/pluginBridge.js.
+router.post("/profile-request", (req, res) => {
+  const { serverId, target, playerName } = req.body || {};
+  if (!serverId || !target || !playerName) {
+    return res.status(400).json({ error: "serverId, target and playerName are required" });
+  }
+  const requestId = pluginBridge.queueProfileRequest(String(serverId), String(target), String(playerName).slice(0, 32));
+  res.json({ ok: true, requestId });
+});
+
+// The target server answering a profile-request it saw in its own /poll.
+const PROFILE_ANSWER_MAX_KEYS = 20;
+function sanitizeProfileData(data) {
+  if (!data || typeof data !== "object") return {};
+  const out = {};
+  for (const key of Object.keys(data).slice(0, PROFILE_ANSWER_MAX_KEYS)) {
+    const value = data[key];
+    if (value === null || typeof value === "number" || typeof value === "boolean") out[key] = value;
+    else if (typeof value === "string") out[key] = value.slice(0, 128);
+  }
+  return out;
+}
+router.post("/profile-answer", (req, res) => {
+  const { serverId, target, requestId, data } = req.body || {};
+  if (!serverId || !target || !requestId) {
+    return res.status(400).json({ error: "serverId, target and requestId are required" });
+  }
+  pluginBridge.queueProfileAnswer(String(serverId), String(target), String(requestId), sanitizeProfileData(data));
+  res.json({ ok: true });
+});
+
 // A plugin's periodic Team/MaTier Star standings report, shown live on the
 // public Ranking page (see lib/pluginBridge.js's getLiveRankings()).
 const RANKINGS_MAX_ENTRIES = 200;
@@ -96,7 +132,7 @@ router.post("/rankings", (req, res) => {
   res.json({ ok: true });
 });
 
-// A connected plugin (currently just MakongVelocity's /mc autorestart)
+// A connected plugin (currently just MakongVelocity's /mcvlc autorestart)
 // queuing a console command on ANOTHER connected server - same command
 // queue the admin panel's /admin/servers already uses, just a second
 // caller. No extra authorization boundary beyond the shared secret every

@@ -15,24 +15,24 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
- * /mc - MakongVelocity's own commands:
- * - /mc clients checks every backend actually running MakongCore (i.e.
+ * /mcvlc - MakongVelocity's own commands:
+ * - /mcvlc clients checks every backend actually running MakongCore (i.e.
  *   currently connected to the website bridge) is reachable right now (a
  *   real status ping, not just "the bridge saw a heartbeat recently") and
  *   reports each one's live player count. Requires the website bridge to be
  *   configured - that's the only source of truth this proxy has for which
  *   of its velocity.toml servers actually run MakongCore.
- * - /mc ping <server-id> mirrors MakongCore's own /mateam ping, relayed
+ * - /mcvlc ping <server-id> mirrors MakongCore's own /makongcore ping, relayed
  *   through the website bridge.
- * - /mc autorestart <seconds> fans a restart warning out to every backend
+ * - /mcvlc autorestart <seconds> fans a restart warning out to every backend
  *   connected to the website bridge at once - see AdminCommand#autorestart
  *   on the Paper side and MakongVelocity's README for the intended
  *   panel-scheduling use.
- * - /mc ar now [interval] / /mc ar stop are the same restart broadcast
+ * - /mcvlc ar now [interval] / /mcvlc ar stop are the same restart broadcast
  *   under a shorter name, plus the ability to cancel a pending one - "ar"
  *   and "autorestart" both relay to AdminCommand#autorestart on every
  *   connected backend.
- * - /mc reload <module> relays to AdminCommand#reload on every connected
+ * - /mcvlc reload <module> relays to AdminCommand#reload on every connected
  *   backend, reloading just that one MakongCore module across the network.
  */
 final class MakongCommand implements SimpleCommand {
@@ -63,7 +63,7 @@ final class MakongCommand implements SimpleCommand {
     }
 
     private void usage(Invocation invocation) {
-        invocation.source().sendMessage(Component.text("Usage: /mc <clients|ping|autorestart|ar|reload> ...", NamedTextColor.RED));
+        invocation.source().sendMessage(Component.text("Usage: /mcvlc <clients|ping|autorestart|ar|reload> ...", NamedTextColor.RED));
     }
 
     private void clients(Invocation invocation) {
@@ -145,7 +145,7 @@ final class MakongCommand implements SimpleCommand {
     private void ping(Invocation invocation, String[] args) {
         if (!requireBridge(invocation)) return;
         if (args.length < 2) {
-            invocation.source().sendMessage(Component.text("Usage: /mc ping <server-id>", NamedTextColor.RED));
+            invocation.source().sendMessage(Component.text("Usage: /mcvlc ping <server-id>", NamedTextColor.RED));
             return;
         }
         invocation.source().sendMessage(Component.text("Pinging " + args[1] + "..."));
@@ -157,7 +157,7 @@ final class MakongCommand implements SimpleCommand {
     private void autorestart(Invocation invocation, String[] args) {
         if (!requireBridge(invocation)) return;
         if (args.length < 2) {
-            invocation.source().sendMessage(Component.text("Usage: /mc autorestart <seconds|stop>", NamedTextColor.RED));
+            invocation.source().sendMessage(Component.text("Usage: /mcvlc autorestart <seconds|stop>", NamedTextColor.RED));
             return;
         }
         if (args[1].equalsIgnoreCase("stop")) {
@@ -174,13 +174,13 @@ final class MakongCommand implements SimpleCommand {
         relayToAllBackends(invocation, "makongcore autorestart " + seconds, "Sent " + seconds + "s restart warning to");
     }
 
-    // "/mc ar" is the same restart-broadcast feature as "/mc autorestart"
+    // "/mcvlc ar" is the same restart-broadcast feature as "/mcvlc autorestart"
     // under a shorter name, split into explicit now/stop subcommands rather
     // than autorestart's single "<seconds|stop>" arg.
     private void ar(Invocation invocation, String[] args) {
         if (!requireBridge(invocation)) return;
         if (args.length < 2) {
-            invocation.source().sendMessage(Component.text("Usage: /mc ar <now [interval]|stop>", NamedTextColor.RED));
+            invocation.source().sendMessage(Component.text("Usage: /mcvlc ar <now [interval]|stop>", NamedTextColor.RED));
             return;
         }
         switch (args[1].toLowerCase(Locale.ROOT)) {
@@ -197,7 +197,7 @@ final class MakongCommand implements SimpleCommand {
                 relayToAllBackends(invocation, "makongcore autorestart " + seconds, "Sent " + seconds + "s restart warning to");
             }
             case "stop" -> relayToAllBackends(invocation, "makongcore autorestart stop", "Sent restart-cancel to");
-            default -> invocation.source().sendMessage(Component.text("Usage: /mc ar <now [interval]|stop>", NamedTextColor.RED));
+            default -> invocation.source().sendMessage(Component.text("Usage: /mcvlc ar <now [interval]|stop>", NamedTextColor.RED));
         }
     }
 
@@ -208,7 +208,7 @@ final class MakongCommand implements SimpleCommand {
         if (!requireBridge(invocation)) return;
         if (args.length < 2) {
             invocation.source().sendMessage(Component.text(
-                    "Usage: /mc reload <team|autorestart|matier|verification|gui>", NamedTextColor.RED));
+                    "Usage: /mcvlc reload <team|autorestart|matier|verification|gui>", NamedTextColor.RED));
             return;
         }
         String module = args[1].toLowerCase(Locale.ROOT);
@@ -260,7 +260,7 @@ final class MakongCommand implements SimpleCommand {
         // Deliberately not "makongcore.admin" - that's already the Paper
         // MakongCore plugin's own distinct permission (/matier's admin
         // subcommands, see plugin.yml). Reusing it here would silently grant
-        // this plugin's /mc admin powers to anyone with that one too, on any
+        // this plugin's /mcvlc admin powers to anyone with that one too, on any
         // network-synced permissions setup (LuckPerms MySQL, etc.).
         return invocation.source().hasPermission("macorevlc.admin");
     }

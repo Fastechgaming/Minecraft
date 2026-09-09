@@ -68,32 +68,72 @@ similar but not called from anywhere in `TeamCommand.java` - the hardcoded
 text in the `onCommand` handler is what actually prints. See
 [§16](#16-known-gaps-found-while-writing-this).
 
-### `/mateam` (primary name: `/makongcore`, same command either way)
+### `/mateam` - team admin only
 
-Requires **`mateam.admin`** (default: `op`).
+Requires **`mateam.admin`** (default: `op`). Scoped to the team module only -
+nothing here reaches MaTier or server-wide admin actions; those live under
+`/makongcore` below (which can *also* reach every one of these same team
+subcommands - see that section).
 
 | Usage | What it does |
 |---|---|
 | `/mateam help` | Lists everything below. |
-| `/mateam reload [module]` | No module: full reload (config, database reconnect, team data reload, all listeners). With a module name (`team`, `autorestart`, `matier`, `verification`, `gui`): reloads just that one. `team` and `autorestart` apply live in place; the other three currently still trigger a full reload internally (see [§16](#16-known-gaps-found-while-writing-this)). |
-| `/mateam info` | Team count, member count, Floodgate status, Website Bridge status. |
-| `/mateam list` | Lists every team (tag, name, member count). |
-| `/mateam team <tag>` | Full stats for one team (ID, members, public/private, PvP, Weekly Points, Stars, kills, deaths, ally count). |
+| `/mateam team <tag>` | Full stats for one team (ID, members, public/private, PvP, Stars, kills, deaths, ally count). |
 | `/mateam disband <tag>` | Force-disbands a team, bypassing the owner-only rule. |
 | `/mateam forcejoin <player> <tag>` | Adds a player to a team as a regular member, bypassing invites. |
 | `/mateam forceleave <player>` | Removes a player from their team. Refuses if they're the owner (transfer or disband first). |
-| `/mateam addweeklypoints <tag> <amount>` (alias `addpoints`) | Adds (or subtracts, with a negative amount) Weekly Points, floored at `team.scoring.minimum_points`. |
-| `/mateam setweeklypoints <tag> <amount>` (alias `setpoints`) | Sets Weekly Points directly, floored the same way. |
 | `/mateam givestar <tag> <amount>` (aliases `addstars`, `givestars`) | Adds/subtracts team Stars, floored at 0. |
 | `/mateam setstars <tag> <amount>` | Sets team Stars directly, floored at 0. |
-| `/mateam ping <server-id>` | Pings another server through the Website Bridge. Requires the bridge to be configured (see [§15](#15-website-bridge--velocity-companion)). |
-| `/mateam autorestart <seconds\|stop>` | Broadcasts a countdown and restarts this server once it elapses, or (`stop`) cancels a pending one. Normally triggered remotely by MakongVelocity's `/mc ar`/`/mc autorestart`, not typed by hand. |
+
+### `/makongcore` (alias `/macore`) - global, every module
+
+Requires **`makongcore.admin`** (default: `op`). This is the "everything"
+command: server-wide admin actions live here directly, and it also reaches
+every `/mateam` team subcommand above and every `/matier` admin subcommand
+below by delegating straight into those same commands' code (so behavior is
+identical either way you reach them - nothing is duplicated).
+
+| Usage | What it does |
+|---|---|
+| `/makongcore help` | Lists everything below. |
+| `/makongcore reload [module]` | No module: full reload (config, database reconnect, team data reload, all listeners). With a module name (`team`, `autorestart`, `matier`, `verification`, `gui`): reloads just that one. `team` and `autorestart` apply live in place; the other three currently still trigger a full reload internally (see [§16](#16-known-gaps-found-while-writing-this)). |
+| `/makongcore info` | Team count, member count, Floodgate status, Website Bridge status. |
+| `/makongcore list` | Lists every team (tag, name, member count). |
+| `/makongcore ping <server-id>` | Pings another server through the Website Bridge. Requires the bridge to be configured (see [§15](#15-website-bridge--velocity-companion)). |
+| `/makongcore autorestart <seconds\|stop>` | Broadcasts a countdown and restarts this server once it elapses, or (`stop`) cancels a pending one. Normally triggered remotely by MakongVelocity's `/mcvlc ar`/`/mcvlc autorestart`, not typed by hand. |
+| `/makongcore team\|disband\|forcejoin\|forceleave\|addstars\|setstars ...` | Same as the identically-named `/mateam` subcommands above. |
+| `/makongcore matier <...>` | Same as the identically-named `/matier` admin subcommand below (e.g. `/makongcore matier set <player> <amount>`). |
+| `/makongcore malink <...>` | Same as the identically-named `/malink` subcommand below (e.g. `/makongcore malink bypass <player>`). |
+| `/makongcore reset <mateam\|matier\|verification\|all> confirm` | **Irreversible.** Wipes that module's persisted data entirely - see the table below. The `confirm` argument is required; running it without one just prints a warning of exactly what would be destroyed and does nothing. |
+
+`/makongcore reset`'s scopes:
+
+| Scope | What gets destroyed |
+|---|---|
+| `mateam` | **Every team, period** - not just Stars. Deletes every row in `teams`, `team_members`, `team_allies`. Equivalent to force-disbanding every team that exists. |
+| `matier` | **All MaTier data** - every player's Stars *and* every past season's tier/rank history (`matier_players` and `matier_history` both wiped). This is a bigger wipe than `/matier resetall`, which only zeroes Stars and leaves history intact. |
+| `verification` | **Every account link** - the entire `account_links` table. Every previously-verified player becomes unverified again and, if `linking.required_for_cracked` applies to them, gets frozen and re-coded the next time they join. Doesn't touch the bypass list (see `/malink` below) or in-progress verification codes. |
+| `all` | All three of the above, together. |
+
+### `/malink` - account-linking admin (also reachable via `/makongcore malink <...>`)
+
+Requires **`makongcore.admin`** (default: `op`) - the same node `/matier`'s
+admin subcommands and `/makongcore` itself use.
+
+| Usage | What it does |
+|---|---|
+| `/malink help` | Lists everything below. |
+| `/malink status <player>` | Whether they've linked yet (and their Discord ID/Telegram chat/account type/linked-at time if so), their bypass state, and - if they're online on *this* server specifically - whether they're currently frozen and their pending code. |
+| `/malink reset <player>` | Deletes that player's `account_links` row (single-player version of `/makongcore reset verification`). If they're online right now, immediately re-runs the same join-time detection/freeze logic `onJoin` would, instead of waiting for their next actual join. |
+| `/malink bypass <player>` | Adds them to the persisted bypass list (`link_bypass` table) - they can play without ever linking, regardless of `linking.required_for_cracked` or their detected account type. Independent of `account_links`: a bypassed player is never required to link whether or not they ever actually do. |
+| `/malink unbypass <player>` | Removes them from the bypass list. |
+| `/malink bypasslist` | Lists every currently-bypassed player. |
 
 ### `/matier`
 
 Base usage (profile/leaderboard) is open to everyone; the admin subcommands
-require **`makongcore.admin`** (default: `op`) - note this is a *different*
-permission node from `/mateam`'s, see [§3](#3-permissions).
+require **`makongcore.admin`** (default: `op`) - the same node `/makongcore`
+itself requires, see [§3](#3-permissions).
 
 | Usage | Permission | What it does |
 |---|---|---|
@@ -105,12 +145,18 @@ permission node from `/mateam`'s, see [§3](#3-permissions).
 | `/matier remove <player> <amount>` | `makongcore.admin` | Subtracts Stars. |
 | `/matier reset <player>` | `makongcore.admin` | Sets one player's Stars to 0. |
 | `/matier resetall` | `makongcore.admin` | Sets *every* player's Stars to 0. |
-| `/matier reload` | `makongcore.admin` | Runs the same full reload as `/mateam reload` (not a MaTier-only reload). |
+| `/matier reload` | `makongcore.admin` | Runs the same full reload as `/makongcore reload` (not a MaTier-only reload). |
 
-### `/link`
+### `/verify` (alias `/link`)
 
-No permission node. Starts optional Discord linking for the player who runs
-it (`AccountLinkService#optionalLink`) - see [§9](#9-moduleverificationyml).
+No permission node. Starts optional Discord/Telegram linking for the player
+who runs it (`AccountLinkService#optionalLink`) - see
+[§9](#9-moduleverificationyml). Renamed from `/link` (added next release);
+`/link` still works as an alias. Its title/subtitle/action bar/chat message
+are configurable (`linking.verify_command.*`), and it has its own cooldown
+(`linking.request_cooldown_seconds`, default 60s) - running it again within
+that window re-shows the same still-valid code rather than generating a new
+one.
 
 ---
 
@@ -119,12 +165,17 @@ it (`AccountLinkService#optionalLink`) - see [§9](#9-moduleverificationyml).
 | Node | Default | Gates |
 |---|---|---|
 | `mateam.use` | `true` | Declared, but **not currently checked anywhere in the code** - `/team`'s own commands have no permission gate at all right now. See [§16](#16-known-gaps-found-while-writing-this). |
-| `mateam.admin` | `op` | `/mateam` (`/makongcore`) - every admin subcommand in [§2](#2-commands). |
-| `makongcore.admin` | `op` | `/matier`'s admin subcommands (`stats`/`set`/`add`/`remove`/`reset`/`resetall`/`reload`). |
+| `mateam.admin` | `op` | `/mateam` - every team admin subcommand in [§2](#2-commands). |
+| `makongcore.admin` | `op` | `/makongcore` (`/macore`) itself, and `/matier`'s admin subcommands (`stats`/`set`/`add`/`remove`/`reset`/`resetall`/`reload`). |
 
-**⚠ Note:** despite the similar names, `mateam.admin` and `makongcore.admin`
-gate two *different* commands (`/mateam` vs `/matier`'s admin subset) - they
-are not aliases of each other and granting one does not grant the other.
+**⚠ Note:** `/makongcore`'s own top-level gate is `makongcore.admin`, but
+when it delegates to a team subcommand (e.g. `/makongcore disband <tag>`)
+that delegates straight into `/mateam`'s own command code, which re-checks
+`mateam.admin` independently. In practice this is invisible to a normal
+server op (ops get both nodes via `default: op`), but a non-op admin granted
+only `makongcore.admin` through a permissions plugin needs `mateam.admin`
+too to reach the delegated team subcommands specifically - grant both if you
+want one staff member to have full `/makongcore` access.
 Before 1.2.20 `mateam.admin` wasn't declared in `plugin.yml` at all even
 though the code already checked it; see [§16](#16-known-gaps-found-while-writing-this).
 
@@ -135,7 +186,7 @@ though the code already checked it; see [§16](#16-known-gaps-found-while-writin
 | File | Covers |
 |---|---|
 | `config.yml` | Storage/database, network mode, Website Bridge, debug logging. |
-| `module/team.yml` | Everything about `/team`: limits, PvP, allies, chat, weekly points/rewards, disband, scoring, PlaceholderAPI's no-team text. |
+| `module/team.yml` | Everything about `/team`: limits, PvP, allies, chat, Star scoring, annual Star reset, disband, PlaceholderAPI's no-team text. |
 | `module/matier.yml` | The MaTier ranking system: tiers, kill/death rewards, anti-farming, inactivity decay, aura particles, and MaTier's own messages. |
 | `module/autorestart.yml` | Scheduled + ad-hoc restarts, countdown messages. |
 | `module/verification.yml` | Discord/Telegram bots, cracked-player verification, premium detection. |
@@ -144,7 +195,7 @@ though the code already checked it; see [§16](#16-known-gaps-found-while-writin
 
 All seven are self-healing: any key present in a newer MakongCore version's
 shipped default but missing from your file gets spliced back in automatically
-on startup and on `/mateam reload` (comments included, nothing you've
+on startup and on `/makongcore reload` (comments included, nothing you've
 customized is touched) - see [§14](#14-auto-config-migration). You should
 never need to delete a config file to "pick up" a new option.
 
@@ -179,6 +230,7 @@ never need to delete a config file to "pick up" a new option.
 
 | Key | Default | Notes |
 |---|---|---|
+| `team.enabled` | *(added 1.2.31)* `true` | Disables the ENTIRE Team module - `/team`, `/mateam`, the team GUI, team chat, team PvP, the annual Star reset, `%team_*%` placeholders. `/team` and `/mateam` still work as commands when `false`, they just reply that teams are disabled. Toggling this specifically (unlike other `team.yml` keys) triggers a full reload even via `/makongcore reload team`, since the team-only listeners need registering/unregistering to match. |
 | `team.limits.max_team_size` | `36` | |
 | `team.limits.min_name_length` / `max_name_length` | `3` / `15` | |
 | `team.limits.min_tag_length` / `max_tag_length` | `2` / `5` | |
@@ -186,34 +238,23 @@ never need to delete a config file to "pick up" a new option.
 | `team.defaults.description` | `a new team!` | Given to a newly created team. |
 | `team.invites.expire_seconds` | `3600` | |
 | `team.pvp.enabled` | `true` | Whether teams can toggle PvP at all. |
-| `team.pvp.default_status` | `false` | PvP state for a newly created team. |
-| `team.pvp.toggle_cooldown_seconds` | `300` | |
+| `team.pvp.default_status` | `false` | PvP state for a newly created team. When `false`, teammates cannot damage each other (friendly fire cancelled); when `true`, teammates can. Damage to/from anyone outside the team is never affected by this setting. Only the team owner can toggle it, from the team GUI's PvP button. |
+| `team.pvp.toggle_cooldown_seconds` | `300` | Not currently enforced. |
 | `team.allies.enabled` | `true` | |
 | `team.allies.max_allies` | `10` | |
 | `team.allies.allow_request_toggle` | `true` | |
 | `team.chat.character_enabled` | `true` | Whether the `character` prefix (below) triggers team chat in normal chat. |
 | `team.chat.character` | `#` | |
 | `team.rename.cooldown_seconds` | `604800` | 7 days. |
-| `team.weekly_points.reset_enabled` | `true` | |
-| `team.weekly_points.reset_day` | `SUNDAY` | A Java `DayOfWeek` name. |
-| `team.weekly_points.reset_hour` / `reset_minute` | `0` / `0` | |
-| `team.weekly_rewards.enabled` | `true` | Paid out from the *completed* previous week, before Weekly Points reset. |
-| `team.weekly_rewards.payout_day` / `payout_hour` / `payout_minute` | `SUNDAY` / `0` / `0` | |
-| `team.weekly_rewards.top_1_stars` | `40` | |
-| `team.weekly_rewards.top_2_stars` | `30` | |
-| `team.weekly_rewards.top_3_stars` | `25` | |
-| `team.weekly_rewards.top_4_5_stars` | `20` | Ranks 4-5. |
-| `team.weekly_rewards.top_6_20_stars_start` | `15` | Rank 6's reward; each subsequent rank down to 20 decreases by... |
-| `team.weekly_rewards.top_6_20_stars_decrement` | `1` | ...this amount. |
 | `team.annual_star_reset.enabled` | `true` | |
 | `team.annual_star_reset.month` / `day` / `hour` / `minute` | `1` / `1` / `0` / `0` | New Year's Day at midnight. |
 | `team.disband.auto_disband` | `false` | Auto-disband inactive teams. |
 | `team.disband.inactive_days` | `15` | |
 | `team.disband.check_interval_minutes` | `360` | |
-| `team.scoring.enabled` | `true` | Whether member activity earns Weekly Points at all. |
-| `team.scoring.minimum_points` | `0` | Floor used by `/mateam addpoints`/`setpoints` too. |
+| `team.scoring.enabled` | `true` | Whether member activity earns Stars at all. *(changed 1.2.35)* Stars are now awarded straight to the team in real time (MaTier-style, minus named tiers), not accumulated toward a weekly payout - see the 1.2.35 changelog entry in `README.md`. |
+| `team.scoring.minimum_stars` | *(renamed 1.2.35, was `minimum_points`)* `0` | Floor applied to a single death's Star loss (see `events.death`/`death_spam` below) - unrelated to `/mateam givestar`/`setstars`, which floor at 0 directly. |
 | `team.scoring.spam_threshold_seconds` | `60` | |
-| `team.scoring.events.playtime_per_hour` | `1` | Points per hour played. |
+| `team.scoring.events.playtime_per_hour` | `1` | Stars per hour played. |
 | `team.scoring.events.kill` | `1` | |
 | `team.scoring.events.kill_spam` | `0` | Reduced reward once `spam_threshold_seconds` triggers. |
 | `team.scoring.events.death` | `0` | |
@@ -265,10 +306,11 @@ never need to delete a config file to "pick up" a new option.
 | `settings.restarts` | `['Daily;05;00']` | Format `Daily;HH;MM` or `DAY;HH;MM`; add more entries for multiple restarts per day. |
 | `settings.messageAtIntervals` | `['30','10','5','4','3','2']` | Countdown seconds at which `messages.interval` broadcasts. |
 | `messages.interval` | `<yellow>server restarting in <white>{time}</white>!</yellow>` | `{time}` is pre-formatted (e.g. `30s`, `2m`). |
-| `messages.cancelled` | *(added 1.2.17)* `<yellow>The scheduled restart has been cancelled.</yellow>` | Broadcast by `/mateam autorestart stop`. |
+| `messages.action-bar` | *(added 1.2.25)* `<yellow>Restarting in <white>{time}</white>!</yellow>` | Shown in every online player's action bar alongside `messages.interval`, at the same `settings.messageAtIntervals` countdowns. Leave blank (`''`) to skip it. |
+| `messages.cancelled` | *(added 1.2.17)* `<yellow>The scheduled restart has been cancelled.</yellow>` | Broadcast by `/makongcore autorestart stop`. |
 | `format.seconds`/`second`/`minutes`/`minute`/`hours`/`hour`/`days`/`day`/`splitter` | `s`/`s`/`m `/`m `/`h `/`h `/`D `/`D `/`and ` | Used to build `{time}`. |
 
-This module also covers the **ad-hoc** restart (`/mateam autorestart <seconds>`,
+This module also covers the **ad-hoc** restart (`/makongcore autorestart <seconds>`,
 normally triggered remotely - see [§2](#2-commands)) - it reuses
 `restartCommands`' `[normal]` entries and the same interval messages, just
 counting down from a fixed number of seconds instead of to a wall-clock time.
@@ -289,7 +331,8 @@ because there is no way to check it.
 
 | Key | Default | Notes |
 |---|---|---|
-| `discord.enabled` | `false` | |
+| `discord.enabled` | `false` | Controls whether linking is required/available and whether `/verify` works on *this* server - independent of `discord.hub` below. Leave `true` on every server in a multi-server network sharing one bot, even non-hub ones. |
+| `discord.hub` | `true` | Whether *this* server opens its own live JDA connection to Discord. Only matters when multiple servers share the same `bot_token`: set `true` on exactly one (the "hub") and `false` on the rest, so only one process ever receives/acknowledges Discord interactions. Without this, every connected server gets every button click/modal submit at once and races the others to reply, producing `10062 Unknown interaction` / `40060 already acknowledged` errors. A player on a non-hub server still gets a code via `/verify` and it's still recognized correctly when submitted through the hub - see [§9.1](#91-multiple-servers-sharing-one-discord-bot). On a single-server setup, leave this alone. |
 | `discord.bot_token` | `PUT_DISCORD_BOT_TOKEN_HERE` | Keep private - never commit a real token. |
 | `discord.invite` | `discord.gg/makong` | |
 | `discord.guild.id` | `""` | |
@@ -299,20 +342,150 @@ because there is no way to check it.
 | `discord.guild.minimum_account_age_days` / `minimum_membership_days` | `180` / `7` | **Dead as of 1.2.21** - superseded by `eligibility_tiers` above. Still present (and untouched) in an upgraded file, but no longer read by any code. |
 | `discord.verification.channel_id` / `panel_message_id` | `""` / `""` | |
 | `discord.roles.crack` / `java` / `bedrock` | `""` each | Roles assigned by account type. |
-| `discord.commands.staff_role_id` | `""` | |
+| `discord.commands.staff_role_ids` | `[]` | Role IDs allowed to use `/ban`/`/unban` - having ANY ONE is enough. **Empty means nobody can use these commands** (fails closed, not open). Independent of `discord.guild.eligibility_tiers`/`required_role_id` - staff don't need to satisfy the player-verification age/membership checks. |
+| `discord.commands.staff_role_id` | `""` | Old, pre-list single-role key - still honored (merged into the effective role set) if set, for upgrades. Use `staff_role_ids` above for new setups. |
+| `discord.commands.roles.trial_helper_role_ids` / `helper_role_ids` / `manager_role_ids` | `[]` each | *(added 1.2.28)* Three-tier permission model on top of `/ban`/`/unban`. A member's HIGHEST matching role decides what happens: **Manager** - both commands run immediately. **Helper** - `/ban` runs immediately, `/unban` is posted as a Manager-only Accept/Deny request. **Trial Helper** - both are always a request (`/ban` needs Helper-or-above, `/unban` needs Manager). Holding a role in `staff_role_ids`/`staff_role_id` above (with none of these three set) counts as Manager, so an existing setup keeps its old immediate-execute behavior unchanged. See [§9.2](#92-ban-unban-approval-requests). |
 | `discord.commands.ban.enabled` / `unban.enabled` | `true` / `true` | Discord `/ban` and `/unban`, with LiteBans integration. |
+| `discord.profile.tagline` | *(added 1.2.29)* `Play. Improve. Be Better.` | The quote line on `/profile`'s card - see [§9.3](#93-profile). |
 | `telegram.enabled` | `false` | |
 | `telegram.bot_token` | `PUT_TELEGRAM_BOT_TOKEN_HERE` | |
 | `telegram.username` | `makongmcbot` | |
 | `linking.required_for_cracked` | `true` | Only actually enforced when at least one of `discord.enabled`/`telegram.enabled` is true - see 1.2.15's changelog entry for the lockout bug this guards against. Set `false` yourself to make linking optional even with a bot enabled. |
 | `linking.code_length` | `6` | |
 | `linking.code_expire_minutes` | `10` | |
+| `linking.request_cooldown_seconds` | `60` | *(added next release)* `/verify`'s own cooldown - running it again within this many seconds of the last request just re-shows the same still-valid code (expiry untouched) instead of rolling a new one. Only matters for `/verify`'s on-demand codes, not the required-verification freeze (a one-time code per freeze, not repeatable on demand). |
 | `linking.one_minecraft_per_discord` / `one_discord_per_minecraft` | `true` / `true` | |
 | `linking.one_minecraft_per_telegram` / `one_telegram_per_minecraft` | `true` / `true` | |
 | `linking.premium_detection.enabled` | `true` | Falls back to a Mojang username lookup when MakongVelocity/nLogin forwarding isn't available - best-effort only, see the file's own comment. |
 | `linking.premium_detection.unknown_as_cracked` | `true` | |
 | `linking.reminder.interval_seconds` | `3` | *(added next release)* How often a frozen player's title/subtitle/action bar/chat message repeats - also the scheduler's own tick rate (`AccountLinkService#start()`), so this is the only place that interval is configured. |
 | `linking.reminder.title` / `subtitle` / `actionbar` / `message` | see file | *(added next release)* The frozen-player nag, sent once immediately on freeze and then repeated every `interval_seconds` - a title/action bar fades on its own after a few seconds, so without repeating it it would only ever show once. Supports `{code}`, `{discord}` (= `discord.invite`), `{telegram}` (= `"@" + telegram.username`), and `&`-style color codes. |
+| `linking.verify_command.title` / `subtitle` / `actionbar` / `message` | see file | *(added next release)* Shown when a player runs `/verify` (or `/link`) by choice - not frozen/required. Same `{code}`/`{discord}`/`{telegram}`/`&`-color support as `reminder.*` above, plus `{expires_minutes}` (= `code_expire_minutes`). |
+
+### 9.1 Multiple servers sharing one Discord bot
+
+A network can run MakongCore on several backend servers pointed at the same
+`discord.bot_token`. Two problems come from that if left unaddressed, and
+both are handled:
+
+- **A player's pending code only exists in memory on whichever server
+  generated it** (wherever `/verify` or the join-time freeze created it), but
+  the Discord interaction that submits the code can land on a *different*
+  server's connection (Discord dispatches to every connected session for
+  the same token, not just one). `AccountLinkService#verifyDiscord`/
+  `verifyTelegram` fall back to a shared `pending_links` database table
+  when the code isn't recognized locally, so this resolves correctly no
+  matter which server's connection Discord picked - and `tickPending()`
+  re-checks `account_links` every reminder tick so a player frozen on one
+  server still gets released once verified through another.
+- **Every connected server still races every other one to *acknowledge*
+  the same interaction** - the fallback above makes the *outcome* correct,
+  but Discord's own "first reply wins, the rest get 10062/40060" behavior
+  is unaffected by it, so a multi-server network with everyone connected
+  keeps logging those errors even though verification is working. `discord.hub`
+  (above) is the actual fix for that: set it `true` on exactly one server
+  and `false` on the rest so only one process is ever connected to Discord
+  in the first place, while `discord.enabled` stays `true` everywhere so
+  `/verify` and the required-verification freeze keep working on every
+  server regardless of which one holds the connection.
+
+### 9.2 `/ban`/`/unban` approval requests
+
+*(added 1.2.28)* With `discord.commands.roles` configured, a Trial Helper's
+or Helper's `/ban`/`/unban` doesn't run immediately - it posts an embed in
+the same channel with **Deny**/**Accept** buttons instead, and waits:
+
+```
+🔨 Player Banning
+Player: Steve
+Duration: 7 days
+Reason: Hacking
+Staff: @Admin
+🟡 Status: Wait for Higher staff to decide
+[Deny] [Accept]
+```
+
+Whoever has at least the required tier (a Helper-or-above for a Trial
+Helper's `/ban`, a Manager for anything else needing approval) clicks
+Accept or Deny. The same message is then edited in place - no new message,
+no leftover buttons:
+
+- **Accept** actually runs the command and shows the real outcome:
+  `🟢 Status: Accepted by @Staff` on success, or `🔴 Status: Accepted by
+  @Staff, but failed to apply - check console` if the underlying `/ban`/
+  `/unban` (LiteBans) itself failed.
+- **Deny** never touches the server at all: `🔴 Status: Denied by @Staff`.
+
+A Manager's `/ban`/`/unban`, and a Helper's `/ban`, skip all of this and run
+immediately - the reply embed goes straight to `🟢 Status: Ban applied
+successfully` (or `🔴 Status: Failed to apply...` on failure), with no
+buttons. Requests are held in memory only (`AccountLinkService#modRequests`)
+- a request still pending across a plugin reload/restart is lost, same as
+this file's other in-memory Discord state (see §9.1 above).
+
+### 9.3 `/profile`
+
+*(added 1.2.29)* `/profile [user]` posts a generated profile card (a PNG
+embed image) for whichever Minecraft account that Discord user has linked -
+open to everyone in the channel, not staff-gated. `user` is optional
+*(added 1.2.34)* - omit it to look up yourself.
+
+If the target isn't linked yet, the reply (publicly visible, not
+ephemeral *(changed 1.2.34)*) points them at how to fix it: run `/verify`
+in-game for a code, then either click **Verify Code** in
+`discord.verification.channel_id` (falls back to "in this server" if
+that's unset), or *(added 1.2.36)* run `/link`/`/verify` right there
+instead - see [§9.4](#94-link-and-verify-discord-slash-commands).
+
+The card is rendered entirely by `ProfileCard` (`java.awt`/`Graphics2D`, no
+external dependency) - the network's own bundled pixel font
+(`fonts/minecraft.ttf`, the same one MakongWeb's site uses) plus flat vector
+icons drawn in code, so nothing here depends on the server having any
+particular font or emoji support installed. It shows:
+
+- **Player** name, an online/offline dot, and `#<rank>` by MaTier Stars (omitted entirely at 0 Stars - there's no meaningful rank at zero).
+- The `discord.profile.tagline` quote (above).
+- **MaTier** tier and **Star** count (`MaTierService`).
+- **Team** name, or "No Team" (`TeamService#byPlayer`).
+- **Account type** (Premium/Cracked/Bedrock/Unknown, from the account link).
+- **Time Registered** and **Last Login** - both a relative duration (`274d 13h 55m` / `5h 20m ago`) and an absolute timestamp underneath.
+- A skin render, fetched live from `nmsr.nickac.dev` (the same renderer NameMC's own site uses - falls back to no render, not an error, if that fetch fails). Cracked/Bedrock accounts always render the vanilla default Steve skin instead of attempting a lookup - their stored UUID is a local offline-mode one with no real skin behind it.
+
+Team/MaTier/account-type/skin come from this server alone, same as
+everything else in this file. **Online status and Time Registered/Last
+Login are whole-network** - they come from nLogin's own data (`getCreationDate()`/
+`getLastLogin()`) and Velocity's own connected-player list, which only the
+connected MakongVelocity companion can see. `/profile` asks for it through
+the same website-bridge relay `/makongcore ping` uses (see §9.1's shape,
+now generalized to `WebsiteBridge.ProfileRequest`/`ProfileAnswer` - look for
+`requestProfile`/`answerProfile` in `WebsiteBridge.java`, `MakongVelocity.java`,
+and `WebsiteBridgeService.java`), with an 8-second timeout. Without a
+connected Velocity companion (or with the website bridge unconfigured
+entirely), those three fields just show "Unknown"/offline - the rest of the
+card still renders normally.
+
+### 9.4 `/link` and `/verify` (Discord slash commands)
+
+*(added 1.2.36)* Two identical slash commands - `/verify` is just an alias
+of `/link` - that do exactly what the verification channel's **Verify
+Code** button does, for anyone who'd rather not go find that channel and
+click it:
+
+- Run with no arguments: opens the same modal the button opens (enter your
+  6-digit code, hit submit).
+- Run with `code:<your code>`: skips the modal entirely and verifies
+  immediately, straight off the one command.
+
+Both forms share the exact same verification logic the button's modal
+uses (`AccountLinkService#verifyDiscord`) - same expiry check, same
+account-age/membership eligibility gate (`discordAllowed`), same
+already-linked-to-another-account check, same role assignment on success.
+Nothing in `module/verification.yml` configures these two specifically;
+they're always available whenever `discord.enabled` is `true` and the bot
+is connected, same as the button.
+
+Not staff-gated (any guild member can run either), guild-only like every
+other command here.
 
 ---
 
@@ -327,7 +500,7 @@ Player-facing categories: permission/usage errors (`no_permission`,
 `ally_request_received`, `ally_limit`), validation (`invalid_tag`,
 `invalid_name`, `duplicate_tag`, `duplicate_name`, `team_full`,
 `team_not_found`), chat-input prompts (`input_cancelled`, `input_tag`,
-`input_name`), and a `gui_create_color` / `leaderboard_points` /
+`input_name`), and a `gui_create_color` / `leaderboard_stars` /
 `leaderboard_kills` / `leaderboard_kdr` group for GUI/leaderboard text.
 
 **⚠ Note:** see [§16](#16-known-gaps-found-while-writing-this) - most of
@@ -347,14 +520,14 @@ apply everywhere; `titles` and `items` are per-screen.
 | Screen (`items.<name>`) | Placeholders available | What it is |
 |---|---|---|
 | `no_team` | none | The 4 buttons a teamless player sees: create/browse/top/invites. |
-| `team` | `{team} {tag} {members} {max} {points} {kills} {deaths} {kdr} {stars} {pvp}` | Main team management screen. |
+| `team` | `{team} {tag} {members} {max} {kills} {deaths} {kdr} {stars} {pvp}` | Main team management screen. |
 | `color` | none | The 16-dye-color picker shown right after team creation. |
-| `leaderboard` | `{page} {pages} {team} {tag} {members} {max} {metric} {value} {rank}` | Stars/Points/Kills/KDR leaderboard, paginated. |
-| `browse` | `{page} {pages} {team} {tag} {members} {max} {status} {points}` | Every public team, paginated. |
-| `team_info` | `{team} {tag} {members} {max} {points} {kills} {deaths} {kdr} {stars} {status} {description}` | A specific team's public info card. |
+| `leaderboard` | `{page} {pages} {team} {tag} {members} {max} {metric} {value} {rank}` | *(changed 1.2.35, was Stars/Points/Kills/KDR)* Stars/Kills/KDR leaderboard, paginated. |
+| `browse` | `{page} {pages} {team} {tag} {members} {max} {status} {stars}` | Every public team, paginated. |
+| `team_info` | `{team} {tag} {members} {max} {kills} {deaths} {kdr} {stars} {status} {description}` | A specific team's public info card. |
 | `invites` | `{team} {tag} {members} {max}` | Your pending invitations. |
 | `settings` | `{team} {tag} {description} {status} {status_info} {color}` | Owner/admin settings (tag, description, public/private, color). |
-| `member` | `{target} {role} {joined} {points} {kills} {deaths} {playtime}` | One member's profile within the team screen. |
+| `member` | `{target} {role} {joined} {kills} {deaths} {playtime}` | One member's profile within the team screen. |
 | `join_requests` | none applied¹ | Pending join requests (owner/admin view). |
 | `allies` | `{team} {tag} {members}` | Allied teams list. |
 | `confirm` | `{target}` | Generic yes/no confirmation (disband/leave/transfer/kick/ally-remove). |
@@ -402,7 +575,7 @@ Optional - only registered if PlaceholderAPI is installed (see
   before registering anything.
 - **MakongVelocity** (separate plugin, this repo's `../MakongVelocity`):
   forwards nLogin's premium/cracked/Bedrock classification to this server
-  over a plugin message, and relays `/mc autorestart`/`/mc ar`/`/mc reload`
+  over a plugin message, and relays `/mcvlc autorestart`/`/mcvlc ar`/`/mcvlc reload`
   network-wide through the Website Bridge. See that project's own README.
 - **Makong Network website** (`../MakongWeb`): see [§15](#15-website-bridge--velocity-companion).
 
@@ -429,12 +602,12 @@ and matching `secret`:
 
 - This server appears on the website's `/admin/servers` page and can be sent
   console commands on demand (or automatically on a Telegram store order Accept).
-- `/mateam ping <server-id>` reaches any other connected server.
+- `/makongcore ping <server-id>` reaches any other connected server.
 - This server's live Team/MaTier standings are reported every poll tick for
   the public `/ranking` page (read-only - the website never writes back).
-- `/mateam autorestart`/`/mateam reload <module>` can be triggered
+- `/makongcore autorestart`/`/makongcore reload <module>` can be triggered
   network-wide from the [MakongVelocity](../MakongVelocity) proxy plugin's
-  `/mc ar`, `/mc autorestart`, and `/mc reload` commands.
+  `/mcvlc ar`, `/mcvlc autorestart`, and `/mcvlc reload` commands.
 
 See `../MakongVelocity/README.md` and `../MakongWeb/lib/pluginBridge.js` for
 the other two sides of this.
@@ -468,7 +641,7 @@ anything) you want changed:
 5. **Two GUI lore lines have an unclosed `</yellow` tag** - see the note at
    the end of [§11](#11-guiyml). Cosmetically harmless (MiniMessage tolerates
    it) but worth fixing if you're already editing those lines.
-6. **`/mateam reload matier|verification|gui` isn't actually lightweight
+6. **`/makongcore reload matier|verification|gui` isn't actually lightweight
    yet** - it silently falls back to a full reload (database reconnect
    included) rather than a true single-module reload. Functionally correct,
    just not as fast as the module name implies; see 1.2.17's changelog entry.

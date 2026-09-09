@@ -235,10 +235,10 @@ different machines/hosts) and:
   connected — falling back to the usual manual copy-paste command when it
   isn't;
 - can ping any other connected server (`/mateam ping <server-id>` on Paper,
-  `/mc ping <server-id>` on Velocity) — this is the "servers respond to each
+  `/mcvlc ping <server-id>` on Velocity) — this is the "servers respond to each
   other" piece, relayed through the website so it works whether or not the
   servers share a Velocity proxy;
-- MakongVelocity's `/mc autorestart <seconds>` uses this same queue
+- MakongVelocity's `/mcvlc autorestart <seconds>` uses this same queue
   (`POST /api/plugin/command`) to fan a restart-warning-then-restart command
   out to every connected Paper backend at once — see its own README for the
   intended panel-scheduling pattern. This endpoint refuses (409) rather than

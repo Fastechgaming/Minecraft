@@ -31,8 +31,8 @@ public final class AutoRestartService {
     public void stop(){if(task!=null){task.cancel();task=null;}if(adHocTask!=null){adHocTask.cancel();adHocTask=null;}}
 
     // A one-off restart outside the configured schedule - used by
-    // /mateam autorestart <seconds> (see AdminCommand), itself normally
-    // triggered by the MakongVelocity companion's /mc autorestart relayed
+    // /makongcore autorestart <seconds> (see AdminCommand), itself normally
+    // triggered by the MakongVelocity companion's /mcvlc autorestart relayed
     // through the website bridge. Reuses the same interval-broadcast
     // messages and "normal" restartCommands the scheduled path uses, just
     // counting down from `seconds` instead of down to a wall-clock target.
@@ -65,8 +65,8 @@ public final class AutoRestartService {
     }
 
     // Cancels a pending triggerAdHocRestart() before it fires - used by
-    // /mateam autorestart stop (see AdminCommand), itself normally triggered
-    // by MakongVelocity's /mc ar stop relayed through the website bridge.
+    // /makongcore autorestart stop (see AdminCommand), itself normally triggered
+    // by MakongVelocity's /mcvlc ar stop relayed through the website bridge.
     // Only touches the ad-hoc countdown; the configured settings.restarts
     // schedule is untouched. Returns false if nothing was pending.
     public boolean cancelAdHocRestart(){
@@ -142,9 +142,15 @@ public final class AutoRestartService {
             try{
                 long n=Long.parseLong(value.trim());
                 if(seconds==n){
+                    String time=format(seconds);
                     String msg=c.getString("messages.interval","<yellow>server restarting in {time}</yellow>")
-                            .replace("{time}",format(seconds));
+                            .replace("{time}",time);
                     Bukkit.broadcast(com.angkor.makongcore.util.Text.mm(msg));
+                    String actionBar=c.getString("messages.action-bar","").replace("{time}",time);
+                    if(!actionBar.isBlank()){
+                        var component=com.angkor.makongcore.util.Text.mm(actionBar);
+                        for(org.bukkit.entity.Player p:Bukkit.getOnlinePlayers())p.sendActionBar(component);
+                    }
                     break;
                 }
             }catch(NumberFormatException ignored){}

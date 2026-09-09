@@ -71,13 +71,13 @@ public final class GuiListener implements Listener {
         }
         final int infoSlot=gui.slot("items.team.info.slot",45), pvpSlot=gui.slot("items.team.pvp.slot",46), requestsSlot=gui.slot("items.team.requests.slot",47), alliesSlot=gui.slot("items.team.allies.slot",48), filterSlot=gui.slot("items.team.filter.slot",49), settingsSlot=gui.slot("items.team.settings.slot",50), browseSlot=gui.slot("items.team.browse.slot",51), topSlot=gui.slot("items.team.leaderboard.slot",52), leaveSlot=gui.slot("items.team.leave.slot",53);
         if(slot==infoSlot){gui.openTeamInfo(p,t,false);return;}
-        if(slot==pvpSlot){if(!ts.settings().pvpEnabled()){p.sendMessage(Text.mm("<red>Team PvP is disabled.</red>"));return;} t.setPvp(!t.pvp());ts.save(t);p.sendMessage(Text.mm("<green>Team PvP is now "+(t.pvp()?"<white>ON":"<white>OFF")+"</white>.</green>"));gui.openTeam(p,t,h.data()==null?"join_date":h.data());return;}
+        if(slot==pvpSlot){if(!ts.settings().pvpEnabled()){p.sendMessage(Text.mm("<red>Team PvP is disabled.</red>"));return;} TeamMember me=t.member(p.getUniqueId());if(me==null||me.role()!=TeamRole.OWNER){p.sendMessage(Text.mm("<red>Only the team owner can toggle PvP.</red>"));return;} t.setPvp(!t.pvp());ts.save(t);p.sendMessage(Text.mm("<green>Team PvP is now "+(t.pvp()?"<white>ON":"<white>OFF")+"</white>.</green>"));gui.openTeam(p,t,h.data()==null?"join_date":h.data());return;}
         if(slot==requestsSlot){TeamMember me=t.member(p.getUniqueId());if(me!=null&&me.role()!=TeamRole.MEMBER)gui.openJoinRequests(p,t);return;}
         if(slot==alliesSlot){if(ts.settings().alliesEnabled())gui.openAllies(p,t);else p.sendMessage(Text.mm("<red>Team allies are disabled.</red>"));return;}
         if(slot==filterSlot){
             String current=h.data()==null?"join_date":h.data();
-            List<String> modes=plugin.gui().config().cfgList("items.team.filter.modes",List.of("join_date","points","name"));
-            if(modes.isEmpty()) modes=List.of("join_date","points","name");
+            List<String> modes=plugin.gui().config().cfgList("items.team.filter.modes",List.of("join_date","kills","name"));
+            if(modes.isEmpty()) modes=List.of("join_date","kills","name");
             int idx=modes.indexOf(current); if(idx<0) idx=0;
             String next=modes.get((idx+1)%modes.size());
             gui.openTeam(p,t,next); return;
@@ -90,10 +90,9 @@ public final class GuiListener implements Listener {
     }
 
     private void leaderboard(Player p,TeamHolder h,int slot){
-        if(slot==gui.slot("items.leaderboard.star.slot",1)){gui.openLeaderboard(p,h.page(),"stars");return;}
-        if(slot==gui.slot("items.leaderboard.points.slot",3)){gui.openLeaderboard(p,h.page(),"points");return;}
-        if(slot==gui.slot("items.leaderboard.kills.slot",5)){gui.openLeaderboard(p,h.page(),"kills");return;}
-        if(slot==gui.slot("items.leaderboard.kdr.slot",7)){gui.openLeaderboard(p,h.page(),"kdr");return;}
+        if(slot==gui.slot("items.leaderboard.star.slot",2)){gui.openLeaderboard(p,h.page(),"stars");return;}
+        if(slot==gui.slot("items.leaderboard.kills.slot",4)){gui.openLeaderboard(p,h.page(),"kills");return;}
+        if(slot==gui.slot("items.leaderboard.kdr.slot",6)){gui.openLeaderboard(p,h.page(),"kdr");return;}
         if(slot==gui.slot("items.leaderboard.previous.slot",45)){gui.openLeaderboard(p,h.page()-1,h.data());return;}
         if(slot==gui.slot("items.leaderboard.next.slot",53)){gui.openLeaderboard(p,h.page()+1,h.data());return;}
         if(slot==gui.slot("items.leaderboard.back.slot",49)){gui.open(p);return;}
@@ -102,7 +101,7 @@ public final class GuiListener implements Listener {
 
     private List<Team> leaderboardList(String mode){
         List<Team> list=new ArrayList<>(ts.all());
-        Comparator<Team> c=switch(mode){case"kills"->Comparator.comparingLong(Team::kills).reversed();case"kdr"->Comparator.comparingDouble(this::kdr).reversed();default->Comparator.comparingLong(Team::points).reversed();};
+        Comparator<Team> c=switch(mode){case"kills"->Comparator.comparingLong(Team::kills).reversed();case"kdr"->Comparator.comparingDouble(this::kdr).reversed();default->Comparator.comparingLong(Team::stars).reversed();};
         list.sort(c.thenComparing(Team::name,String.CASE_INSENSITIVE_ORDER));return list;
     }
     private double kdr(Team t){return t.deaths()==0?t.kills():(double)t.kills()/t.deaths();}
@@ -129,10 +128,10 @@ public final class GuiListener implements Listener {
 
     private void settings(Player p,int slot){
         Team t=ts.byPlayer(p.getUniqueId());if(t==null){gui.openNoTeam(p);return;}TeamMember me=t.member(p.getUniqueId());if(me==null||me.role()==TeamRole.MEMBER){gui.openTeam(p,t);return;}
-        if(slot==gui.slot("items.settings.tag.slot",11)){ChatListener.beginChangeTag(p);return;}
-        if(slot==gui.slot("items.settings.description.slot",13)){ChatListener.beginDescription(p);return;}
-        if(slot==gui.slot("items.settings.status.slot",15)){t.setPublic(!t.isPublic());ts.save(t);p.sendMessage(Text.mm("<green>Team is now "+(t.isPublic()?"<white>Public":"<white>Private")+"</white>.</green>"));gui.openSettings(p,t);return;}
-        if(slot==gui.slot("items.settings.color.slot",17)){gui.openColor(p,t);return;}
+        if(slot==gui.slot("items.settings.tag.slot",10)){ChatListener.beginChangeTag(p);return;}
+        if(slot==gui.slot("items.settings.description.slot",12)){ChatListener.beginDescription(p);return;}
+        if(slot==gui.slot("items.settings.status.slot",14)){t.setPublic(!t.isPublic());ts.save(t);p.sendMessage(Text.mm("<green>Team is now "+(t.isPublic()?"<white>Public":"<white>Private")+"</white>.</green>"));gui.openSettings(p,t);return;}
+        if(slot==gui.slot("items.settings.color.slot",16)){gui.openColor(p,t);return;}
         if(slot==gui.slot("items.settings.back.slot",22))gui.openTeam(p,t);
     }
 
@@ -142,8 +141,8 @@ public final class GuiListener implements Listener {
         boolean owner=me.role()==TeamRole.OWNER,admin=me.role()==TeamRole.ADMIN;
         if(slot==gui.slot("items.member.back.slot",22)){gui.openTeam(p,t,h.data()==null?"join_date":h.data());return;}
         if(slot==gui.slot("items.member.promote.slot",12)&&owner){
-            if(tm.role()==TeamRole.MEMBER){t.removeMember(target);t.addMember(new TeamMember(tm.uuid(),tm.name(),TeamRole.ADMIN,tm.joinedAt(),tm.lastSeen(),tm.server(),tm.points()));ts.save(t);p.sendMessage(Text.mm("<green>Promoted.</green>"));gui.openMember(p,t,target);}
-            else if(tm.role()==TeamRole.ADMIN){t.removeMember(target);t.addMember(new TeamMember(tm.uuid(),tm.name(),TeamRole.MEMBER,tm.joinedAt(),tm.lastSeen(),tm.server(),tm.points()));ts.save(t);p.sendMessage(Text.mm("<green>Demoted.</green>"));gui.openMember(p,t,target);}
+            if(tm.role()==TeamRole.MEMBER){t.removeMember(target);t.addMember(new TeamMember(tm.uuid(),tm.name(),TeamRole.ADMIN,tm.joinedAt(),tm.lastSeen(),tm.server()));ts.save(t);p.sendMessage(Text.mm("<green>Promoted.</green>"));gui.openMember(p,t,target);}
+            else if(tm.role()==TeamRole.ADMIN){t.removeMember(target);t.addMember(new TeamMember(tm.uuid(),tm.name(),TeamRole.MEMBER,tm.joinedAt(),tm.lastSeen(),tm.server()));ts.save(t);p.sendMessage(Text.mm("<green>Demoted.</green>"));gui.openMember(p,t,target);}
         } else if(slot==gui.slot("items.member.kick.slot",14)&&(owner||admin)&&tm.role()!=TeamRole.OWNER&&!target.equals(p.getUniqueId())){
             gui.openConfirm(p,"kick",tm.name(),target.toString());
         } else if(slot==gui.slot("items.member.transfer.slot",16)&&owner&&tm.role()!=TeamRole.OWNER){
@@ -187,8 +186,8 @@ public final class GuiListener implements Listener {
             UUID id=uuid(data);TeamMember me=t.member(p.getUniqueId()),target=t.member(id);
             if(me!=null&&me.role()==TeamRole.OWNER&&target!=null&&target.role()!=TeamRole.OWNER){
                 t.removeMember(me.uuid());t.removeMember(id);
-                t.addMember(new TeamMember(id,target.name(),TeamRole.OWNER,target.joinedAt(),target.lastSeen(),target.server(),target.points()));
-                t.addMember(new TeamMember(me.uuid(),me.name(),TeamRole.MEMBER,me.joinedAt(),me.lastSeen(),me.server(),me.points()));
+                t.addMember(new TeamMember(id,target.name(),TeamRole.OWNER,target.joinedAt(),target.lastSeen(),target.server()));
+                t.addMember(new TeamMember(me.uuid(),me.name(),TeamRole.MEMBER,me.joinedAt(),me.lastSeen(),me.server()));
                 ts.save(t);p.sendMessage(Text.mm("<green>Ownership transferred.</green>"));gui.openTeam(p,t);
             }
         } else if(action.equals("ally-remove")){

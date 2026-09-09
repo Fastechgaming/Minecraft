@@ -36,7 +36,7 @@ public final class TeamPlaceholders extends PlaceholderExpansion {
     private final TeamService teams;
     // Kept as the ModuleConfig wrapper (not a resolved FileConfiguration or
     // String) so a reload - team.yml's own via ModuleConfig#reload(), or a
-    // /mateam reload team - is picked up on the very next placeholder
+    // /makongcore reload team - is picked up on the very next placeholder
     // request without needing to re-register this expansion.
     private final ModuleConfig teamConfig;
 

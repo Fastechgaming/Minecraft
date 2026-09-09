@@ -1,10 +1,53 @@
 # Account verification - cracked-player Discord/Telegram linking, premium
 # detection, and the Discord staff commands that ride along with it.
 # INFO: Keep bot tokens private. Never publish them or commit them to Git.
+#
+# ================================================================
+# QUICK REFERENCE - what to configure where, on a multi-server network
+# sharing one Discord bot (a single-server setup can ignore this and just
+# fill everything in once):
+#
+#   EVERY SERVER (set the same everywhere):
+#     discord.enabled, discord.invite, telegram.* (but only actually
+#     ENABLE Telegram on one server - see the note by telegram.enabled),
+#     everything under linking.*
+#
+#   HUB SERVER ONLY (the one server with discord.hub: true - every other
+#   server never reads these at all, so just leave them as shipped):
+#     discord.hub, discord.bot_token, discord.guild.*,
+#     discord.verification.*, discord.roles.*, discord.commands.*,
+#     discord.profile.*
+#
+# Why: only the hub server ever opens a live connection to Discord, so
+# only it ever receives a slash command, button click, or modal submit -
+# everything in the "hub only" list is exclusively read from inside
+# those. discord.enabled itself is the one exception living in the
+# discord: block below - it controls /verify and the cracked-player
+# freeze locally on THIS server, independent of who holds the connection.
+# ================================================================
+
 discord:
+  # ---- every server ----
   enabled: false
-  bot_token: "PUT_DISCORD_BOT_TOKEN_HERE"
   invite: "discord.gg/makong"
+
+  # ---- hub server only (below this line) ----
+  # INFO: If MULTIPLE servers share this same bot_token (a network with one
+  # INFO: bot for all servers), only ONE of them should actually open a
+  # INFO: connection to Discord - otherwise every connected server receives
+  # INFO: every button click/modal submit at once and races the others to
+  # INFO: reply, producing "10062 Unknown interaction" / "40060 already
+  # INFO: acknowledged" errors in the console. Set hub: true on exactly ONE
+  # INFO: server (its config already carries a real channel_id/panel below)
+  # INFO: and hub: false everywhere else. discord.enabled above stays true
+  # INFO: on every server regardless - it controls whether linking is
+  # INFO: required/available and whether /verify works, not the connection;
+  # INFO: a player on a non-hub server still gets a code via /verify, and it's
+  # INFO: still recognized correctly when they submit it through the hub's
+  # INFO: bot, via the shared database. On a single-server setup (the
+  # INFO: default), leave this alone.
+  hub: true
+  bot_token: "PUT_DISCORD_BOT_TOKEN_HERE"
   guild:
     id: ""
     required: true
@@ -30,17 +73,65 @@ discord:
     java: ""
     bedrock: ""
   commands:
+    # INFO: Discord role IDs allowed to use /ban and /unban. Add as many as
+    # INFO: you want - having ANY ONE of these roles is enough (multiple
+    # INFO: staff ranks are fine). Empty by default: with nothing configured
+    # INFO: here, NOBODY can use these commands - moderation commands stay
+    # INFO: locked down until you deliberately grant a role, not open to
+    # INFO: every verified player. staff_role_id (singular, below) is the
+    # INFO: old pre-list key - still honored if you already had it set, so
+    # INFO: upgrading never silently drops an existing setup, but new setups
+    # INFO: should use staff_role_ids instead.
+    staff_role_ids: []
     staff_role_id: ""
+    # INFO: Three-tier permission model for /ban and /unban. A member's
+    # INFO: HIGHEST matching role below decides what happens - having a role
+    # INFO: in staff_role_ids/staff_role_id above (with nothing set here)
+    # INFO: counts as Manager, so an existing pre-3-tier setup keeps working
+    # INFO: exactly as before (both commands run immediately, nothing to
+    # INFO: accept/deny):
+    # INFO:
+    # INFO:   Manager      - /ban and /unban both run immediately.
+    # INFO:   Helper       - /ban runs immediately; /unban is posted as a
+    # INFO:                  request (an embed with Accept/Deny buttons, in
+    # INFO:                  the same channel) that only a Manager can decide.
+    # INFO:   Trial Helper - both /ban and /unban are always a request:
+    # INFO:                  /ban can be Accepted/Denied by a Helper OR a
+    # INFO:                  Manager, /unban needs a Manager specifically.
+    # INFO:
+    # INFO: Each list works the same as staff_role_ids above - any ONE
+    # INFO: matching role is enough, multiple ranks per tier are fine.
+    roles:
+      trial_helper_role_ids: []
+      helper_role_ids: []
+      manager_role_ids: []
     ban:
       enabled: true
     unban:
       enabled: true
+  # INFO: /profile @user - shows a linked player's Makong Network profile
+  # INFO: card (Discord embed image) to anyone in the channel: MaTier tier
+  # INFO: + Star, Team, account type, and (if the MakongVelocity companion
+  # INFO: is connected) whole-network online status and nLogin registration/
+  # INFO: last-login. Open to everyone, not staff-gated like ban/unban -
+  # INFO: it's read-only. Only works for a Discord account already linked
+  # INFO: to a Minecraft account (see /verify).
+  profile:
+    tagline: "Play. Improve. Be Better."
 
+# ---- every server ----
 telegram:
   enabled: false
+  # INFO: Unlike discord.hub above, Telegram has no hub flag (yet) - every
+  # INFO: server with enabled: true here runs its OWN independent poller
+  # INFO: against the same bot_token. On a multi-server network, only turn
+  # INFO: this on for ONE server, the same practical rule as discord.hub,
+  # INFO: just not enforced by the plugin - two servers both polling would
+  # INFO: race each other the same way an un-hubbed Discord bot would.
   bot_token: "PUT_TELEGRAM_BOT_TOKEN_HERE"
   username: "makongmcbot"
 
+# ---- every server ----
 linking:
   # INFO: Cracked players must verify with Discord OR Telegram. Only takes
   # INFO: effect when at least one of discord.enabled / telegram.enabled
@@ -51,6 +142,14 @@ linking:
   required_for_cracked: true
   code_length: 6
   code_expire_minutes: 10
+  # INFO: /verify's own cooldown - running it again within this many seconds
+  # INFO: of the last request just re-shows the SAME still-valid code
+  # INFO: (doesn't touch its expiry, doesn't roll a new one). Once the
+  # INFO: cooldown has elapsed, running /verify again generates a genuinely
+  # INFO: new code with a fresh code_expire_minutes window. Doesn't apply to
+  # INFO: the required-verification freeze (that's a one-time code per
+  # INFO: freeze, not repeatable on demand).
+  request_cooldown_seconds: 60
   one_minecraft_per_discord: true
   one_discord_per_minecraft: true
   one_minecraft_per_telegram: true
@@ -73,3 +172,12 @@ linking:
     subtitle: "Send this code to Discord/Telegram to play"
     actionbar: "&bDiscord: {discord} &7| &bTelegram: {telegram}"
     message: "&cYou must link your account to continue. &7Code: &e{code}"
+  # INFO: Shown when a player runs /verify (or its /link alias) by choice -
+  # INFO: not frozen/required, just asking for a code. Same {code}/{discord}/
+  # INFO: {telegram}/&-color convention as reminder above, plus
+  # INFO: {expires_minutes} (= code_expire_minutes above).
+  verify_command:
+    title: "{code}"
+    subtitle: "Send this code to Discord/Telegram to link"
+    actionbar: "&bDiscord: {discord} &7| &bTelegram: {telegram}"
+    message: "&aOptional linking code: &e{code} &7(expires in {expires_minutes}m)"

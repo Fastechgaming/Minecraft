@@ -42,31 +42,31 @@ public final class TeamStatsListener implements Listener {
         long now=System.currentTimeMillis();
         boolean repeat=now-pairCooldown.getOrDefault(key,0L)<cooldown;
         pairCooldown.put(key,now);
-        long points=plugin.teamConfig().get().getLong("team.scoring.events.kill",1);
-        if(repeat) points=plugin.teamConfig().get().getLong("team.scoring.events.kill_spam",0);
-        score(kt,killer.getUniqueId(),points,1,0);
+        long stars=plugin.teamConfig().get().getLong("team.scoring.events.kill",1);
+        if(repeat) stars=plugin.teamConfig().get().getLong("team.scoring.events.kill_spam",0);
+        score(kt,killer.getUniqueId(),stars,1,0);
         if(vt!=null){
-            long deathPoints=plugin.teamConfig().get().getLong("team.scoring.events.death",0);
-            if(repeat) deathPoints=plugin.teamConfig().get().getLong("team.scoring.events.death_spam",-1);
-            score(vt,victim.getUniqueId(),deathPoints,0,0);
+            long deathStars=plugin.teamConfig().get().getLong("team.scoring.events.death",0);
+            if(repeat) deathStars=plugin.teamConfig().get().getLong("team.scoring.events.death_spam",-1);
+            score(vt,victim.getUniqueId(),deathStars,0,0);
         }
     }
 
     private void tickPlaytime(){
-        long pointsPerHour=plugin.teamConfig().get().getLong("team.scoring.events.playtime_per_hour",1);
+        long starsPerHour=plugin.teamConfig().get().getLong("team.scoring.events.playtime_per_hour",1);
         for(Player p:Bukkit.getOnlinePlayers()){
             Team t=teams.byPlayer(p.getUniqueId()); if(t==null)continue;
             TeamMember m=t.member(p.getUniqueId()); if(m==null)continue;
             long next=m.playtimeMinutes()+1;
-            long points=(pointsPerHour>0 && next%60==0)?pointsPerHour:0;
-            score(t,p.getUniqueId(),points,0,0,1);
+            long stars=(starsPerHour>0 && next%60==0)?starsPerHour:0;
+            score(t,p.getUniqueId(),stars,0,0,1);
         }
     }
 
-    private void score(Team t,UUID u,long points,long kills,long deaths){score(t,u,points,kills,deaths,0);}
-    private void score(Team t,UUID u,long points,long kills,long deaths,long minutes){
-        long min=plugin.teamConfig().get().getLong("team.scoring.minimum_points",0);
-        if(points<0) points=Math.max(points,-min);
-        teams.addMemberStats(t,u,points,kills,deaths,minutes);
+    private void score(Team t,UUID u,long stars,long kills,long deaths){score(t,u,stars,kills,deaths,0);}
+    private void score(Team t,UUID u,long stars,long kills,long deaths,long minutes){
+        long min=plugin.teamConfig().get().getLong("team.scoring.minimum_stars",0);
+        if(stars<0) stars=Math.max(stars,-min);
+        teams.addMemberStats(t,u,stars,kills,deaths,minutes);
     }
 }
