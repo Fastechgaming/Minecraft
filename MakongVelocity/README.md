@@ -180,8 +180,9 @@ this) simply ignores it.
 
 Reuses the exact same website bridge protocol MakongCore itself uses (see
 `../MakongWeb/lib/pluginBridge.js` and `../MakongCore/README.md`'s "Website
-Bridge" section) purely to relay a command - it doesn't report rankings or
-answer pings itself.
+Bridge" section) purely to relay a command - it doesn't report rankings
+itself (see "Answering /profile lookups" below for the one thing it does
+answer).
 
 ```properties
 website.enabled=true
@@ -234,6 +235,19 @@ instead of logging into each server individually. Valid modules: `team`,
 `autorestart`, `matier`, `verification`, `gui` - see MakongCore's README
 for what each covers and `/makongcore reload [module]` for the same thing run
 locally on one server.
+
+## Answering `/profile` lookups
+
+MakongCore's Discord `/profile @user` command (see its README's "Website
+Bridge" section and `DOCUMENTATION.md`'s §9.3) needs two things only this
+proxy can see: whole-network online status (any player connected through
+it, regardless of which backend they're actually on) and nLogin's
+registration/last-login data (`getCreationDate()`/`getLastLogin()` -
+requires nLogin running in proxy mode here, same as account-type
+forwarding above; without it, or without a player found by that name, the
+answer just omits those two fields). Handled automatically over the same
+website bridge connection as everything else on this page - nothing to
+configure beyond `website.*` already being set up.
 
 ## Permissions
 

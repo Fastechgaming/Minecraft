@@ -26,8 +26,10 @@ import org.slf4j.Logger;
 
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -46,7 +48,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * 3. Periodic network-wide announcements (store/Discord plugs, etc.) - see
  *    AnnouncementService and announcements.yml.
  */
-@Plugin(id = "makongcore", name = "MaCoreVLC", version = "1.3.3", authors = {"Angkor"})
+@Plugin(id = "makongcore", name = "MaCoreVLC", version = "1.3.4", authors = {"Angkor"})
 public final class MakongVelocity {
 
     static final MinecraftChannelIdentifier ACCOUNT_TYPE_CHANNEL = MinecraftChannelIdentifier.create("makong", "accounttype");
@@ -205,6 +207,30 @@ public final class MakongVelocity {
             Set<CommandSource> waiting = pendingPings.remove(pong.from);
             if (waiting != null) waiting.forEach(s -> s.sendMessage(Component.text(msg)));
         }
+        for (WebsiteBridge.ProfileRequest req : result.profileRequests) {
+            answerProfileRequest(req);
+        }
+    }
+
+    // Answers a /profile lookup relayed from a connected MakongCore server
+    // (see AccountLinkService's /profile command on the Paper side) - this
+    // proxy is the only place with both nLogin's registration/last-login
+    // data and true whole-network online status (any player connected
+    // through it, regardless of which backend they're actually on).
+    private void answerProfileRequest(WebsiteBridge.ProfileRequest req) {
+        Map<String, Object> data = new LinkedHashMap<>();
+        Optional<Player> online = server.getPlayer(req.playerName);
+        data.put("online", online.isPresent());
+        online.ifPresent(p -> data.put("currentServer",
+                p.getCurrentServer().map(s -> s.getServerInfo().getName()).orElse(null)));
+        nLoginAPI api = nLoginAPI.getApi();
+        if (api != null && api.isAvailable()) {
+            api.getAccount(Identity.ofKnownName(req.playerName)).ifPresent(acc -> {
+                data.put("registeredAt", acc.getCreationDate().toEpochMilli());
+                data.put("lastLogin", acc.getLastLogin().toEpochMilli());
+            });
+        }
+        bridge.answerProfile(req.from, req.id, data);
     }
 
     /** Every currently-connected MakongCore backend (excludes this proxy itself). */

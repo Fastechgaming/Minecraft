@@ -358,6 +358,7 @@ because there is no way to check it.
 | `discord.commands.staff_role_id` | `""` | Old, pre-list single-role key - still honored (merged into the effective role set) if set, for upgrades. Use `staff_role_ids` above for new setups. |
 | `discord.commands.roles.trial_helper_role_ids` / `helper_role_ids` / `manager_role_ids` | `[]` each | *(added 1.2.28)* Three-tier permission model on top of `/ban`/`/unban`. A member's HIGHEST matching role decides what happens: **Manager** - both commands run immediately. **Helper** - `/ban` runs immediately, `/unban` is posted as a Manager-only Accept/Deny request. **Trial Helper** - both are always a request (`/ban` needs Helper-or-above, `/unban` needs Manager). Holding a role in `staff_role_ids`/`staff_role_id` above (with none of these three set) counts as Manager, so an existing setup keeps its old immediate-execute behavior unchanged. See [§9.2](#92-ban-unban-approval-requests). |
 | `discord.commands.ban.enabled` / `unban.enabled` | `true` / `true` | Discord `/ban` and `/unban`, with LiteBans integration. |
+| `discord.profile.tagline` | *(added 1.2.29)* `Play. Improve. Be Better.` | The quote line on `/profile`'s card - see [§9.3](#93-profile). |
 | `telegram.enabled` | `false` | |
 | `telegram.bot_token` | `PUT_TELEGRAM_BOT_TOKEN_HERE` | |
 | `telegram.username` | `makongmcbot` | |
@@ -433,6 +434,40 @@ successfully` (or `🔴 Status: Failed to apply...` on failure), with no
 buttons. Requests are held in memory only (`AccountLinkService#modRequests`)
 - a request still pending across a plugin reload/restart is lost, same as
 this file's other in-memory Discord state (see §9.1 above).
+
+### 9.3 `/profile`
+
+*(added 1.2.29)* `/profile @user` posts a generated profile card (a PNG
+embed image) for whichever Minecraft account that Discord user has linked -
+open to everyone in the channel, not staff-gated. Replies "not linked to a
+Minecraft account" (ephemerally) if they haven't run `/verify`.
+
+The card is rendered entirely by `ProfileCard` (`java.awt`/`Graphics2D`, no
+external dependency) - the network's own bundled pixel font
+(`fonts/minecraft.ttf`, the same one MakongWeb's site uses) plus flat vector
+icons drawn in code, so nothing here depends on the server having any
+particular font or emoji support installed. It shows:
+
+- **Player** name, an online/offline dot, and `#<rank>` by MaTier Stars (omitted entirely at 0 Stars - there's no meaningful rank at zero).
+- The `discord.profile.tagline` quote (above).
+- **MaTier** tier and **Star** count (`MaTierService`).
+- **Team** name, or "No Team" (`TeamService#byPlayer`).
+- **Account type** (Premium/Cracked/Bedrock/Unknown, from the account link).
+- **Time Registered** and **Last Login** - both a relative duration (`274d 13h 55m` / `5h 20m ago`) and an absolute timestamp underneath.
+- A skin render, fetched live from `crafatar.com` (falls back to no render, not an error, if that fetch fails).
+
+Team/MaTier/account-type/skin come from this server alone, same as
+everything else in this file. **Online status and Time Registered/Last
+Login are whole-network** - they come from nLogin's own data (`getCreationDate()`/
+`getLastLogin()`) and Velocity's own connected-player list, which only the
+connected MakongVelocity companion can see. `/profile` asks for it through
+the same website-bridge relay `/makongcore ping` uses (see §9.1's shape,
+now generalized to `WebsiteBridge.ProfileRequest`/`ProfileAnswer` - look for
+`requestProfile`/`answerProfile` in `WebsiteBridge.java`, `MakongVelocity.java`,
+and `WebsiteBridgeService.java`), with an 8-second timeout. Without a
+connected Velocity companion (or with the website bridge unconfigured
+entirely), those three fields just show "Unknown"/offline - the rest of the
+card still renders normally.
 
 ---
 

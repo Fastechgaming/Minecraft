@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 
 /**
  * Connects this server to the Makong Network website's multi-server command
@@ -43,6 +44,19 @@ public final class WebsiteBridgeService {
     // the console log. Best-effort - a sender who logs off before the pong
     // arrives (usually well under a second) just misses the reply.
     private final ConcurrentHashMap<String, Set<CommandSender>> pendingPings = new ConcurrentHashMap<>();
+
+    // Every server this proxy/plugin knows about as of the last poll tick -
+    // used by requestProfile() below to find the connected "velocity" server
+    // (the only one with nLogin registration/last-login and true
+    // whole-network online status - see /profile in AccountLinkService).
+    private volatile List<WebsiteBridge.ServerInfo> knownServers = List.of();
+
+    // /profile lookups awaiting an answer relayed back through the website
+    // (see requestProfile() below) - keyed by the request id WebsiteBridge
+    // handed back when the request was queued. Same best-effort shape as
+    // pendingPings above: a request that never gets answered just times out
+    // via its own runTaskLater() rather than leaking forever.
+    private final ConcurrentHashMap<String, Consumer<Map<String, Object>>> pendingProfileRequests = new ConcurrentHashMap<>();
 
     public WebsiteBridgeService(MakongCore plugin, FileConfiguration c) {
         this.plugin = plugin;
@@ -104,6 +118,7 @@ public final class WebsiteBridgeService {
 
         WebsiteBridge.PollResult result = bridge.poll();
         if (result == null) return; // network hiccup - just retry next tick
+        knownServers = result.servers;
 
         if (!result.commands.isEmpty()) {
             Bukkit.getScheduler().runTask(plugin, () -> {
@@ -137,6 +152,11 @@ public final class WebsiteBridgeService {
             if (waiting != null) {
                 Bukkit.getScheduler().runTask(plugin, () -> waiting.forEach(s -> s.sendMessage(msg)));
             }
+        }
+
+        for (WebsiteBridge.ProfileAnswer answer : result.profileAnswers) {
+            Consumer<Map<String, Object>> onAnswer = pendingProfileRequests.remove(answer.id);
+            if (onAnswer != null) Bukkit.getScheduler().runTask(plugin, () -> onAnswer.accept(answer.data));
         }
     }
 
@@ -182,5 +202,42 @@ public final class WebsiteBridgeService {
         }
         pendingPings.computeIfAbsent(target, k -> ConcurrentHashMap.newKeySet()).add(sender);
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> bridge.ping(target));
+    }
+
+    /**
+     * Used by Discord's /profile command (AccountLinkService) - asks the
+     * connected Velocity companion for nLogin registration/last-login data
+     * and true whole-network online status for `playerName`, relayed
+     * through the website exactly like ping()/pong() above. `onAnswer` is
+     * always eventually called on the main thread, with an empty map if
+     * there's no bridge/Velocity connected or the request times out
+     * without an answer (`timeoutMillis`, rounded up to whole ticks).
+     */
+    public void requestProfile(String playerName, Consumer<Map<String, Object>> onAnswer, long timeoutMillis) {
+        if (bridge == null || !connected) {
+            onAnswer.accept(Map.of());
+            return;
+        }
+        String velocityId = knownServers.stream()
+                .filter(s -> "velocity".equals(s.kind))
+                .map(s -> s.serverId)
+                .findFirst()
+                .orElse(null);
+        if (velocityId == null) {
+            onAnswer.accept(Map.of());
+            return;
+        }
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            String requestId = bridge.requestProfile(velocityId, playerName);
+            if (requestId == null) {
+                Bukkit.getScheduler().runTask(plugin, () -> onAnswer.accept(Map.of()));
+                return;
+            }
+            pendingProfileRequests.put(requestId, onAnswer);
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                Consumer<Map<String, Object>> stillPending = pendingProfileRequests.remove(requestId);
+                if (stillPending != null) stillPending.accept(Map.of());
+            }, Math.max(1, timeoutMillis / 50));
+        });
     }
 }

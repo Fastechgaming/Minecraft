@@ -81,6 +81,15 @@ discord:
       enabled: true
     unban:
       enabled: true
+  # INFO: /profile @user - shows a linked player's Makong Network profile
+  # INFO: card (Discord embed image) to anyone in the channel: MaTier tier
+  # INFO: + Star, Team, account type, and (if the MakongVelocity companion
+  # INFO: is connected) whole-network online status and nLogin registration/
+  # INFO: last-login. Open to everyone, not staff-gated like ban/unban -
+  # INFO: it's read-only. Only works for a Discord account already linked
+  # INFO: to a Minecraft account (see /verify).
+  profile:
+    tagline: "Play. Improve. Be Better."
 
 telegram:
   enabled: false

@@ -15,7 +15,7 @@ const ONLINE_WINDOW_MS = 12_000; // ~4 poll intervals at the plugin's default 3s
 const RANKINGS_STALE_MS = 5 * 60 * 1000; // fall back to admin-curated data if nothing's reported in this long
 const { nanoid } = require("nanoid");
 
-const servers = new Map(); // serverId -> { kind, lastSeen, commands: [], pings: [], pongs: [] }
+const servers = new Map(); // serverId -> { kind, lastSeen, commands: [], pings: [], pongs: [], profileRequests: [], profileAnswers: [] }
 const rankingsByServer = new Map(); // serverId -> { teams: [{name,star}], players: [{name,star,tier}], reportedAt }
 
 function enabled() {
@@ -25,7 +25,7 @@ function enabled() {
 function entry(serverId) {
   let e = servers.get(serverId);
   if (!e) {
-    e = { kind: "paper", lastSeen: 0, commands: [], pings: [], pongs: [] };
+    e = { kind: "paper", lastSeen: 0, commands: [], pings: [], pongs: [], profileRequests: [], profileAnswers: [] };
     servers.set(serverId, e);
   }
   return e;
@@ -104,6 +104,36 @@ function drainPongs(serverId) {
   const e = entry(serverId);
   const drained = e.pongs;
   e.pongs = [];
+  return drained;
+}
+
+// Cross-server profile lookup, same relay shape as ping/pong above - used by
+// MakongCore's /profile Discord command to ask the connected Velocity
+// companion for nLogin registration/last-login and whole-network online
+// status (data only the proxy has). `from` asks `target` (normally the one
+// connected server with kind "velocity") about `playerName`; once `target`
+// answers (via queueProfileAnswer), `from` sees it on its own next poll.
+function queueProfileRequest(from, target, playerName) {
+  const id = nanoid(8);
+  entry(target).profileRequests.push({ id, from, playerName, queuedAt: Date.now() });
+  return id;
+}
+
+function drainProfileRequests(serverId) {
+  const e = entry(serverId);
+  const drained = e.profileRequests;
+  e.profileRequests = [];
+  return drained;
+}
+
+function queueProfileAnswer(from, target, requestId, data) {
+  entry(target).profileAnswers.push({ id: requestId, from, data: data || {}, queuedAt: Date.now() });
+}
+
+function drainProfileAnswers(serverId) {
+  const e = entry(serverId);
+  const drained = e.profileAnswers;
+  e.profileAnswers = [];
   return drained;
 }
 
@@ -219,6 +249,10 @@ module.exports = {
   drainPings,
   queuePong,
   drainPongs,
+  queueProfileRequest,
+  drainProfileRequests,
+  queueProfileAnswer,
+  drainProfileAnswers,
   reportRankings,
   getLiveRankings,
   startHealthCheck,

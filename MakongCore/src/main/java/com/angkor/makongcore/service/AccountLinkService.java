@@ -3,9 +3,13 @@ package com.angkor.makongcore.service;
 import com.angkor.makongcore.MakongCore;
 import com.angkor.makongcore.data.Database;
 import com.angkor.makongcore.hook.FloodgateHook;
+import com.angkor.makongcore.model.Team;
+import com.angkor.makongcore.util.ProfileCard;
 import net.dv8tion.jda.api.*;
 import net.dv8tion.jda.api.entities.*;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
+import net.dv8tion.jda.api.interactions.InteractionHook;
+import net.dv8tion.jda.api.utils.FileUpload;
 import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.command.CommandAutoCompleteInteractionEvent;
@@ -33,6 +37,8 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerAttemptPickupItemEvent;
 
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
 import java.net.URI;
 import java.net.http.*;
 import java.time.*;
@@ -40,6 +46,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import javax.imageio.ImageIO;
 
 public final class AccountLinkService extends ListenerAdapter implements Listener, org.bukkit.plugin.messaging.PluginMessageListener {
     private final MakongCore plugin; private final Database db; private final FloodgateHook floodgate;
@@ -136,7 +143,7 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
     }
     private void startDiscord(){String token=cfg.s("discord.bot_token","");if(token.isBlank()||token.startsWith("PUT_")){plugin.getLogger().warning("Discord enabled but bot_token is not configured.");return;}try{jda=JDABuilder.createDefault(token).addEventListeners(this).build();plugin.getLogger().info("Discord hook starting...");}catch(Exception e){plugin.getLogger().severe("Discord hook failed: "+e.getMessage());}}
     @Override public void onReady(ReadyEvent e){registerCommands();sendVerificationPanel();plugin.getLogger().info("Discord hook connected as "+e.getJDA().getSelfUser().getName()+".");}
-    private void registerCommands(){if(jda==null)return; jda.updateCommands().addCommands(Commands.slash("ban","Ban a Minecraft player").addOption(OptionType.STRING,"name","Minecraft name",true).addOption(OptionType.STRING,"duration","Duration (choose a preset or type your own)",true,true).addOption(OptionType.STRING,"reason","Reason",true),Commands.slash("unban","Unban a Minecraft player").addOption(OptionType.STRING,"name","Minecraft name",true).addOption(OptionType.STRING,"reason","Reason",true)).queue();}
+    private void registerCommands(){if(jda==null)return; jda.updateCommands().addCommands(Commands.slash("ban","Ban a Minecraft player").addOption(OptionType.STRING,"name","Minecraft name",true).addOption(OptionType.STRING,"duration","Duration (choose a preset or type your own)",true,true).addOption(OptionType.STRING,"reason","Reason",true),Commands.slash("unban","Unban a Minecraft player").addOption(OptionType.STRING,"name","Minecraft name",true).addOption(OptionType.STRING,"reason","Reason",true),Commands.slash("profile","Show a linked player's Makong Network profile").addOption(OptionType.USER,"user","The Discord user to look up",true)).queue();}
     @Override public void onCommandAutoCompleteInteraction(CommandAutoCompleteInteractionEvent e){
         if(!e.getName().equals("ban")||!e.getFocusedOption().getName().equals("duration"))return;
         String input=e.getFocusedOption().getValue().toLowerCase(Locale.ROOT);
@@ -274,6 +281,7 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
     }
     @Override public void onSlashCommandInteraction(SlashCommandInteractionEvent e){
         if(!e.isFromGuild()){e.reply("Guild only.").setEphemeral(true).queue();return;}
+        if(e.getName().equals("profile")){handleProfile(e);return;}
         if(!e.getName().equals("ban")&&!e.getName().equals("unban"))return;
         boolean ban=e.getName().equals("ban");
         if(!cfg.b("discord.commands."+e.getName()+".enabled",true)){e.reply("❌ This Discord command is disabled.").setEphemeral(true).queue();return;}
@@ -300,6 +308,75 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
             var embed=modEmbed(ban,true,target,duration,reason,staffMention,"🟡","Wait for Higher staff to decide",0xF1C40F);
             e.replyEmbeds(embed.build()).setComponents(ActionRow.of(Button.danger("makong:modreq:deny:"+id,"Deny"),Button.success("makong:modreq:accept:"+id,"Accept"))).queue();
         });
+    }
+    // /profile @user - looks up the target's linked Minecraft account, then
+    // gathers Team/MaTier data locally (this server already has it) and
+    // nLogin registration/last-login + true whole-network online status via
+    // the website bridge (see WebsiteBridgeService#requestProfile - only the
+    // connected Velocity companion has that), in parallel with fetching a
+    // skin render, before compositing it all into one PNG (ProfileCard).
+    private void handleProfile(SlashCommandInteractionEvent e){
+        User target=e.getOption("user").getAsUser();
+        db.findByDiscord(target.getId()).thenAccept(link->{
+            if(link==null){e.reply("❌ <@"+target.getId()+"> is not linked to a Minecraft account.").setEphemeral(true).queue();return;}
+            e.deferReply().queue();
+            buildProfileCard(link,e.getHook());
+        });
+    }
+    private void buildProfileCard(Database.AccountLink link,InteractionHook hook){
+        UUID uuid=link.uuid();
+        Team t=plugin.teams().byPlayer(uuid);
+        String tier=plugin.matier().tier(uuid);
+        long stars=plugin.matier().stars(uuid);
+        Integer rank=stars>0?plugin.matier().rank(uuid):null;
+        String accountType=displayAccountType(link.accountType());
+        String tagline=cfg.s("discord.profile.tagline","Play. Improve. Be Better.");
+
+        CompletableFuture<BufferedImage> skinFuture=fetchSkinRender(uuid);
+        CompletableFuture<Map<String,Object>> bridgeFuture=new CompletableFuture<>();
+        plugin.websiteBridge().requestProfile(link.name(),bridgeFuture::complete,8000);
+
+        skinFuture.thenCombineAsync(bridgeFuture,(skin,data)->{
+            boolean online=Boolean.TRUE.equals(data.get("online"));
+            Long registeredAt=asLong(data.get("registeredAt"));
+            Long lastLogin=asLong(data.get("lastLogin"));
+            ProfileCard.Input input=new ProfileCard.Input(link.name(),online,rank,tier,stars,
+                    t==null?null:t.name(),accountType,registeredAt,lastLogin,skin);
+            try{return ProfileCard.render(input,tagline);}
+            catch(Exception ex){throw new CompletionException(ex);}
+        }).whenComplete((png,err)->{
+            if(err!=null||png==null){
+                plugin.getLogger().warning("/profile card render failed for "+link.name()+": "+(err==null?"unknown error":err.getMessage()));
+                hook.editOriginal("❌ Failed to build the profile card - check this server's console.").queue();
+                return;
+            }
+            var embed=new net.dv8tion.jda.api.EmbedBuilder().setImage("attachment://profile.png").setColor(0x2ECC71).build();
+            hook.editOriginalAttachments(FileUpload.fromData(png,"profile.png")).setEmbeds(embed).queue();
+        });
+    }
+    private CompletableFuture<BufferedImage> fetchSkinRender(UUID uuid){
+        HttpRequest req=HttpRequest.newBuilder(URI.create("https://crafatar.com/renders/body/"+uuid+"?overlay&size=300"))
+                .timeout(Duration.ofSeconds(6)).GET().build();
+        return http.sendAsync(req,HttpResponse.BodyHandlers.ofByteArray())
+                .thenApply(res->{
+                    try{return res.statusCode()==200?ImageIO.read(new ByteArrayInputStream(res.body())):null;}
+                    catch(Exception ex){return null;}
+                })
+                .exceptionally(ex->null);
+    }
+    private String displayAccountType(String raw){
+        if(raw==null)return "Unknown";
+        return switch(raw.toLowerCase(Locale.ROOT)){
+            case "java"->"Premium";
+            case "cracked"->"Cracked";
+            case "bedrock"->"Bedrock";
+            default->"Unknown";
+        };
+    }
+    private Long asLong(Object o){
+        if(o instanceof Number n)return n.longValue();
+        if(o==null)return null;
+        try{return Long.parseLong(String.valueOf(o).trim());}catch(NumberFormatException ex){return null;}
     }
     // null = this tier's request runs immediately, no approval needed.
     // Otherwise the MINIMUM tier allowed to Accept/Deny it - see
