@@ -229,3 +229,6 @@ Added alt accounts: one Discord account may now link up to three Minecraft accou
 - `/profile` shows the Main account by default; with 2+ accounts linked, a dropdown appears below the card ("Main - PlayerName", "Alt#1 - PlayerName", "Alt#2 - PlayerName") to switch between them - omitted entirely with only one account linked.
 - New `/editprofile` (self only): a dropdown of your linked accounts - picking one promotes it to Main, the rest shift down preserving their prior relative order.
 - New `account_link_alts` table holds Alt#1/Alt#2 (`account_links` itself, and its schema, is untouched - it still holds exactly the Main, same as every version before this one). A separate table rather than relaxing `account_links`' own `discord_id UNIQUE` constraint, since dropping/altering an existing constraint isn't reliably scriptable across H2 and MySQL - this needed no `ALTER TABLE` on existing installs at all. Alts are Discord-only; Telegram linking is completely unaffected.
+
+## 1.2.42 changes
+- MaTier's inactivity decay now floors at `matier.inactivity.floor_stars` (default `150`) instead of `0`. A player already at or under the floor loses nothing further to inactivity no matter how long they stay away; one still above it decays toward the floor same as before, just never past it. Doesn't bump anyone already below the floor back up to it - it only ever reduces.

@@ -46,12 +46,13 @@ matier:
     repeat_kill_reward: 0
     suicide_reward: 0
     suicide_loss: 0
-  # INFO: Inactive players lose Stars after 7 full days offline. The first penalty is 50 Stars, then 10 more Stars per additional inactive day. Going online resets the inactivity counter.
+  # INFO: Inactive players lose Stars after 7 full days offline. The first penalty is 50 Stars, then 10 more Stars per additional inactive day. Going online resets the inactivity counter. Decay never takes anyone below floor_stars - a player already at or under it loses nothing further to inactivity, no matter how long they stay away.
   inactivity:
     enabled: true
     grace_days: 7
     initial_penalty: 50
     daily_penalty: 10
+    floor_stars: 150
   # INFO: Leaderboard display size.
   leaderboard:
     size: 10

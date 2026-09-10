@@ -288,6 +288,7 @@ never need to delete a config file to "pick up" a new option.
 | `matier.inactivity.grace_days` | `7` | Days offline before any penalty starts. |
 | `matier.inactivity.initial_penalty` | `50` | Stars lost at the grace threshold. |
 | `matier.inactivity.daily_penalty` | `10` | Stars lost per additional inactive day. Logging back in resets the counter. |
+| `matier.inactivity.floor_stars` | *(added 1.2.42)* `150` | Decay never takes a player below this. A player already at or under it loses nothing further to inactivity, no matter how much longer they stay away - it only ever reduces toward the floor, never bumps someone already below it back up to it. |
 | `matier.leaderboard.size` | `10` | Used by both `/matier top` and the leaderboard GUI's default page size. |
 | `matier.messages.*` | (12 messages) | `prefix`, `profile`, `top_header`, `top_entry`, `tier_up`, `m1_achieved`, `kill`, `death`, `reset`, `no_player`, `admin_only`, `invalid_amount`, `reload`. Placeholders: `{player}`, `{tier}`, `{stars}`, `{next_tier}`, `{required}`, `{rank}`, `{year}` (see [§10](#10-messagesyml) for which message uses which). `{tier}`/`{next_tier}` (when it's an actual tier, not `MAX`) are already colored per `MaTierService.TIER_HEX` - don't wrap them in another color tag in the template or it'll fight the tier's own color. |
 | `matier.aura.enabled` | `true` | Colored dust-particle aura for M3/M2/M1 - no potion effects. |
