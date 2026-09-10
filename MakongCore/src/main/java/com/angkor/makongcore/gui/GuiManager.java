@@ -311,7 +311,7 @@ public final class GuiManager {
         Inventory inv=Bukkit.createInventory(new TeamHolder("invites"),config.size("sizes.invites",27),Text.mm(title("invites","<yellow>ᴘᴇɴᴅɪɴɢ ɪɴᴠɪᴛᴇ")));
         Team t=invite==null?null:teams.team(invite.team());
         if(t==null)inv.setItem(cfgSlot("invites.empty",13),cfgItem("invites.empty",Material.PAPER,"<gray>No pending invitations."));
-        else { vars("team",t.name(),"tag",t.tag(),"members",t.members().size(),"max",teams.settings().maxSize()); inv.setItem(cfgSlot("invites.entry",13),cfgItem("invites.entry",Material.DIAMOND,"<aqua><bold>"+t.name()+"</bold>","<gray>Tag: <white>"+t.tag(),"<gray>Members: <white>"+t.members().size()+"/"+teams.settings().maxSize(),"","<green>Left-click: Accept</green>","<red>Right-click: Decline</red>")); }
+        else { vars("team",t.name(),"tag",t.tag(),"members",t.members().size(),"max",teams.settings().maxSize()); inv.setItem(cfgSlot("invites.entry",13),cfgItem("invites.entry",Material.DIAMOND,"<aqua><bold>"+t.name()+"</bold>","<gray>Tag: <white>"+t.tag(),"<gray>Members: <white>"+t.members().size()+"/"+teams.settings().maxSize(),"","<yellow>Click to respond.</yellow>")); }
         inv.setItem(cfgSlot("invites.back",22),cfgItem("invites.back",Material.IRON_DOOR,"<gray>ʙᴀᴄᴋ"));fillRange(inv,18,26);open(p,inv);
     }
 
@@ -380,7 +380,7 @@ public final class GuiManager {
         Inventory inv=Bukkit.createInventory(new TeamHolder("join-requests"),config.size("sizes.join_requests",54),Text.mm(title("join_requests","<aqua>ᴊᴏɪɴ ʀᴇǫᴜᴇsᴛs")));
         List<TeamService.Request> rs=teams.requestsFor(t.id());
         if(rs.isEmpty())inv.setItem(cfgSlot("requests.empty",22),cfgItem("requests.empty",Material.PAPER,"<gray>No pending requests."));
-        else for(int i=0;i<Math.min(36,rs.size());i++){var r=rs.get(i);OfflinePlayer op=Bukkit.getOfflinePlayer(r.player());inv.setItem(guiBase("requests.entry",9)+i,head(op,"<yellow>"+(op.getName()==null?"Unknown":op.getName()),"<gray>Wants to join.","","<green>Left-click: Accept</green>","<red>Right-click: Deny</red>"));}
+        else for(int i=0;i<Math.min(36,rs.size());i++){var r=rs.get(i);OfflinePlayer op=Bukkit.getOfflinePlayer(r.player());inv.setItem(guiBase("requests.entry",9)+i,head(op,"<yellow>"+(op.getName()==null?"Unknown":op.getName()),"<gray>Wants to join.","","<yellow>Click to respond.</yellow>"));}
         fillRange(inv,45,53);
         inv.setItem(cfgSlot("requests.back",49),cfgItem("requests.back",Material.IRON_DOOR,"<gray>ʙᴀᴄᴋ"));open(p,inv);
     }
@@ -418,15 +418,15 @@ public final class GuiManager {
 
     public void openConfirm(Player p,String action,String target,String data){
         vars("target",target);
-        // ally-accept reuses the same two slots as every other confirm screen,
-        // just relabeled Deny/Accept instead of Cancel/Confirm - two separate
-        // items you tap, not a left/right-click distinction on one item, so
-        // it works the same on Bedrock as on Java.
-        boolean allyAccept=action.equals("ally-accept");
-        String title=switch(action){case"disband"->"<red>ᴅɪsʙᴀɴᴅ ᴛᴇᴀᴍ?";case"leave"->"<red>ʟᴇᴀᴠᴇ ᴛᴇᴀᴍ?";case"transfer"->"<gold>ᴛʀᴀɴsғᴇʀ ᴏᴡɴᴇʀsʜɪᴘ?";case"kick"->"<red>ᴋɪᴄᴋ ᴍᴇᴍʙᴇʀ?";case"ally-remove"->"<red>ʀᴇᴍᴏᴠᴇ ᴀʟʟʏ?";case"ally-accept"->"<green>ᴀʟʟɪᴀɴᴄᴇ ʀᴇǫᴜᴇsᴛ";default->"<yellow>ᴄᴏɴғɪʀᴍ";};
+        // ally-accept/join-accept/invite-accept reuse the same two slots as
+        // every other confirm screen, just relabeled Deny/Accept instead of
+        // Cancel/Confirm - two separate items you tap, not a left/right-click
+        // distinction on one item, so it works the same on Bedrock as on Java.
+        boolean respond=action.equals("ally-accept")||action.equals("join-accept")||action.equals("invite-accept");
+        String title=switch(action){case"disband"->"<red>ᴅɪsʙᴀɴᴅ ᴛᴇᴀᴍ?";case"leave"->"<red>ʟᴇᴀᴠᴇ ᴛᴇᴀᴍ?";case"transfer"->"<gold>ᴛʀᴀɴsғᴇʀ ᴏᴡɴᴇʀsʜɪᴘ?";case"kick"->"<red>ᴋɪᴄᴋ ᴍᴇᴍʙᴇʀ?";case"ally-remove"->"<red>ʀᴇᴍᴏᴠᴇ ᴀʟʟʏ?";case"ally-accept"->"<green>ᴀʟʟɪᴀɴᴄᴇ ʀᴇǫᴜᴇsᴛ";case"join-accept"->"<green>ᴊᴏɪɴ ʀᴇǫᴜᴇsᴛ";case"invite-accept"->"<green>ᴛᴇᴀᴍ ɪɴᴠɪᴛᴇ";default->"<yellow>ᴄᴏɴғɪʀᴍ";};
         Inventory inv=Bukkit.createInventory(new TeamHolder("confirm:"+action,1,data),config.size("sizes.confirm",27),Text.mm(title("confirm."+action,title)));
-        inv.setItem(cfgSlot("confirm.cancel",11),cfgItem("confirm.cancel",Material.RED_WOOL,allyAccept?"<red><bold>ᴅᴇɴʏ</bold>":"<red><bold>ᴄᴀɴᴄᴇʟ</bold>",allyAccept?"<gray>Deny this alliance request.":"<gray>Return."));
-        inv.setItem(cfgSlot("confirm.confirm",15),cfgItem("confirm.confirm",Material.GREEN_WOOL,allyAccept?"<green><bold>ᴀᴄᴄᴇᴘᴛ</bold>":"<green><bold>ᴄᴏɴғɪʀᴍ</bold>","<gray>Target: <white>"+target,"","<yellow>Click to "+(allyAccept?"accept.":"confirm.")+"</yellow>"));
+        inv.setItem(cfgSlot("confirm.cancel",11),cfgItem("confirm.cancel",Material.RED_WOOL,respond?"<red><bold>ᴅᴇɴʏ</bold>":"<red><bold>ᴄᴀɴᴄᴇʟ</bold>",respond?"<gray>Deny/decline this request.":"<gray>Return."));
+        inv.setItem(cfgSlot("confirm.confirm",15),cfgItem("confirm.confirm",Material.GREEN_WOOL,respond?"<green><bold>ᴀᴄᴄᴇᴘᴛ</bold>":"<green><bold>ᴄᴏɴғɪʀᴍ</bold>","<gray>Target: <white>"+target,"","<yellow>Click to "+(respond?"accept.":"confirm.")+"</yellow>"));
         fill(inv);open(p,inv);
     }
 

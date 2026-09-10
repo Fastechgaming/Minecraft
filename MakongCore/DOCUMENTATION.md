@@ -593,12 +593,12 @@ apply everywhere; `titles` and `items` are per-screen.
 | `leaderboard` | `{page} {pages} {team} {tag} {members} {max} {metric} {value} {rank}` | *(changed 1.2.35, was Stars/Points/Kills/KDR)* Stars/Kills/KDR leaderboard, paginated. |
 | `browse` | `{page} {pages} {team} {tag} {members} {max} {status} {stars}` | Every public team, paginated. |
 | `team_info` | `{team} {tag} {members} {max} {kills} {deaths} {kdr} {stars} {status} {description}` | A specific team's public info card. |
-| `invites` | `{team} {tag} {members} {max}` | Your pending invitations. |
+| `invites` | `{team} {tag} {members} {max}` | Your pending invitation. *(changed 1.2.43)* Clicking the entry opens an Accept/Decline `confirm` screen (the `invite-accept` action) instead of a left/right-click distinction, so it works on Bedrock/Floodgate too. |
 | `settings` | `{team} {tag} {description} {status} {status_info} {color}` | Owner/admin settings (tag, description, public/private, color). |
 | `member` | `{target} {role} {joined} {kills} {deaths} {playtime}` | One member's profile within the team screen. |
-| `join_requests` | none applied¹ | Pending join requests (owner/admin view). |
-| `allies` | `{team} {tag} {members}` | *(changed 1.2.43)* Allied teams list (slots 0-26, click an entry to remove it) plus, in slots 27-44, incoming pending alliance requests via the new `request_entry` item - clicking one opens an Accept/Deny `confirm` screen (see the `ally-accept` action below) rather than a left/right-click distinction, so it works on Bedrock/Floodgate too. |
-| `confirm` | `{target}` | Generic yes/no confirmation (disband/leave/transfer/kick/ally-remove/ally-accept). *(1.2.43)* For `ally-accept` specifically, the same two slots are relabeled Deny/Accept instead of Cancel/Confirm - Deny actually clears the alliance request rather than just navigating back. |
+| `join_requests` | none applied¹ | Pending join requests (owner/admin view). *(changed 1.2.43)* Clicking an entry opens an Accept/Deny `confirm` screen (the `join-accept` action) instead of a left/right-click distinction, so it works on Bedrock/Floodgate too. |
+| `allies` | `{team} {tag} {members}` | *(changed 1.2.43)* Allied teams list (slots 0-26, click an entry to remove it) plus, in slots 27-44, incoming pending alliance requests via the new `request_entry` item - clicking one opens an Accept/Deny `confirm` screen (the `ally-accept` action) rather than a left/right-click distinction, so it works on Bedrock/Floodgate too. |
+| `confirm` | `{target}` | Generic yes/no confirmation (disband/leave/transfer/kick/ally-remove/ally-accept/join-accept/invite-accept). *(1.2.43)* For the three `*-accept` actions specifically, the same two slots are relabeled Deny/Accept instead of Cancel/Confirm - Deny actually denies/declines rather than just navigating back like every other action's Cancel does. |
 
 Every item entry supports `slot`, `material`, `name`, `lore` (a list; `[]`
 removes it), and - on a few items only (`leaderboard.filter`) - `modes` and

@@ -239,3 +239,8 @@ Fixed `/team ally <tag>` - it was a complete no-op stub that printed a fake "All
 - If the other team already sent your team a request first, sending one back auto-accepts immediately instead of leaving two mirrored requests pending.
 - Proper rejection feedback for allying yourself, an already-allied team, either team being at `team.allies.max_allies`, or a request already pending in that direction - previously all of these silently "succeeded" with the same fake message.
 - Requests expire after `team.invites.expire_seconds`, same as team invites/join requests.
+
+## 1.2.44 changes
+The team **invite** and **join-request** GUI screens still relied on left-click-to-accept / right-click-to-decline on a single item - the same Bedrock-unfriendly pattern just fixed for alliance requests in 1.2.43. Bedrock/Floodgate players can't reliably trigger a distinct right-click inside an inventory GUI, so this was effectively unusable for them.
+- Clicking your pending team invite, or a pending join request in the owner/admin view, now opens the same Accept/Deny confirmation screen used for alliance requests - two separate buttons, no click-type distinction, works the same on Bedrock and Java.
+- No behavior change for Java players beyond the extra confirmation screen; all existing accept/decline outcomes (join the team, get added as a member, etc.) are unchanged.

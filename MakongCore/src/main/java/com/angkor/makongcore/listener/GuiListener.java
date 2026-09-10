@@ -7,6 +7,7 @@ import com.angkor.makongcore.model.*;
 import com.angkor.makongcore.service.TeamService;
 import com.angkor.makongcore.util.Text;
 import org.bukkit.Bukkit;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.event.*;
 import org.bukkit.event.inventory.InventoryClickEvent;
@@ -35,10 +36,10 @@ public final class GuiListener implements Listener {
             case "leaderboard" -> leaderboard(p,h,slot);
             case "browse" -> browse(p,h,slot);
             case "team-info" -> teamInfo(p,h,slot);
-            case "invites" -> invites(p,slot,e.isLeftClick());
+            case "invites" -> invites(p,slot);
             case "settings" -> settings(p,slot);
             case "member" -> member(p,h,slot);
-            case "join-requests" -> requests(p,slot,e.isLeftClick());
+            case "join-requests" -> requests(p,slot);
             case "allies" -> allies(p,slot);
             default -> { if(type.startsWith("confirm:")) confirm(p,type.substring(8),h.data(),slot); }
         }
@@ -118,12 +119,11 @@ public final class GuiListener implements Listener {
         if(slot==gui.slot("items.team_info.join.slot",20)){Team t=teamByData(h.data());if(t==null)return;if(ts.byPlayer(p.getUniqueId())!=null){p.sendMessage(Text.mm("<red>You are already in a team.</red>"));return;}if(!t.isPublic()){p.sendMessage(Text.mm("<red>That team is private.</red>"));return;}ts.request(p.getUniqueId(),t.id());p.sendMessage(Text.mm("<green>Join request sent to <white>"+t.name()+"</white>.</green>"));return;}
     }
 
-    private void invites(Player p,int slot,boolean left){
+    private void invites(Player p,int slot){
         if(slot==gui.slot("items.invites.back.slot",22)){gui.open(p);return;}if(slot!=gui.slot("items.invites.entry.slot",13))return;
         TeamService.Invite i=ts.invite(p.getUniqueId());if(i==null){gui.openInvites(p);return;}Team t=ts.team(i.team());
         if(t==null){ts.clearInvite(p.getUniqueId());gui.openInvites(p);return;}
-        if(left){if(ts.addMember(t,p.getUniqueId(),p.getName(),TeamRole.MEMBER)){ts.clearInvite(p.getUniqueId());p.sendMessage(Text.mm("<green>You joined <white>"+t.name()+"</white>.</green>"));gui.openTeam(p,t);}else p.sendMessage(Text.mm("<red>Could not join; the team may be full.</red>"));}
-        else{ts.clearInvite(p.getUniqueId());p.sendMessage(Text.mm("<gray>Invitation declined.</gray>"));gui.openNoTeam(p);}
+        gui.openConfirm(p,"invite-accept",t.name());
     }
 
     private void settings(Player p,int slot){
@@ -150,17 +150,12 @@ public final class GuiListener implements Listener {
         }
     }
 
-    private void requests(Player p,int slot,boolean left){
+    private void requests(Player p,int slot){
         Team t=ts.byPlayer(p.getUniqueId());if(t==null)return;TeamMember me=t.member(p.getUniqueId());if(me==null||me.role()==TeamRole.MEMBER)return;
         if(slot==gui.slot("items.join_requests.back.slot",49)){gui.openTeam(p,t);return;}if(slot<9||slot>44)return;
         int index=slot-9;List<TeamService.Request> rs=ts.requestsFor(t.id());if(index>=rs.size())return;
-        TeamService.Request r=rs.get(index);OfflinePlayerName(p,r.player(),t,left);
-    }
-    private void OfflinePlayerName(Player p,UUID player,Team t,boolean accept){
-        if(accept){
-            if(ts.addMember(t,player,Bukkit.getOfflinePlayer(player).getName(),TeamRole.MEMBER)){ts.clearRequest(player);p.sendMessage(Text.mm("<green>Request accepted.</green>"));}else p.sendMessage(Text.mm("<red>Could not accept; team may be full or player is already in a team.</red>"));
-        }else{ts.clearRequest(player);p.sendMessage(Text.mm("<gray>Request denied.</gray>"));}
-        gui.openJoinRequests(p,t);
+        TeamService.Request r=rs.get(index);OfflinePlayer op=Bukkit.getOfflinePlayer(r.player());
+        gui.openConfirm(p,"join-accept",op.getName()==null?"Unknown":op.getName(),r.player().toString());
     }
 
     // Slots split into two ranges (see GuiManager#openAllies): existing
@@ -188,10 +183,11 @@ public final class GuiListener implements Listener {
     private void notifyOfficers(Team team,String message){for(TeamMember m:team.members()){if(m.role()==TeamRole.MEMBER)continue;Player online=Bukkit.getPlayer(m.uuid());if(online!=null)online.sendMessage(Text.mm(message));}}
 
     private void confirm(Player p,String action,String data,int slot){
-        // ally-accept's "cancel" slot is relabeled Deny (GuiManager#openConfirm)
-        // and must actually clear the request, not just navigate back like
-        // every other confirm screen's cancel button does - handle it before
-        // the generic cancel/confirm slot check below.
+        // ally-accept/join-accept/invite-accept's "cancel" slot is relabeled
+        // Deny (GuiManager#openConfirm) and must actually clear the
+        // request/invite, not just navigate back like every other confirm
+        // screen's cancel button does - handle these before the generic
+        // cancel/confirm slot check below.
         if(action.equals("ally-accept")){
             Team t=ts.byPlayer(p.getUniqueId());Team from=teamByData(data);
             if(t==null||from==null){gui.open(p);return;}
@@ -206,6 +202,37 @@ public final class GuiListener implements Listener {
             p.sendMessage(Text.mm("<green>Alliance accepted with <white>"+from.name()+"</white>.</green>"));
             notifyOfficers(from,"<green>Your alliance request to <white>"+t.name()+"</white> was accepted!</green>");
             gui.openAllies(p,t);
+            return;
+        }
+        if(action.equals("join-accept")){
+            Team t=ts.byPlayer(p.getUniqueId());UUID player=uuid(data);
+            if(t==null){gui.open(p);return;}
+            if(slot==gui.slot("items.confirm.cancel.slot",11)){
+                ts.clearRequest(player);
+                p.sendMessage(Text.mm("<gray>Request denied.</gray>"));
+                gui.openJoinRequests(p,t);
+                return;
+            }
+            if(slot!=gui.slot("items.confirm.confirm.slot",15))return;
+            if(ts.addMember(t,player,Bukkit.getOfflinePlayer(player).getName(),TeamRole.MEMBER)){ts.clearRequest(player);p.sendMessage(Text.mm("<green>Request accepted.</green>"));}
+            else p.sendMessage(Text.mm("<red>Could not accept; team may be full or player is already in a team.</red>"));
+            gui.openJoinRequests(p,t);
+            return;
+        }
+        if(action.equals("invite-accept")){
+            TeamService.Invite i=ts.invite(p.getUniqueId());
+            if(i==null){gui.openInvites(p);return;}
+            Team t=ts.team(i.team());
+            if(t==null){ts.clearInvite(p.getUniqueId());gui.openInvites(p);return;}
+            if(slot==gui.slot("items.confirm.cancel.slot",11)){
+                ts.clearInvite(p.getUniqueId());
+                p.sendMessage(Text.mm("<gray>Invitation declined.</gray>"));
+                gui.openNoTeam(p);
+                return;
+            }
+            if(slot!=gui.slot("items.confirm.confirm.slot",15))return;
+            if(ts.addMember(t,p.getUniqueId(),p.getName(),TeamRole.MEMBER)){ts.clearInvite(p.getUniqueId());p.sendMessage(Text.mm("<green>You joined <white>"+t.name()+"</white>.</green>"));gui.openTeam(p,t);}
+            else p.sendMessage(Text.mm("<red>Could not join; the team may be full.</red>"));
             return;
         }
         if(slot==gui.slot("items.confirm.cancel.slot",11)){gui.open(p);return;}if(slot!=gui.slot("items.confirm.confirm.slot",15))return;

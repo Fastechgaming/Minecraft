@@ -136,7 +136,7 @@ items:
 
   invites:
     empty: {slot: 13, material: PAPER, name: "<gray>No pending invitations.", lore: []}
-    entry: {slot: 13, material: DIAMOND, name: "<aqua><bold>{team}</bold>", lore: ["<gray>Tag: <white>{tag}", "<gray>Members: <white>{members}/{max}", "", "<green>Left-click: Accept</green>", "<red>Right-click: Decline</red>"]}
+    entry: {slot: 13, material: DIAMOND, name: "<aqua><bold>{team}</bold>", lore: ["<gray>Tag: <white>{tag}", "<gray>Members: <white>{members}/{max}", "", "<yellow>Click to respond.</yellow>"]}
     back: {slot: 22, material: IRON_DOOR, name: "<gray>ʙᴀᴄᴋ", lore: []}
 
   settings:
@@ -156,7 +156,7 @@ items:
 
   join_requests:
     empty: {slot: 22, material: PAPER, name: "<gray>No pending requests.", lore: []}
-    entry: {slot: 9, material: PLAYER_HEAD, name: "<yellow>{target}", lore: ["<gray>Wants to join.", "", "<green>Left-click: Accept</green>", "<red>Right-click: Deny</red>"]}
+    entry: {slot: 9, material: PLAYER_HEAD, name: "<yellow>{target}", lore: ["<gray>Wants to join.", "", "<yellow>Click to respond.</yellow>"]}
     back: {slot: 49, material: IRON_DOOR, name: "<gray>ʙᴀᴄᴋ", lore: []}
 
   allies:
