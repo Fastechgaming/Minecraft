@@ -406,7 +406,7 @@ public final class GuiManager {
             Team from=teams.team(r.fromTeam());if(from==null)continue;
             vars("team",from.name(),"tag",from.tag(),"members",from.members().size());
             inv.setItem(guiBase("allies.request_entry",27)+j,cfgItem("allies.request_entry",Material.PAPER,"<yellow>"+from.name()+" <gray>["+from.tag()+"]",
-                    "<gray>Wants to ally with your team.","","<green>Left-click: Accept</green>","<red>Right-click: Deny</red>"));
+                    "<gray>Wants to ally with your team.","","<yellow>Click to respond.</yellow>"));
             if(++j>=18)break;
         }
         fillRange(inv,45,53);
@@ -418,10 +418,15 @@ public final class GuiManager {
 
     public void openConfirm(Player p,String action,String target,String data){
         vars("target",target);
-        String title=switch(action){case"disband"->"<red>ᴅɪsʙᴀɴᴅ ᴛᴇᴀᴍ?";case"leave"->"<red>ʟᴇᴀᴠᴇ ᴛᴇᴀᴍ?";case"transfer"->"<gold>ᴛʀᴀɴsғᴇʀ ᴏᴡɴᴇʀsʜɪᴘ?";case"kick"->"<red>ᴋɪᴄᴋ ᴍᴇᴍʙᴇʀ?";case"ally-remove"->"<red>ʀᴇᴍᴏᴠᴇ ᴀʟʟʏ?";default->"<yellow>ᴄᴏɴғɪʀᴍ";};
+        // ally-accept reuses the same two slots as every other confirm screen,
+        // just relabeled Deny/Accept instead of Cancel/Confirm - two separate
+        // items you tap, not a left/right-click distinction on one item, so
+        // it works the same on Bedrock as on Java.
+        boolean allyAccept=action.equals("ally-accept");
+        String title=switch(action){case"disband"->"<red>ᴅɪsʙᴀɴᴅ ᴛᴇᴀᴍ?";case"leave"->"<red>ʟᴇᴀᴠᴇ ᴛᴇᴀᴍ?";case"transfer"->"<gold>ᴛʀᴀɴsғᴇʀ ᴏᴡɴᴇʀsʜɪᴘ?";case"kick"->"<red>ᴋɪᴄᴋ ᴍᴇᴍʙᴇʀ?";case"ally-remove"->"<red>ʀᴇᴍᴏᴠᴇ ᴀʟʟʏ?";case"ally-accept"->"<green>ᴀʟʟɪᴀɴᴄᴇ ʀᴇǫᴜᴇsᴛ";default->"<yellow>ᴄᴏɴғɪʀᴍ";};
         Inventory inv=Bukkit.createInventory(new TeamHolder("confirm:"+action,1,data),config.size("sizes.confirm",27),Text.mm(title("confirm."+action,title)));
-        inv.setItem(cfgSlot("confirm.cancel",11),cfgItem("confirm.cancel",Material.RED_WOOL,"<red><bold>ᴄᴀɴᴄᴇʟ</bold>","<gray>Return."));
-        inv.setItem(cfgSlot("confirm.confirm",15),cfgItem("confirm.confirm",Material.GREEN_WOOL,"<green><bold>ᴄᴏɴғɪʀᴍ</bold>","<gray>Target: <white>"+target,"","<yellow>Click to confirm.</yellow>"));
+        inv.setItem(cfgSlot("confirm.cancel",11),cfgItem("confirm.cancel",Material.RED_WOOL,allyAccept?"<red><bold>ᴅᴇɴʏ</bold>":"<red><bold>ᴄᴀɴᴄᴇʟ</bold>",allyAccept?"<gray>Deny this alliance request.":"<gray>Return."));
+        inv.setItem(cfgSlot("confirm.confirm",15),cfgItem("confirm.confirm",Material.GREEN_WOOL,allyAccept?"<green><bold>ᴀᴄᴄᴇᴘᴛ</bold>":"<green><bold>ᴄᴏɴғɪʀᴍ</bold>","<gray>Target: <white>"+target,"","<yellow>Click to "+(allyAccept?"accept.":"confirm.")+"</yellow>"));
         fill(inv);open(p,inv);
     }
 

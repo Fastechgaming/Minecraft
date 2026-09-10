@@ -60,7 +60,7 @@ No permission node gates the base command - every player can use it.
 | `/team transfer <player>` | Owner only. Opens a confirmation GUI. |
 | `/team disband` / `/team delete` | Owner only. Opens a confirmation GUI. |
 | `/team chat` | Toggles team-chat mode for you (see `team.chat` in `module/team.yml`). |
-| `/team ally <tag>` | Admin/owner only. *(fixed 1.2.43, previously a no-op stub that printed a fake success message without creating anything)* Sends a real alliance request to `<tag>`; their online owner/admins are notified in chat and can Accept (left-click) or Deny (right-click) it from the team GUI's Allies screen, which now also lists incoming pending requests alongside existing allies. If `<tag>` already sent your team a request first, this auto-accepts instead of leaving two requests pending. |
+| `/team ally <tag>` | Admin/owner only. *(fixed 1.2.43, previously a no-op stub that printed a fake success message without creating anything)* Sends a real alliance request to `<tag>`; their online owner/admins are notified in chat and can click it in the team GUI's Allies screen to open an Accept/Deny confirmation (two separate buttons, works on Bedrock too), which now also lists incoming pending requests alongside existing allies. If `<tag>` already sent your team a request first, this auto-accepts instead of leaving two requests pending. |
 
 **⚠ Note:** `/team help`'s in-game text and `TeamCommand`'s tab-completion
 both list every subcommand above; `messages.yml`'s own `help` string is
@@ -597,8 +597,8 @@ apply everywhere; `titles` and `items` are per-screen.
 | `settings` | `{team} {tag} {description} {status} {status_info} {color}` | Owner/admin settings (tag, description, public/private, color). |
 | `member` | `{target} {role} {joined} {kills} {deaths} {playtime}` | One member's profile within the team screen. |
 | `join_requests` | none applied¹ | Pending join requests (owner/admin view). |
-| `allies` | `{team} {tag} {members}` | *(changed 1.2.43)* Allied teams list (slots 0-26, left-click to remove) plus, in slots 27-44, incoming pending alliance requests via the new `request_entry` item - same placeholders, left-click Accept / right-click Deny. |
-| `confirm` | `{target}` | Generic yes/no confirmation (disband/leave/transfer/kick/ally-remove). |
+| `allies` | `{team} {tag} {members}` | *(changed 1.2.43)* Allied teams list (slots 0-26, click an entry to remove it) plus, in slots 27-44, incoming pending alliance requests via the new `request_entry` item - clicking one opens an Accept/Deny `confirm` screen (see the `ally-accept` action below) rather than a left/right-click distinction, so it works on Bedrock/Floodgate too. |
+| `confirm` | `{target}` | Generic yes/no confirmation (disband/leave/transfer/kick/ally-remove/ally-accept). *(1.2.43)* For `ally-accept` specifically, the same two slots are relabeled Deny/Accept instead of Cancel/Confirm - Deny actually clears the alliance request rather than just navigating back. |
 
 Every item entry supports `slot`, `material`, `name`, `lore` (a list; `[]`
 removes it), and - on a few items only (`leaderboard.filter`) - `modes` and
