@@ -162,6 +162,7 @@ items:
   allies:
     entry: {slot: 0, material: TOTEM_OF_UNDYING, name: "<aqua>{team} <gray>[{tag}]", lore: ["<gray>Members: <white>{members}", "", "<red>Click to remove ally.</red>"]}
     empty: {slot: 22, material: PAPER, name: "<gray>No allies.", lore: ["<gray>Use <white>/team ally <tag></white> to request one."]}
+    request_entry: {slot: 27, material: PAPER, name: "<yellow>{team} <gray>[{tag}]", lore: ["<gray>Wants to ally with your team.", "", "<green>Left-click: Accept</green>", "<red>Right-click: Deny</red>"]}
     back: {slot: 49, material: IRON_DOOR, name: "<gray>ʙᴀᴄᴋ", lore: []}
 
   confirm:

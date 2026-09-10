@@ -60,7 +60,7 @@ No permission node gates the base command - every player can use it.
 | `/team transfer <player>` | Owner only. Opens a confirmation GUI. |
 | `/team disband` / `/team delete` | Owner only. Opens a confirmation GUI. |
 | `/team chat` | Toggles team-chat mode for you (see `team.chat` in `module/team.yml`). |
-| `/team ally <tag>` | Admin/owner only. Sends an alliance request. |
+| `/team ally <tag>` | Admin/owner only. *(fixed 1.2.43, previously a no-op stub that printed a fake success message without creating anything)* Sends a real alliance request to `<tag>`; their online owner/admins are notified in chat and can Accept (left-click) or Deny (right-click) it from the team GUI's Allies screen, which now also lists incoming pending requests alongside existing allies. If `<tag>` already sent your team a request first, this auto-accepts instead of leaving two requests pending. |
 
 **⚠ Note:** `/team help`'s in-game text and `TeamCommand`'s tab-completion
 both list every subcommand above; `messages.yml`'s own `help` string is
@@ -240,9 +240,9 @@ never need to delete a config file to "pick up" a new option.
 | `team.pvp.enabled` | `true` | Whether teams can toggle PvP at all. |
 | `team.pvp.default_status` | `false` | PvP state for a newly created team. When `false`, teammates cannot damage each other (friendly fire cancelled); when `true`, teammates can. Damage to/from anyone outside the team is never affected by this setting. Only the team owner can toggle it, from the team GUI's PvP button. |
 | `team.pvp.toggle_cooldown_seconds` | `300` | Not currently enforced. |
-| `team.allies.enabled` | `true` | |
-| `team.allies.max_allies` | `10` | |
-| `team.allies.allow_request_toggle` | `true` | |
+| `team.allies.enabled` | `true` | Whether `/team ally` works at all; `false` blocks sending new requests. |
+| `team.allies.max_allies` | `10` | Max allied teams per team - checked on both sides of a request (`/team ally` fails if either team is already at this limit). |
+| `team.allies.allow_request_toggle` | `true` | **Not read by any code** - see [§16](#16-known-gaps-found-while-writing-this). |
 | `team.chat.character_enabled` | `true` | Whether the `character` prefix (below) triggers team chat in normal chat. |
 | `team.chat.character` | `#` | |
 | `team.rename.cooldown_seconds` | `604800` | 7 days. |
@@ -597,7 +597,7 @@ apply everywhere; `titles` and `items` are per-screen.
 | `settings` | `{team} {tag} {description} {status} {status_info} {color}` | Owner/admin settings (tag, description, public/private, color). |
 | `member` | `{target} {role} {joined} {kills} {deaths} {playtime}` | One member's profile within the team screen. |
 | `join_requests` | none applied¹ | Pending join requests (owner/admin view). |
-| `allies` | `{team} {tag} {members}` | Allied teams list. |
+| `allies` | `{team} {tag} {members}` | *(changed 1.2.43)* Allied teams list (slots 0-26, left-click to remove) plus, in slots 27-44, incoming pending alliance requests via the new `request_entry` item - same placeholders, left-click Accept / right-click Deny. |
 | `confirm` | `{target}` | Generic yes/no confirmation (disband/leave/transfer/kick/ally-remove). |
 
 Every item entry supports `slot`, `material`, `name`, `lore` (a list; `[]`
@@ -728,6 +728,12 @@ anything) you want changed:
    dead config** - only its `slot` is actually read; the item itself is
    built with hardcoded text in `GuiManager#openJoinRequests`. See the
    footnote at the end of [§11](#11-guiyml).
+8. **`team.allies.allow_request_toggle` in `module/team.yml` is entirely
+   unused**, same pattern as `team.creation.*` above - confirmed `Settings`
+   has no field for it and nothing reads this key. `/team ally` always
+   behaves as if it were `true` (allow_request_toggle presumably meaning
+   "let players send new requests" as opposed to only accepting/removing
+   existing ones, but nothing enforces that distinction).
 
 None of these are urgent - they're the kind of thing that's easy to miss
 without reading the whole codebase in one sitting, which is exactly what

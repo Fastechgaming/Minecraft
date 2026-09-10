@@ -39,7 +39,7 @@ public final class GuiListener implements Listener {
             case "settings" -> settings(p,slot);
             case "member" -> member(p,h,slot);
             case "join-requests" -> requests(p,slot,e.isLeftClick());
-            case "allies" -> allies(p,slot);
+            case "allies" -> allies(p,slot,e.isLeftClick());
             default -> { if(type.startsWith("confirm:")) confirm(p,type.substring(8),h.data(),slot); }
         }
     }
@@ -163,11 +163,36 @@ public final class GuiListener implements Listener {
         gui.openJoinRequests(p,t);
     }
 
-    private void allies(Player p,int slot){
+    // Slots split into two ranges (see GuiManager#openAllies): existing
+    // allies (click to remove, via the confirm screen like everything else
+    // destructive) starting at items.allies.entry.slot, and pending
+    // incoming requests (left-click accept / right-click deny, same
+    // convention as the join-requests screen) starting at
+    // items.allies.request_entry.slot.
+    private void allies(Player p,int slot,boolean left){
         Team t=ts.byPlayer(p.getUniqueId());if(t==null)return;TeamMember me=t.member(p.getUniqueId());if(me==null||me.role()==TeamRole.MEMBER)return;
-        if(slot==gui.slot("items.allies.back.slot",49)){gui.openTeam(p,t);return;}if(slot<0||slot>44)return;int index=slot;
-        List<UUID> ids=new ArrayList<>(t.allies());if(index>=ids.size())return;Team ally=ts.team(ids.get(index));if(ally!=null)gui.openConfirm(p,"ally-remove",ally.name(),ally.id().toString());
+        if(slot==gui.slot("items.allies.back.slot",49)){gui.openTeam(p,t);return;}
+        int entryBase=gui.slot("items.allies.entry.slot",0),requestBase=gui.slot("items.allies.request_entry.slot",27);
+        if(slot>=entryBase&&slot<entryBase+27){
+            int index=slot-entryBase;List<UUID> ids=new ArrayList<>(t.allies());if(index>=ids.size())return;
+            Team ally=ts.team(ids.get(index));if(ally!=null)gui.openConfirm(p,"ally-remove",ally.name(),ally.id().toString());
+            return;
+        }
+        if(slot>=requestBase&&slot<requestBase+18){
+            int index=slot-requestBase;List<TeamService.AllyRequest> reqs=ts.allyRequestsFor(t.id());if(index>=reqs.size())return;
+            TeamService.AllyRequest r=reqs.get(index);Team from=ts.team(r.fromTeam());if(from==null)return;
+            if(left){
+                ts.acceptAlly(from,t);
+                p.sendMessage(Text.mm("<green>Alliance accepted with <white>"+from.name()+"</white>.</green>"));
+                notifyOfficers(from,"<green>Your alliance request to <white>"+t.name()+"</white> was accepted!</green>");
+            } else {
+                ts.clearAllyRequest(from.id(),t.id());
+                p.sendMessage(Text.mm("<gray>Alliance request denied.</gray>"));
+            }
+            gui.openAllies(p,t);
+        }
     }
+    private void notifyOfficers(Team team,String message){for(TeamMember m:team.members()){if(m.role()==TeamRole.MEMBER)continue;Player online=Bukkit.getPlayer(m.uuid());if(online!=null)online.sendMessage(Text.mm(message));}}
 
     private void confirm(Player p,String action,String data,int slot){
         if(slot==gui.slot("items.confirm.cancel.slot",11)){gui.open(p);return;}if(slot!=gui.slot("items.confirm.confirm.slot",15))return;

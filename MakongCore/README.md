@@ -232,3 +232,10 @@ Added alt accounts: one Discord account may now link up to three Minecraft accou
 
 ## 1.2.42 changes
 - MaTier's inactivity decay now floors at `matier.inactivity.floor_stars` (default `150`) instead of `0`. A player already at or under the floor loses nothing further to inactivity no matter how long they stay away; one still above it decays toward the floor same as before, just never past it. Doesn't bump anyone already below the floor back up to it - it only ever reduces.
+
+## 1.2.43 changes
+Fixed `/team ally <tag>` - it was a complete no-op stub that printed a fake "Alliance request sent" success message without creating, persisting, or notifying anything, even though the underlying model (`Team`'s ally set) and database table (`team_allies`) were already fully built for it.
+- `/team ally <tag>` now creates a real, persisted alliance request. The target team's online owner/admins are notified in chat and can Accept or Deny it from the team GUI's Allies screen, which now shows incoming pending requests (left-click to accept, right-click to deny) alongside the existing allied-teams list (left-click to remove), mirroring the same accept/deny convention already used for join requests.
+- If the other team already sent your team a request first, sending one back auto-accepts immediately instead of leaving two mirrored requests pending.
+- Proper rejection feedback for allying yourself, an already-allied team, either team being at `team.allies.max_allies`, or a request already pending in that direction - previously all of these silently "succeeded" with the same fake message.
+- Requests expire after `team.invites.expire_seconds`, same as team invites/join requests.

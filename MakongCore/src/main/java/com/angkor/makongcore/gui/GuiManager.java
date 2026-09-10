@@ -394,9 +394,21 @@ public final class GuiManager {
             vars("team",a.name(),"tag",a.tag(),"members",a.members().size());
             inv.setItem(guiBase("allies.entry",0)+i,cfgItem("allies.entry",Material.TOTEM_OF_UNDYING,"<aqua>"+a.name()+" <gray>["+a.tag()+"]",
                     "<gray>Members: <white>"+a.members().size(),"","<red>Click to remove ally.</red>"));
-            if(++i>=45)break;
+            if(++i>=27)break;
         }
         if(i==0)inv.setItem(cfgSlot("allies.empty",22),cfgItem("allies.empty",Material.PAPER,"<gray>No allies.","<gray>Use <white>/team ally <tag></white> to request one."));
+        // Pending incoming requests get their own slot range (27+) so
+        // GuiListener#allies can tell an "accept/deny a request" click
+        // apart from a "remove an existing ally" click by slot alone -
+        // see TeamService#allyRequestsFor.
+        int j=0;
+        for(TeamService.AllyRequest r:teams.allyRequestsFor(t.id())){
+            Team from=teams.team(r.fromTeam());if(from==null)continue;
+            vars("team",from.name(),"tag",from.tag(),"members",from.members().size());
+            inv.setItem(guiBase("allies.request_entry",27)+j,cfgItem("allies.request_entry",Material.PAPER,"<yellow>"+from.name()+" <gray>["+from.tag()+"]",
+                    "<gray>Wants to ally with your team.","","<green>Left-click: Accept</green>","<red>Right-click: Deny</red>"));
+            if(++j>=18)break;
+        }
         fillRange(inv,45,53);
         inv.setItem(cfgSlot("allies.back",49),cfgItem("allies.back",Material.IRON_DOOR,"<gray>ʙᴀᴄᴋ"));
         open(p,inv);
