@@ -340,6 +340,8 @@ because there is no way to check it.
 | `discord.guild.required_role_id` | `""` | |
 | `discord.guild.eligibility_tiers` | 2 tiers (see below) | *(added 1.2.21)* A list of `{minimum_account_age_days, minimum_membership_days}` pairs - an account qualifies if it meets **at least one** tier's **both** minimums. Shipped defaults: (180-day-old account, 30-day membership) OR (365-day-old account, any membership length). Add/remove/edit tiers freely - at least one tier must exist or nobody can ever verify. |
 | `discord.guild.minimum_account_age_days` / `minimum_membership_days` | `180` / `7` | **Dead as of 1.2.21** - superseded by `eligibility_tiers` above. Still present (and untouched) in an upgraded file, but no longer read by any code. |
+| `discord.alts.enabled` | *(added 1.2.41)* `true` | Whether a Discord account may link more than one Minecraft account (a Main plus Alt#1/Alt#2). `false` forces every Discord account back to exactly one (Main only), regardless of `tiers` below. |
+| `discord.alts.tiers` | *(added 1.2.41)* 2 tiers (see below) | A list of `{minimum_account_age_days, minimum_membership_days, max_accounts}` - the highest tier a Discord account's own age/membership meets decides its TOTAL account cap (Main + alts). This is **additive to, not a replacement for**, `eligibility_tiers` above: that gate still decides whether a Discord account may link *anything* at all (its Main); this one only decides how many more it may add once it's already eligible. Shipped defaults: (365-day-old account, 90-day membership) -> 2 total (Main + Alt#1); (730-day-old account, 270-day membership) -> 3 total (Main + Alt#1 + Alt#2). Below the first tier's thresholds, or with nothing matching, the cap is 1 (Main only). See [§9.6](#96-alt-accounts-and-editprofile). |
 | `discord.verification.channel_id` / `panel_message_id` | `""` / `""` | |
 | `discord.roles.crack` / `java` / `bedrock` | `""` each | Roles assigned by account type. |
 | `discord.commands.staff_role_ids` | `[]` | Role IDs allowed to use `/ban`/`/unban` - having ANY ONE is enough. **Empty means nobody can use these commands** (fails closed, not open). Independent of `discord.guild.eligibility_tiers`/`required_role_id` - staff don't need to satisfy the player-verification age/membership checks. |
@@ -428,7 +430,10 @@ this file's other in-memory Discord state (see §9.1 above).
 *(added 1.2.29)* `/profile [user]` posts a generated profile card (a PNG
 embed image) for whichever Minecraft account that Discord user has linked -
 open to everyone in the channel, not staff-gated. `user` is optional
-*(added 1.2.34)* - omit it to look up yourself.
+*(added 1.2.34)* - omit it to look up yourself. Shows the Main account by
+default; *(added 1.2.41)* if that Discord user has alt accounts linked, a
+dropdown below the card lets you switch between Main/Alt#1/Alt#2 - see
+[§9.6](#96-alt-accounts-and-editprofile).
 
 If the target isn't linked yet, the reply (publicly visible, not
 ephemeral *(changed 1.2.34)*) points them at how to fix it: run `/verify`
@@ -505,6 +510,49 @@ top 10 (or fewer if there aren't 10 yet). Ranks 1-3 get a medal emoji
   `M9`-`M1` text - not the MiniMessage-colored form `/matier top` uses
   in-game, since Discord doesn't render those tags) alongside their Star
   count.
+
+### 9.6 Alt accounts and `/editprofile`
+
+*(added 1.2.41)* One Discord account may link up to three Minecraft
+accounts - a **Main** (slot 0) plus up to two **Alts** (Alt#1, Alt#2) -
+gated by `discord.alts.tiers` above (the Discord account's own age and how
+long it's been in this guild decide its total cap; `eligibility_tiers`
+still separately gates whether it can link *anything* at all).
+
+**How linking an alt works:** running `/verify` in-game and then `/link`
+(or `/verify`, or clicking **Verify Code**) in Discord works exactly the
+same whether it's your first account or your third - the bot checks how
+many you already have against what your Discord account currently
+qualifies for, and rejects with the current cap if you're at the limit.
+A successful link tells you which slot it landed in (`✅ ... (Alt#1)`).
+
+**Storage:** the Main lives in `account_links` (unchanged, one row per
+Discord id, same as before this feature existed); Alt#1/Alt#2 live in a
+new `account_link_alts` table (`uuid` primary key, `discord_id`, `slot`,
+plus the same `name`/`account_type`/`linked_at` columns) rather than
+relaxing `account_links`' own `discord_id UNIQUE` constraint - dropping or
+altering an existing constraint isn't reliably scriptable across H2 and
+MySQL (the auto-generated constraint name differs per engine), so a new,
+purely additive table needed no `ALTER TABLE` on existing installs at
+all. Alts are Discord-only - Telegram linking is untouched, still exactly
+one account, unaffected by any of this. `Database#getAccountLink(uuid)`
+(the in-game "is this player linked" check `onJoin()`/`/malink status`
+use) checks `account_links` first and falls back to `account_link_alts`,
+so an alt-linked player is recognized as linked exactly like a Main is -
+neither caller needed to change.
+
+**`/profile`** shows the Main by default. With 2+ accounts linked, a
+dropdown appears below the card ("Main - PlayerName", "Alt#1 - PlayerName",
+"Alt#2 - PlayerName" - only the entries that actually exist) letting the
+viewer switch; picking one re-renders the card for that account in place.
+With only one account linked, no dropdown appears at all.
+
+**`/editprofile`** (self only - it operates on the caller's own linked
+accounts, there's no `user` option) posts a dropdown of your linked
+accounts; picking one promotes it to Main. The rest shift down preserving
+their existing relative order - promoting Alt#2 to Main on a 3-account
+link results in `[new Main, old Main, old Alt#1]`. Replies "nothing to
+organize" if you only have one account linked.
 
 ---
 

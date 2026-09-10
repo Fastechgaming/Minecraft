@@ -24,6 +24,16 @@ public final class Database implements Closeable {
    s.executeUpdate("CREATE TABLE IF NOT EXISTS account_links(uuid VARCHAR(36) PRIMARY KEY,name VARCHAR(64) NOT NULL,discord_id VARCHAR(32) UNIQUE,telegram_chat_id VARCHAR(64) UNIQUE,linked_at BIGINT NOT NULL DEFAULT 0,account_type VARCHAR(16) NOT NULL DEFAULT 'unknown')");
    s.executeUpdate("CREATE INDEX IF NOT EXISTS idx_account_links_discord ON account_links(discord_id)");
    s.executeUpdate("CREATE INDEX IF NOT EXISTS idx_account_links_telegram ON account_links(telegram_chat_id)");
+   // Alt-account slots (1=Alt#1, 2=Alt#2) for a Discord id that already has a
+   // main link in account_links (slot 0, implicitly). Discord-only - Telegram
+   // linking is untouched by the alt-account feature. A brand new table
+   // rather than relaxing account_links' own discord_id UNIQUE constraint:
+   // dropping/renaming an existing constraint isn't reliably scriptable
+   // across H2 and MySQL (the auto-generated constraint name differs per
+   // engine), whereas a new table needs no ALTER at all on existing
+   // installs. See AccountLinkService's alt-linking flow and DOCUMENTATION.md.
+   s.executeUpdate("CREATE TABLE IF NOT EXISTS account_link_alts(uuid VARCHAR(36) PRIMARY KEY,discord_id VARCHAR(32) NOT NULL,slot INT NOT NULL,name VARCHAR(64) NOT NULL,account_type VARCHAR(16) NOT NULL DEFAULT 'unknown',linked_at BIGINT NOT NULL DEFAULT 0)");
+   s.executeUpdate("CREATE INDEX IF NOT EXISTS idx_account_link_alts_discord ON account_link_alts(discord_id)");
    s.executeUpdate("CREATE TABLE IF NOT EXISTS pending_links(code VARCHAR(6) PRIMARY KEY,uuid VARCHAR(36) NOT NULL,name VARCHAR(64) NOT NULL,expires_at BIGINT NOT NULL,account_type VARCHAR(16) NOT NULL,discord_only BOOLEAN NOT NULL)");
    s.executeUpdate("CREATE INDEX IF NOT EXISTS idx_pending_links_uuid ON pending_links(uuid)");
    s.executeUpdate("CREATE TABLE IF NOT EXISTS link_bypass(uuid VARCHAR(36) PRIMARY KEY,name VARCHAR(64) NOT NULL,added_at BIGINT NOT NULL)");
@@ -121,17 +131,47 @@ public final class Database implements Closeable {
  public CompletableFuture<Void> setMeta(String key,String value){return CompletableFuture.runAsync(()->{try(Connection c=ds.getConnection()){try(PreparedStatement p=c.prepareStatement("UPDATE mateam_meta SET v=? WHERE k=?")){p.setString(1,value);p.setString(2,key);if(p.executeUpdate()==0){try(PreparedStatement i=c.prepareStatement("INSERT INTO mateam_meta(k,v) VALUES(?,?)")){i.setString(1,key);i.setString(2,value);i.executeUpdate();}}}}catch(SQLException e){throw new CompletionException(e);}},io);}
 
 
- public CompletableFuture<AccountLink> getAccountLink(UUID uuid){return CompletableFuture.supplyAsync(()->{try(Connection c=ds.getConnection();PreparedStatement p=c.prepareStatement("SELECT * FROM account_links WHERE uuid=?")){p.setString(1,uuid.toString());try(ResultSet r=p.executeQuery()){if(!r.next())return null;return new AccountLink(uuid,r.getString("name"),r.getString("discord_id"),r.getString("telegram_chat_id"),r.getLong("linked_at"),r.getString("account_type"));}}catch(SQLException e){throw new CompletionException(e);}},io);}
+ // Checks account_links (the main) first, then falls back to
+ // account_link_alts - so onJoin()'s "is this player linked" freeze check
+ // and /malink status correctly recognize an alt account as linked too,
+ // without either caller needing to know which table it actually lives in.
+ public CompletableFuture<AccountLink> getAccountLink(UUID uuid){return CompletableFuture.supplyAsync(()->{try(Connection c=ds.getConnection()){try(PreparedStatement p=c.prepareStatement("SELECT * FROM account_links WHERE uuid=?")){p.setString(1,uuid.toString());try(ResultSet r=p.executeQuery()){if(r.next())return new AccountLink(uuid,r.getString("name"),r.getString("discord_id"),r.getString("telegram_chat_id"),r.getLong("linked_at"),r.getString("account_type"));}}try(PreparedStatement p=c.prepareStatement("SELECT * FROM account_link_alts WHERE uuid=?")){p.setString(1,uuid.toString());try(ResultSet r=p.executeQuery()){if(r.next())return new AccountLink(uuid,r.getString("name"),r.getString("discord_id"),null,r.getLong("linked_at"),r.getString("account_type"));}}return null;}catch(SQLException e){throw new CompletionException(e);}},io);}
+ // Only ever the MAIN account (account_links) - used for staff identity
+ // (/ban's --sender) and Telegram linking, neither of which should resolve
+ // to whichever alt happens to be linked. Use linkedAccounts() for the
+ // full Main+Alt#1+Alt#2 list.
  public CompletableFuture<AccountLink> findByDiscord(String id){return findLink("discord_id",id);}
  public CompletableFuture<AccountLink> findByTelegram(String id){return findLink("telegram_chat_id",id);}
  private CompletableFuture<AccountLink> findLink(String col,String id){return CompletableFuture.supplyAsync(()->{try(Connection c=ds.getConnection();PreparedStatement p=c.prepareStatement("SELECT * FROM account_links WHERE "+col+"=?")){p.setString(1,id);try(ResultSet r=p.executeQuery()){if(!r.next())return null;return new AccountLink(UUID.fromString(r.getString("uuid")),r.getString("name"),r.getString("discord_id"),r.getString("telegram_chat_id"),r.getLong("linked_at"),r.getString("account_type"));}}catch(SQLException e){throw new CompletionException(e);}},io);}
  public CompletableFuture<Void> linkAccount(UUID uuid,String name,String discord,String telegram,String type){return CompletableFuture.runAsync(()->{try(Connection c=ds.getConnection()){c.setAutoCommit(false);try(PreparedStatement p=c.prepareStatement("DELETE FROM account_links WHERE uuid=?")){p.setString(1,uuid.toString());p.executeUpdate();}try(PreparedStatement p=c.prepareStatement("INSERT INTO account_links(uuid,name,discord_id,telegram_chat_id,linked_at,account_type) VALUES(?,?,?,?,?,?)")){p.setString(1,uuid.toString());p.setString(2,name);p.setString(3,discord);p.setString(4,telegram);p.setLong(5,System.currentTimeMillis());p.setString(6,type);p.executeUpdate();}c.commit();}catch(Exception e){throw new CompletionException(e);}},io);}
- public CompletableFuture<Void> deleteAccountLink(UUID uuid){return CompletableFuture.runAsync(()->{try(Connection c=ds.getConnection();PreparedStatement p=c.prepareStatement("DELETE FROM account_links WHERE uuid=?")){p.setString(1,uuid.toString());p.executeUpdate();}catch(SQLException e){throw new CompletionException(e);}},io);}
- public CompletableFuture<Void> deleteAllAccountLinks(){return CompletableFuture.runAsync(()->{try(Connection c=ds.getConnection();Statement s=c.createStatement()){s.executeUpdate("DELETE FROM account_links");}catch(SQLException e){throw new CompletionException(e);}},io);}
+ // Links `uuid` as an alt (slot 1 or 2) of `discord` - see linkAccount()
+ // above for the main slot (0, implicit). Same DELETE-then-INSERT-by-uuid
+ // pattern, so re-linking an already-alt-linked account (e.g. switching it
+ // to a different Discord id) works the same permissive way the main link
+ // already does.
+ public CompletableFuture<Void> linkAlt(UUID uuid,String name,String discord,String type,int slot){return CompletableFuture.runAsync(()->{try(Connection c=ds.getConnection()){c.setAutoCommit(false);try(PreparedStatement p=c.prepareStatement("DELETE FROM account_link_alts WHERE uuid=?")){p.setString(1,uuid.toString());p.executeUpdate();}try(PreparedStatement p=c.prepareStatement("INSERT INTO account_link_alts(uuid,discord_id,slot,name,account_type,linked_at) VALUES(?,?,?,?,?,?)")){p.setString(1,uuid.toString());p.setString(2,discord);p.setInt(3,slot);p.setString(4,name);p.setString(5,type);p.setLong(6,System.currentTimeMillis());p.executeUpdate();}c.commit();}catch(Exception e){throw new CompletionException(e);}},io);}
+ // Every account (Main first, then Alt#1/Alt#2 in slot order) a Discord id
+ // currently has linked - see AccountLinkService's /profile switcher and
+ // /editprofile. Empty when nothing's linked at all.
+ public CompletableFuture<List<LinkedAccount>> linkedAccounts(String discord){return CompletableFuture.supplyAsync(()->{List<LinkedAccount> out=new ArrayList<>();try(Connection c=ds.getConnection()){try(PreparedStatement p=c.prepareStatement("SELECT * FROM account_links WHERE discord_id=?")){p.setString(1,discord);try(ResultSet r=p.executeQuery()){if(r.next())out.add(new LinkedAccount(UUID.fromString(r.getString("uuid")),r.getString("name"),0,r.getString("account_type"),r.getString("telegram_chat_id"),r.getLong("linked_at")));}}try(PreparedStatement p=c.prepareStatement("SELECT * FROM account_link_alts WHERE discord_id=?")){p.setString(1,discord);try(ResultSet r=p.executeQuery()){while(r.next())out.add(new LinkedAccount(UUID.fromString(r.getString("uuid")),r.getString("name"),r.getInt("slot"),r.getString("account_type"),null,r.getLong("linked_at")));}}}catch(SQLException e){throw new CompletionException(e);}out.sort(Comparator.comparingInt(LinkedAccount::slot));return out;},io);}
+ // /editprofile - rewrites which linked account occupies which slot.
+ // `ordered` is the FULL new Main-first order (index 0 becomes Main in
+ // account_links, index 1/2 become Alt#1/Alt#2 in account_link_alts).
+ // Clears and rewrites both tables for this discord id in one transaction
+ // rather than a per-row UPDATE, since a slot swap can move a row between
+ // the two different tables. The main's telegram link (alts never have
+ // one) is preserved across the reassignment regardless of which account
+ // ends up as the new Main.
+ public CompletableFuture<Void> reassignSlots(String discord,List<LinkedAccount> ordered){return CompletableFuture.runAsync(()->{try(Connection c=ds.getConnection()){c.setAutoCommit(false);try{String telegram=null;try(PreparedStatement p=c.prepareStatement("SELECT telegram_chat_id FROM account_links WHERE discord_id=?")){p.setString(1,discord);try(ResultSet r=p.executeQuery()){if(r.next())telegram=r.getString(1);}}try(PreparedStatement d=c.prepareStatement("DELETE FROM account_links WHERE discord_id=?")){d.setString(1,discord);d.executeUpdate();}try(PreparedStatement d=c.prepareStatement("DELETE FROM account_link_alts WHERE discord_id=?")){d.setString(1,discord);d.executeUpdate();}for(int i=0;i<ordered.size()&&i<3;i++){LinkedAccount l=ordered.get(i);if(i==0){try(PreparedStatement p=c.prepareStatement("INSERT INTO account_links(uuid,name,discord_id,telegram_chat_id,linked_at,account_type) VALUES(?,?,?,?,?,?)")){p.setString(1,l.uuid().toString());p.setString(2,l.name());p.setString(3,discord);p.setString(4,telegram);p.setLong(5,l.linkedAt());p.setString(6,l.accountType());p.executeUpdate();}}else{try(PreparedStatement p=c.prepareStatement("INSERT INTO account_link_alts(uuid,discord_id,slot,name,account_type,linked_at) VALUES(?,?,?,?,?,?)")){p.setString(1,l.uuid().toString());p.setString(2,discord);p.setInt(3,i);p.setString(4,l.name());p.setString(5,l.accountType());p.setLong(6,l.linkedAt());p.executeUpdate();}}}c.commit();}catch(Exception e){try{c.rollback();}catch(SQLException ignored){}throw e;}}catch(Exception e){throw new CompletionException(e);}},io);}
+ public CompletableFuture<Void> deleteAccountLink(UUID uuid){return CompletableFuture.runAsync(()->{try(Connection c=ds.getConnection()){try(PreparedStatement p=c.prepareStatement("DELETE FROM account_links WHERE uuid=?")){p.setString(1,uuid.toString());p.executeUpdate();}try(PreparedStatement p=c.prepareStatement("DELETE FROM account_link_alts WHERE uuid=?")){p.setString(1,uuid.toString());p.executeUpdate();}}catch(SQLException e){throw new CompletionException(e);}},io);}
+ public CompletableFuture<Void> deleteAllAccountLinks(){return CompletableFuture.runAsync(()->{try(Connection c=ds.getConnection();Statement s=c.createStatement()){s.executeUpdate("DELETE FROM account_links");s.executeUpdate("DELETE FROM account_link_alts");}catch(SQLException e){throw new CompletionException(e);}},io);}
  public CompletableFuture<Void> setDiscord(UUID uuid,String id){return setLinkField(uuid,"discord_id",id);}
  public CompletableFuture<Void> setTelegram(UUID uuid,String id){return setLinkField(uuid,"telegram_chat_id",id);}
  private CompletableFuture<Void> setLinkField(UUID uuid,String col,String id){return CompletableFuture.runAsync(()->{try(Connection c=ds.getConnection();PreparedStatement p=c.prepareStatement("UPDATE account_links SET "+col+"=?,linked_at=? WHERE uuid=?")){p.setString(1,id);p.setLong(2,System.currentTimeMillis());p.setString(3,uuid.toString());p.executeUpdate();}catch(SQLException e){throw new CompletionException(e);}},io);}
  public record AccountLink(UUID uuid,String name,String discordId,String telegramChatId,long linkedAt,String accountType){}
+ // slot 0 = Main, 1 = Alt#1, 2 = Alt#2. telegramChatId is only ever
+ // non-null on slot 0 - alts are Discord-only.
+ public record LinkedAccount(UUID uuid,String name,int slot,String accountType,String telegramChatId,long linkedAt){}
  // Shared cross-server fallback for AccountLinkService's in-memory `pending`
  // map: every server with Discord enabled holds its own JDA connection on
  // the same bot token, so a verify-code modal submission can land on a

@@ -14,6 +14,8 @@ import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.command.CommandAutoCompleteInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
+import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent;
+import net.dv8tion.jda.api.components.selections.StringSelectMenu;
 import net.dv8tion.jda.api.events.session.ReadyEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
@@ -145,7 +147,7 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
     }
     private void startDiscord(){String token=cfg.s("discord.bot_token","");if(token.isBlank()||token.startsWith("PUT_")){plugin.getLogger().warning("Discord enabled but bot_token is not configured.");return;}try{jda=JDABuilder.createDefault(token).addEventListeners(this).build();plugin.getLogger().info("Discord hook starting...");}catch(Exception e){plugin.getLogger().severe("Discord hook failed: "+e.getMessage());}}
     @Override public void onReady(ReadyEvent e){registerCommands();sendVerificationPanel();plugin.getLogger().info("Discord hook connected as "+e.getJDA().getSelfUser().getName()+".");}
-    private void registerCommands(){if(jda==null)return; jda.updateCommands().addCommands(Commands.slash("ban","Ban a Minecraft player").addOption(OptionType.STRING,"name","Minecraft name",true).addOption(OptionType.STRING,"duration","Duration (choose a preset or type your own)",true,true).addOption(OptionType.STRING,"reason","Reason",true),Commands.slash("unban","Unban a Minecraft player").addOption(OptionType.STRING,"name","Minecraft name",true).addOption(OptionType.STRING,"reason","Reason",true),Commands.slash("profile","Show a linked player's Makong Network profile").addOption(OptionType.USER,"user","The Discord user to look up (defaults to you)",false),linkCommand("link"),linkCommand("verify"),Commands.slash("topteam","Top 10 teams by Stars"),Commands.slash("topplayer","Top 10 players by MaTier Stars")).queue();}
+    private void registerCommands(){if(jda==null)return; jda.updateCommands().addCommands(Commands.slash("ban","Ban a Minecraft player").addOption(OptionType.STRING,"name","Minecraft name",true).addOption(OptionType.STRING,"duration","Duration (choose a preset or type your own)",true,true).addOption(OptionType.STRING,"reason","Reason",true),Commands.slash("unban","Unban a Minecraft player").addOption(OptionType.STRING,"name","Minecraft name",true).addOption(OptionType.STRING,"reason","Reason",true),Commands.slash("profile","Show a linked player's Makong Network profile").addOption(OptionType.USER,"user","The Discord user to look up (defaults to you)",false),linkCommand("link"),linkCommand("verify"),Commands.slash("topteam","Top 10 teams by Stars"),Commands.slash("topplayer","Top 10 players by MaTier Stars"),Commands.slash("editprofile","Choose which of your linked accounts is Main, Alt#1 or Alt#2")).queue();}
     // /link and /verify are identical aliases - a slash-command shortcut for
     // someone who'd rather not go find the verification channel and click
     // its button. With no `code` given, opens the same modal the "Verify
@@ -223,8 +225,73 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
             verifyDiscord(e,new Pending(row.uuid(),row.name(),code,row.expiresAt(),row.accountType(),row.discordOnly()));
         });
     }
-    private void verifyDiscord(IReplyCallback e,Pending x){if(x.expiresAt<System.currentTimeMillis()){e.reply("❌ Code expired or not found. Join the server again for a new code.").setEphemeral(true).queue();return;}if(!discordAllowed(e.getUser(),e.getMember(),e.getGuild())){e.reply("❌ Your Discord account does not meet the server/account-age requirements.").setEphemeral(true).queue();return;}db.findByDiscord(e.getUser().getId()).thenAccept(existing->{if(existing!=null&&!existing.uuid().equals(x.uuid)){e.reply("❌ This Discord account is already linked to another Minecraft account.").setEphemeral(true).queue();return;}completeDiscord(e,x,existing);});}
-    private void completeDiscord(IReplyCallback e,Pending x,Database.AccountLink existing){String telegram=existing==null?null:existing.telegramChatId();db.linkAccount(x.uuid,x.name(),e.getUser().getId(),telegram,x.accountType).thenRun(()->{pending.remove(x.code);db.removePending(x.code);playerCodes.remove(x.uuid);frozen.remove(x.uuid);Bukkit.getScheduler().runTask(plugin,()->release(x.uuid));Guild g=e.getGuild();String roleKey=x.accountType.equals("cracked")?"roles.crack":x.accountType.equals("bedrock")?"roles.bedrock":"roles.java";String roleId=cfg.s("discord."+roleKey,"");if(g!=null&&!roleId.isBlank()){Role role=g.getRoleById(roleId);if(role!=null)g.addRoleToMember(e.getUser(),role).queue();}e.reply("✅ Successfully connected to **"+x.name()+"**.").setEphemeral(true).queue();});}
+    // Alt accounts: a Discord id may link more than one Minecraft account
+    // (Main, slot 0, plus up to two alts) once it clears BOTH gates - the
+    // base discordAllowed() eligibility above (unchanged, still gates
+    // whether this Discord account may link ANYTHING at all) and the
+    // separate, additive maxAccountsFor() tier below (how many TOTAL
+    // accounts it currently qualifies for). Re-verifying an account this
+    // Discord id already has linked (at any slot) just re-completes at that
+    // same slot - it never counts against or re-checks the alt-tier cap.
+    private void verifyDiscord(IReplyCallback e,Pending x){
+        if(x.expiresAt<System.currentTimeMillis()){e.reply("❌ Code expired or not found. Join the server again for a new code.").setEphemeral(true).queue();return;}
+        if(!discordAllowed(e.getUser(),e.getMember(),e.getGuild())){e.reply("❌ Your Discord account does not meet the server/account-age requirements.").setEphemeral(true).queue();return;}
+        String discordId=e.getUser().getId();
+        db.linkedAccounts(discordId).thenAccept(links->{
+            Database.LinkedAccount mine=links.stream().filter(l->l.uuid().equals(x.uuid)).findFirst().orElse(null);
+            if(mine!=null){completeDiscord(e,x,mine.slot(),mine.telegramChatId());return;}
+            long accountAgeDays=Duration.between(e.getUser().getTimeCreated().toInstant(),Instant.now()).toDays();
+            Member m=e.getMember();
+            long membershipDays=m==null||m.getTimeJoined()==null?0:Duration.between(m.getTimeJoined().toInstant(),Instant.now()).toDays();
+            int maxAllowed=maxAccountsFor(accountAgeDays,membershipDays);
+            if(links.size()>=maxAllowed){
+                e.reply("❌ This Discord account is already linked to the maximum number of accounts it currently qualifies for ("+maxAllowed+"). See the alt-account requirements for a higher limit.").setEphemeral(true).queue();
+                return;
+            }
+            completeDiscord(e,x,nextFreeSlot(links),null);
+        });
+    }
+    private void completeDiscord(IReplyCallback e,Pending x,int slot,String preserveTelegram){
+        String discordId=e.getUser().getId();
+        CompletableFuture<Void> op=slot==0
+                ?db.linkAccount(x.uuid,x.name(),discordId,preserveTelegram,x.accountType)
+                :db.linkAlt(x.uuid,x.name(),discordId,x.accountType,slot);
+        op.thenRun(()->{
+            pending.remove(x.code);db.removePending(x.code);playerCodes.remove(x.uuid);frozen.remove(x.uuid);
+            Bukkit.getScheduler().runTask(plugin,()->release(x.uuid));
+            Guild g=e.getGuild();
+            String roleKey=x.accountType.equals("cracked")?"roles.crack":x.accountType.equals("bedrock")?"roles.bedrock":"roles.java";
+            String roleId=cfg.s("discord."+roleKey,"");
+            if(g!=null&&!roleId.isBlank()){Role role=g.getRoleById(roleId);if(role!=null)g.addRoleToMember(e.getUser(),role).queue();}
+            e.reply("✅ Successfully connected to **"+x.name()+"** ("+slotLabel(slot)+").").setEphemeral(true).queue();
+        });
+    }
+    // How many TOTAL Minecraft accounts (Main + alts) this Discord id may
+    // have linked, based on ITS OWN age and time in this guild - see
+    // discord.alts.tiers in module/verification.yml. Independent of
+    // discordAllowed()'s eligibility_tiers, which still separately gates
+    // whether this Discord account may link at all; this only controls how
+    // many. The highest matching tier wins; 1 (Main only, no alts) if none
+    // match or discord.alts.enabled is false.
+    private int maxAccountsFor(long accountAgeDays,long membershipDays){
+        if(!cfg.b("discord.alts.enabled",true))return 1;
+        int max=1;
+        for(long[] tier:cfg.altTiers("discord.alts.tiers")){
+            if(accountAgeDays>=tier[0]&&membershipDays>=tier[1]&&tier[2]>max)max=(int)tier[2];
+        }
+        return max;
+    }
+    // The lowest unused slot among {1 (Alt#1), 2 (Alt#2)} - or 0 (Main) if
+    // nothing's linked yet at all. Only ever called after maxAccountsFor()
+    // has already confirmed there's room for one more.
+    private int nextFreeSlot(List<Database.LinkedAccount> links){
+        if(links.isEmpty())return 0;
+        Set<Integer> used=new HashSet<>();
+        for(Database.LinkedAccount l:links)used.add(l.slot());
+        for(int s=1;s<=2;s++)if(!used.contains(s))return s;
+        return -1;
+    }
+    private static String slotLabel(int slot){return switch(slot){case 0->"Main";case 1->"Alt#1";case 2->"Alt#2";default->"Alt#"+slot;};}
     // Player-verification gate only - account-age/membership eligibility
     // tiers plus the optional discord.guild.required_role_id. Staff
     // permission for /ban and /unban is a completely separate, unrelated
@@ -301,6 +368,7 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
         if(e.getName().equals("link")||e.getName().equals("verify")){handleLinkCommand(e);return;}
         if(e.getName().equals("topteam")){handleTopTeam(e);return;}
         if(e.getName().equals("topplayer")){handleTopPlayer(e);return;}
+        if(e.getName().equals("editprofile")){handleEditProfile(e);return;}
         if(!e.getName().equals("ban")&&!e.getName().equals("unban"))return;
         boolean ban=e.getName().equals("ban");
         if(!cfg.b("discord.commands."+e.getName()+".enabled",true)){e.reply("❌ This Discord command is disabled.").setEphemeral(true).queue();return;}
@@ -389,18 +457,20 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
         e.replyEmbeds(embed.build()).queue();
     }
 
-    // /profile @user - looks up the target's linked Minecraft account, then
-    // gathers Team/MaTier data locally (this server already has it) and
-    // nLogin registration/last-login + true whole-network online status via
-    // the website bridge (see WebsiteBridgeService#requestProfile - only the
-    // connected Velocity companion has that), in parallel with fetching a
-    // skin render, before compositing it all into one PNG (ProfileCard).
+    // /profile @user - looks up the target's linked Minecraft account(s),
+    // then gathers Team/MaTier data locally (this server already has it)
+    // and nLogin registration/last-login + true whole-network online status
+    // via the website bridge (see WebsiteBridgeService#requestProfile -
+    // only the connected Velocity companion has that), in parallel with
+    // fetching a skin render, before compositing it all into one PNG
+    // (ProfileCard). Shows Main by default; with 2+ linked accounts, a
+    // dropdown (onProfileSelect below) lets the viewer switch to any alt.
     private void handleProfile(SlashCommandInteractionEvent e){
         OptionMapping opt=e.getOption("user");
         User target=opt!=null?opt.getAsUser():e.getUser();
         boolean self=target.getId().equals(e.getUser().getId());
-        db.findByDiscord(target.getId()).thenAccept(link->{
-            if(link==null){
+        db.linkedAccounts(target.getId()).thenAccept(links->{
+            if(links.isEmpty()){
                 String who=self?"You're":"<@"+target.getId()+"> is";
                 String channelId=cfg.s("discord.verification.channel_id","");
                 String where=channelId.isBlank()?"in this server":"in <#"+channelId+">";
@@ -408,10 +478,15 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
                 return;
             }
             e.deferReply().queue();
-            buildProfileCard(link,e.getHook());
+            buildProfileCard(links.get(0),links,target.getId(),e.getHook());
         });
     }
-    private void buildProfileCard(Database.AccountLink link,InteractionHook hook){
+    // `allLinks` (Main-first, slot order) drives the account-switcher
+    // dropdown attached below the card - omitted entirely when there's
+    // only one, per how this was asked for ("if have alt only 1, don't
+    // display" - a dropdown with a single, unchangeable option is the same
+    // uselessness as the single-alt button case that came from).
+    private void buildProfileCard(Database.LinkedAccount link,List<Database.LinkedAccount> allLinks,String discordId,InteractionHook hook){
         UUID uuid=link.uuid();
         Team t=plugin.teams().byPlayer(uuid);
         String tier=plugin.matier().tier(uuid);
@@ -438,8 +513,66 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
                 hook.editOriginal("❌ Failed to build the profile card - check this server's console.").queue();
                 return;
             }
-            var embed=new net.dv8tion.jda.api.EmbedBuilder().setImage("attachment://profile.png").setColor(0x2ECC71).build();
-            hook.editOriginalAttachments(FileUpload.fromData(png,"profile.png")).setEmbeds(embed).queue();
+            var embed=new net.dv8tion.jda.api.EmbedBuilder().setTitle(slotLabel(link.slot())+" - "+link.name()).setImage("attachment://profile.png").setColor(0x2ECC71).build();
+            var edit=hook.editOriginalAttachments(FileUpload.fromData(png,"profile.png")).setEmbeds(embed);
+            edit=allLinks.size()>1?edit.setComponents(ActionRow.of(profileSelectMenu(allLinks,discordId,uuid))):edit.setComponents();
+            edit.queue();
+        });
+    }
+    // "Main - PlayerName" / "Alt#1 - PlayerName" / "Alt#2 - PlayerName" -
+    // the currently-shown account pre-selected as the default option.
+    private StringSelectMenu profileSelectMenu(List<Database.LinkedAccount> links,String discordId,UUID current){
+        StringSelectMenu.Builder b=StringSelectMenu.create("makong:profile:select:"+discordId);
+        for(Database.LinkedAccount l:links)b.addOption(slotLabel(l.slot())+" - "+l.name(),l.uuid().toString());
+        b.setDefaultValues(current.toString());
+        return b.build();
+    }
+    @Override public void onStringSelectInteraction(StringSelectInteractionEvent e){
+        String id=e.getComponentId();
+        if(id.startsWith("makong:profile:select:")){onProfileSelect(e,id.substring("makong:profile:select:".length()));return;}
+        if(id.startsWith("makong:editprofile:main:")){onEditProfileSelect(e,id.substring("makong:editprofile:main:".length()));return;}
+    }
+    private void onProfileSelect(StringSelectInteractionEvent e,String discordId){
+        if(e.getValues().isEmpty())return;
+        UUID selected;
+        try{selected=UUID.fromString(e.getValues().get(0));}catch(IllegalArgumentException ex){return;}
+        UUID finalSelected=selected;
+        db.linkedAccounts(discordId).thenAccept(links->{
+            Database.LinkedAccount chosen=links.stream().filter(l->l.uuid().equals(finalSelected)).findFirst().orElse(null);
+            if(chosen==null){e.reply("❌ That account is no longer linked.").setEphemeral(true).queue();return;}
+            e.deferEdit().queue();
+            buildProfileCard(chosen,links,discordId,e.getHook());
+        });
+    }
+    // /editprofile - pick which linked account should be Main; the rest
+    // shift down preserving their existing relative order (promoting
+    // Alt#2 to Main on a 3-account link results in [new Main, old Main,
+    // old Alt#1]). Operates only on the caller's own accounts.
+    private void handleEditProfile(SlashCommandInteractionEvent e){
+        db.linkedAccounts(e.getUser().getId()).thenAccept(links->{
+            if(links.size()<2){e.reply("❌ You only have "+links.size()+" linked account"+(links.size()==1?"":"s")+" - nothing to organize.").setEphemeral(true).queue();return;}
+            StringSelectMenu.Builder b=StringSelectMenu.create("makong:editprofile:main:"+e.getUser().getId());
+            for(Database.LinkedAccount l:links)b.addOption(slotLabel(l.slot())+" - "+l.name(),l.uuid().toString());
+            b.setDefaultValues(links.get(0).uuid().toString());
+            e.reply("Choose which account should be your **Main**:").setEphemeral(true).setComponents(ActionRow.of(b.build())).queue();
+        });
+    }
+    private void onEditProfileSelect(StringSelectInteractionEvent e,String discordId){
+        if(!discordId.equals(e.getUser().getId())){e.reply("❌ This isn't your menu.").setEphemeral(true).queue();return;}
+        if(e.getValues().isEmpty())return;
+        UUID selected;
+        try{selected=UUID.fromString(e.getValues().get(0));}catch(IllegalArgumentException ex){return;}
+        UUID finalSelected=selected;
+        db.linkedAccounts(discordId).thenAccept(links->{
+            Database.LinkedAccount chosen=links.stream().filter(l->l.uuid().equals(finalSelected)).findFirst().orElse(null);
+            if(chosen==null){e.reply("❌ That account is no longer linked.").setEphemeral(true).queue();return;}
+            if(chosen.slot()==0){e.editMessage("✅ **"+chosen.name()+"** is already your Main.").setComponents(List.of()).queue();return;}
+            e.deferEdit().queue();
+            List<Database.LinkedAccount> reordered=new ArrayList<>();
+            reordered.add(chosen);
+            for(Database.LinkedAccount l:links)if(!l.uuid().equals(finalSelected))reordered.add(l);
+            db.reassignSlots(discordId,reordered).thenRun(()->
+                    e.getHook().editOriginal("✅ **"+chosen.name()+"** is now your Main.").setComponents(List.of()).queue());
         });
     }
     // NameMC's own renders come from this same service (NMSR - see
@@ -730,6 +863,19 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
                 long age=m.get("minimum_account_age_days") instanceof Number n?n.longValue():0L;
                 long member=m.get("minimum_membership_days") instanceof Number n?n.longValue():0L;
                 out.add(new long[]{age,member});
+            }
+            return out;
+        }
+        // Same shape as tiers() above, plus a third field: how many TOTAL
+        // accounts (Main + alts) this tier allows once met. See
+        // discord.alts.tiers in module/verification.yml.
+        List<long[]> altTiers(String p){
+            List<long[]> out=new ArrayList<>();
+            for(java.util.Map<?,?> m:c.getMapList(p)){
+                long age=m.get("minimum_account_age_days") instanceof Number n?n.longValue():0L;
+                long member=m.get("minimum_membership_days") instanceof Number n?n.longValue():0L;
+                long max=m.get("max_accounts") instanceof Number n?n.longValue():1L;
+                out.add(new long[]{age,member,max});
             }
             return out;
         }
