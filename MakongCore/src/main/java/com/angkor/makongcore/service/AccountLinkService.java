@@ -145,7 +145,7 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
     }
     private void startDiscord(){String token=cfg.s("discord.bot_token","");if(token.isBlank()||token.startsWith("PUT_")){plugin.getLogger().warning("Discord enabled but bot_token is not configured.");return;}try{jda=JDABuilder.createDefault(token).addEventListeners(this).build();plugin.getLogger().info("Discord hook starting...");}catch(Exception e){plugin.getLogger().severe("Discord hook failed: "+e.getMessage());}}
     @Override public void onReady(ReadyEvent e){registerCommands();sendVerificationPanel();plugin.getLogger().info("Discord hook connected as "+e.getJDA().getSelfUser().getName()+".");}
-    private void registerCommands(){if(jda==null)return; jda.updateCommands().addCommands(Commands.slash("ban","Ban a Minecraft player").addOption(OptionType.STRING,"name","Minecraft name",true).addOption(OptionType.STRING,"duration","Duration (choose a preset or type your own)",true,true).addOption(OptionType.STRING,"reason","Reason",true),Commands.slash("unban","Unban a Minecraft player").addOption(OptionType.STRING,"name","Minecraft name",true).addOption(OptionType.STRING,"reason","Reason",true),Commands.slash("profile","Show a linked player's Makong Network profile").addOption(OptionType.USER,"user","The Discord user to look up (defaults to you)",false),linkCommand("link"),linkCommand("verify")).queue();}
+    private void registerCommands(){if(jda==null)return; jda.updateCommands().addCommands(Commands.slash("ban","Ban a Minecraft player").addOption(OptionType.STRING,"name","Minecraft name",true).addOption(OptionType.STRING,"duration","Duration (choose a preset or type your own)",true,true).addOption(OptionType.STRING,"reason","Reason",true),Commands.slash("unban","Unban a Minecraft player").addOption(OptionType.STRING,"name","Minecraft name",true).addOption(OptionType.STRING,"reason","Reason",true),Commands.slash("profile","Show a linked player's Makong Network profile").addOption(OptionType.USER,"user","The Discord user to look up (defaults to you)",false),linkCommand("link"),linkCommand("verify"),Commands.slash("topteam","Top 10 teams by Stars"),Commands.slash("topplayer","Top 10 players by MaTier Stars")).queue();}
     // /link and /verify are identical aliases - a slash-command shortcut for
     // someone who'd rather not go find the verification channel and click
     // its button. With no `code` given, opens the same modal the "Verify
@@ -299,6 +299,8 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
         if(!e.isFromGuild()){e.reply("Guild only.").setEphemeral(true).queue();return;}
         if(e.getName().equals("profile")){handleProfile(e);return;}
         if(e.getName().equals("link")||e.getName().equals("verify")){handleLinkCommand(e);return;}
+        if(e.getName().equals("topteam")){handleTopTeam(e);return;}
+        if(e.getName().equals("topplayer")){handleTopPlayer(e);return;}
         if(!e.getName().equals("ban")&&!e.getName().equals("unban"))return;
         boolean ban=e.getName().equals("ban");
         if(!cfg.b("discord.commands."+e.getName()+".enabled",true)){e.reply("❌ This Discord command is disabled.").setEphemeral(true).queue();return;}
@@ -343,6 +345,50 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
         if(!CODE.matcher(code).matches()){e.reply("❌ Invalid code. It should be exactly 6 digits.").setEphemeral(true).queue();return;}
         verifyDiscord(e,code);
     }
+    // /topteam and /topplayer - Discord-side equivalents of /mateam leaderboard
+    // (team.stars, GuiManager's default leaderboard mode) and /matier top
+    // (player Stars). Both are public, no permission gate - same as their
+    // in-game counterparts. Fixed top 10, no page/count option, per how
+    // they were asked for.
+    private static final String[] TOP_MEDALS = {"🥇","🥈","🥉"};
+    private String topRankLabel(int index){return index<TOP_MEDALS.length?TOP_MEDALS[index]:"**#"+(index+1)+"**";}
+
+    private void handleTopTeam(SlashCommandInteractionEvent e){
+        List<Team> list=new ArrayList<>(plugin.teams().all());
+        list.sort(Comparator.comparingLong(Team::stars).reversed().thenComparing(Team::name,String.CASE_INSENSITIVE_ORDER));
+        StringBuilder sb=new StringBuilder();
+        if(list.isEmpty()){
+            sb.append("*No teams yet.*");
+        } else {
+            int limit=Math.min(10,list.size());
+            for(int i=0;i<limit;i++){
+                Team t=list.get(i);
+                sb.append(topRankLabel(i)).append(" **").append(t.name()).append("** [").append(t.tag())
+                        .append("] — ⭐ ").append(t.stars()).append('\n');
+            }
+        }
+        var embed=new net.dv8tion.jda.api.EmbedBuilder().setTitle("🏆 Top Teams").setDescription(sb.toString()).setColor(0xF1C40F);
+        e.replyEmbeds(embed.build()).queue();
+    }
+
+    private void handleTopPlayer(SlashCommandInteractionEvent e){
+        List<Database.PlayerStar> list=plugin.matier().sorted();
+        StringBuilder sb=new StringBuilder();
+        if(list.isEmpty()){
+            sb.append("*No players yet.*");
+        } else {
+            int limit=Math.min(10,list.size());
+            for(int i=0;i<limit;i++){
+                Database.PlayerStar p=list.get(i);
+                String tier=plugin.matier().tier(p.uuid());
+                sb.append(topRankLabel(i)).append(" **").append(p.name()).append("** — ").append(tier)
+                        .append(" · ⭐ ").append(p.stars()).append('\n');
+            }
+        }
+        var embed=new net.dv8tion.jda.api.EmbedBuilder().setTitle("🏆 Top Players").setDescription(sb.toString()).setColor(0x3498DB);
+        e.replyEmbeds(embed.build()).queue();
+    }
+
     // /profile @user - looks up the target's linked Minecraft account, then
     // gathers Team/MaTier data locally (this server already has it) and
     // nLogin registration/last-login + true whole-network online status via

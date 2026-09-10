@@ -218,3 +218,6 @@ Fixed a real bug behind `/profile` intermittently losing online status/Time Regi
 
 ## 1.2.39 changes
 - `module/autorestart.yml`'s `settings.restarts` default is now empty (`[]`) instead of shipping a `Daily;05;00` entry every fresh install got whether they wanted it or not. Scheduled restarts are opt-in now - add your own `'Daily;HH;MM'`/`'DAY;HH;MM'` entries if you want them. The ad-hoc restart path (`/makongcore autorestart <seconds>`, or MakongVelocity's `/mcvlc ar` relay) is completely unaffected either way. **Existing servers keep whatever's already in their own `module/autorestart.yml`** - `ConfigUpdater` only adds missing keys, it never touches a key that's already there, so remove the `restarts:` list from your own file by hand if you don't want the daily restart it currently has.
+
+## 1.2.40 changes
+- Added Discord slash commands `/topteam` and `/topplayer` - the top 10 teams by Stars and top 10 players by MaTier Stars, posted as an embed with medal emoji for the top 3. `/topteam` reads the same `Team.stars()` ordering the in-game leaderboard GUI uses; `/topplayer` reuses `MaTierService#sorted()`, the same list `/matier top` reads in-game. Neither is staff-gated or configurable - always the full top 10 (or fewer if there aren't 10 yet), same as their in-game counterparts.

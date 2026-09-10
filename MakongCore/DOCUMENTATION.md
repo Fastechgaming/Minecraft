@@ -487,6 +487,25 @@ is connected, same as the button.
 Not staff-gated (any guild member can run either), guild-only like every
 other command here.
 
+### 9.5 `/topteam` and `/topplayer` (Discord slash commands)
+
+*(added 1.2.40)* Discord-side equivalents of the in-game `/mateam
+leaderboard` (Team Stars) and `/matier top` (player Stars) - the top 10 by
+Stars, posted as an embed. Not staff-gated, no options - always the full
+top 10 (or fewer if there aren't 10 yet). Ranks 1-3 get a medal emoji
+(🥇🥈🥉), 4-10 a plain `#N`.
+
+- `/topteam` sorts every team by `Team.stars()` descending (ties broken by
+  name) - the exact same ordering `GuiManager`'s leaderboard uses in its
+  default "stars" mode. Shows team name, tag, and Star count. If the Team
+  module is disabled (`team.enabled: false`) or no teams exist yet, posts
+  "No teams yet." instead of an empty list.
+- `/topplayer` reuses `MaTierService#sorted()` (the same list `/matier
+  top` reads) and shows each player's tier (`MaTierService#tier`, plain
+  `M9`-`M1` text - not the MiniMessage-colored form `/matier top` uses
+  in-game, since Discord doesn't render those tags) alongside their Star
+  count.
+
 ---
 
 ## 10. `messages.yml`
