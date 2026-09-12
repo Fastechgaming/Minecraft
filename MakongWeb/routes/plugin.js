@@ -22,9 +22,9 @@ router.use(auth);
 // Called once on plugin startup to register this server. Also perfectly fine
 // to call again later (e.g. a reconnect) - it's just an upsert.
 router.post("/connect", (req, res) => {
-  const { serverId, kind } = req.body || {};
+  const { serverId, kind, playerCount } = req.body || {};
   if (!serverId) return res.status(400).json({ error: "serverId is required" });
-  pluginBridge.register(String(serverId), kind);
+  pluginBridge.register(String(serverId), kind, Number(playerCount));
   console.log(`[pluginBridge] ${serverId} connected (${kind === "velocity" ? "velocity" : "paper"})`);
   res.json({ ok: true, serverId: String(serverId) });
 });
@@ -47,8 +47,9 @@ router.get("/poll", (req, res) => {
   const serverId = String(req.query.serverId || "");
   if (!serverId) return res.status(400).json({ error: "serverId is required" });
   const kind = req.query.kind;
-  if (kind) pluginBridge.register(serverId, String(kind));
-  else pluginBridge.heartbeat(serverId);
+  const playerCount = req.query.players !== undefined ? Number(req.query.players) : undefined;
+  if (kind) pluginBridge.register(serverId, String(kind), playerCount);
+  else pluginBridge.heartbeat(serverId, playerCount);
   res.json({
     ok: true,
     servers: pluginBridge.listServers(),

@@ -350,6 +350,12 @@ because there is no way to check it.
 | `discord.commands.roles.trial_helper_role_ids` / `helper_role_ids` / `manager_role_ids` | `[]` each | *(added 1.2.28)* Three-tier permission model on top of `/ban`/`/unban`. A member's HIGHEST matching role decides what happens: **Manager** - both commands run immediately. **Helper** - `/ban` runs immediately, `/unban` is posted as a Manager-only Accept/Deny request. **Trial Helper** - both are always a request (`/ban` needs Helper-or-above, `/unban` needs Manager). Holding a role in `staff_role_ids`/`staff_role_id` above (with none of these three set) counts as Manager, so an existing setup keeps its old immediate-execute behavior unchanged. See [§9.2](#92-ban-unban-approval-requests). |
 | `discord.commands.ban.enabled` / `unban.enabled` | `true` / `true` | Discord `/ban` and `/unban`, with LiteBans integration. |
 | `discord.profile.tagline` | *(added 1.2.29)* `Play. Improve. Be Better.` | The quote line on `/profile`'s card - see [§9.3](#93-profile). |
+| `discord.status.enabled` | *(added 1.2.45)* `false` | Turns on the self-editing status-embed panel (`/status` works regardless of this). See [§9.7](#97-status-and-the-live-status-embed). |
+| `discord.status.channel_id` / `panel_message_id` | `""` / `""` | Where the panel is posted; leave `panel_message_id` blank the first time - it's filled in and remembered automatically. |
+| `discord.status.update_interval_seconds` | `60` | How often the panel message is re-edited. |
+| `discord.status.title` | `🌿 MAKONG NETWORK` | Embed title. |
+| `discord.status.starting_grace_seconds` | `30` | How long a server shows 🟡 Starting instead of 🟢 Online right after reconnecting. |
+| `discord.status.servers` | example entries (see file) | One `{server_id, label, emoji, maintenance}` per row shown, in order. `server_id` must match that server's own `website.server_id`. `maintenance: true` is a manual override, not automatic. |
 | `telegram.enabled` | `false` | |
 | `telegram.bot_token` | `PUT_TELEGRAM_BOT_TOKEN_HERE` | |
 | `telegram.username` | `makongmcbot` | |
@@ -555,6 +561,68 @@ their existing relative order - promoting Alt#2 to Main on a 3-account
 link results in `[new Main, old Main, old Alt#1]`. Replies "nothing to
 organize" if you only have one account linked.
 
+### 9.7 `/status` and the live status embed
+
+*(added 1.2.45)* `discord.status` (in this file, hub-only like everything
+else in §9's "hub server only" list) shows the whole network's live
+online/offline state and player counts in Discord, two ways:
+
+- **`/status`** - anyone can run it, posts the embed as a normal reply.
+  Not staff-gated, guild-only like every other command here.
+- **A self-editing panel message** - if `discord.status.enabled: true` and
+  `discord.status.channel_id` is set, `AccountLinkService` posts one embed
+  into that channel on startup and then keeps re-editing that same message
+  in place every `update_interval_seconds` (default 60), the same
+  self-editing trick `discord.verification`'s panel already uses (its own
+  message id persisted separately, `discord_status_panel_message_id` in
+  the `mateam_meta` table, so the two panels never collide even if they're
+  posted to the same channel).
+
+Both read the exact same data, built by
+`AccountLinkService#buildStatusEmbed`:
+
+- **Website** - `WebsiteBridgeService#isConnected()` on THIS (the hub)
+  server: whether its own last poll to the website succeeded recently.
+  Just 🟢 Online / 🔴 Offline, no player count.
+- **Every other row** - one per entry in `discord.status.servers`
+  (`server_id`/`label`/`emoji`/`maintenance`), matched against
+  `WebsiteBridgeService#knownServers()` (every server the website bridge
+  saw as of *this hub server's own* last poll tick - see
+  [§15](#15-website-bridge--velocity-companion)) by `server_id`
+  against that other server's own `website.server_id`. A `server_id` with
+  no match at all (never connected even once since the website last
+  restarted) shows ⚪ Unknown; `maintenance: true` always shows 🟠
+  Maintenance regardless of actual online state - that one's a manual
+  switch you flip yourself for a planned gamemode outage, not something
+  detected automatically.
+- **🟡 Starting** - shown instead of 🟢 Online for
+  `discord.status.starting_grace_seconds` (default 30) after a server's
+  first heartbeat of a fresh connect/reconnect
+  (`WebsiteBridge.ServerInfo#onlineSince`, tracked website-side in
+  `pluginBridge.js`'s `markSeen()`). A rough stand-in for "the process is
+  up but the world probably hasn't finished loading yet" - the plugin has
+  no real boot-phase signal to report, so this is just elapsed time since
+  the bridge first saw it, not an actual load-complete check.
+- **Player counts** - every connected server now reports its own live
+  online-player count on every poll tick (`Bukkit.getOnlinePlayers().size()`
+  on Paper, `ProxyServer#getPlayerCount()` on Velocity - see
+  `WebsiteBridge#poll(int)`'s `playerCount` parameter and
+  `ServerInfo#playerCount`). **Network Players** at the bottom of the embed
+  uses whichever configured row's matched server has `kind: "velocity"`
+  (detected automatically, not configured) as the one true count of unique
+  connected players, instead of summing every row - falls back to summing
+  every online, non-maintenance row if no `velocity`-kind server is
+  configured/connected.
+
+**Config is required** - unlike `/topteam`/`/topplayer`, this can't ship
+with sane defaults that just work, since the network's actual gamemode
+servers (and which `server_id` each one uses) aren't something this
+plugin could ever guess. `discord.status.servers` ships with example
+entries for a typical setup (`velocity`/Proxy, `lobby`, `boxpvp`,
+`ecosmp`, `hyperclash`, `plotcity`, `arcade`) - edit the list to match
+your own `website.server_id`s, and `discord.status.enabled` stays `false`
+until you do.
+
 ---
 
 ## 10. `messages.yml`
@@ -687,6 +755,16 @@ referenced it again, and never self-correct until that plugin process
 itself restarted - permanently breaking anything that specifically needs
 the `velocity`-kind server (like `/profile`'s network lookup - see
 [§9.3](#93-profile)) after any website deploy.
+
+*(changed 1.2.45)* Every poll now also sends this server's own live
+player count (`&players=N` on the `/api/plugin/poll` request -
+`Bukkit.getOnlinePlayers().size()` here, `ProxyServer#getPlayerCount()` on
+the MakongVelocity side) and gets back, per server in the `servers` list,
+that server's `playerCount` and `onlineSince` (epoch millis its current
+unbroken online streak began, tracked in `pluginBridge.js`'s new
+`markSeen()`). Added for Discord's `/status`/status-embed feature - see
+[§9.7](#97-status-and-the-live-status-embed) - but available to anything
+else that reads `WebsiteBridgeService#knownServers()`.
 
 See `../MakongVelocity/README.md` and `../MakongWeb/lib/pluginBridge.js` for
 the other two sides of this.

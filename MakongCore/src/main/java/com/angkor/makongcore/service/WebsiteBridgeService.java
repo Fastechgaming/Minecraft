@@ -107,6 +107,17 @@ public final class WebsiteBridgeService {
         return serverId;
     }
 
+    /**
+     * Every server the website's bridge knew about as of this server's last
+     * poll tick - used by Discord's /status command and the live status
+     * embed (see AccountLinkService#buildStatusEmbed). Empty until the first
+     * successful poll; stale (not live-updated between ticks) the same way
+     * requestProfile()'s use of this same field already is.
+     */
+    public List<WebsiteBridge.ServerInfo> knownServers() {
+        return knownServers;
+    }
+
     private void pollOnce() {
         if (!connected) {
             if (!bridge.connect()) return; // will retry on the next tick
@@ -116,7 +127,7 @@ public final class WebsiteBridgeService {
 
         reportRankings();
 
-        WebsiteBridge.PollResult result = bridge.poll();
+        WebsiteBridge.PollResult result = bridge.poll(Bukkit.getOnlinePlayers().size());
         if (result == null) return; // network hiccup - just retry next tick
         knownServers = result.servers;
 

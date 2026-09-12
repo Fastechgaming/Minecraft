@@ -16,7 +16,10 @@
 #   server never reads these at all, so just leave them as shipped):
 #     discord.hub, discord.bot_token, discord.guild.*,
 #     discord.verification.*, discord.roles.*, discord.commands.*,
-#     discord.profile.*
+#     discord.profile.*, discord.status.* (but every server that should
+#     actually SHOW UP in the status embed still needs its own
+#     website.url/secret configured in config.yml - see discord.status
+#     below)
 #
 # Why: only the hub server ever opens a live connection to Discord, so
 # only it ever receives a slash command, button click, or modal submit -
@@ -140,6 +143,60 @@ discord:
   # INFO: to a Minecraft account (see /verify).
   profile:
     tagline: "Play. Improve. Be Better."
+  # INFO: /status (anyone can run it) and a live status embed this plugin
+  # INFO: keeps re-editing in place in status.channel_id, both showing every
+  # INFO: server on the network - the same data, just two ways to see it.
+  # INFO: Needs the website bridge configured (config.yml's website:
+  # INFO: section) on every server listed below AND on this hub server
+  # INFO: itself - without it every row just shows ⚪ Unknown.
+  status:
+    enabled: false
+    channel_id: ""
+    # INFO: Leave blank the first time - this plugin posts the panel message
+    # INFO: itself and remembers its id from then on. Only set this if you
+    # INFO: want it to reuse a SPECIFIC existing message instead.
+    panel_message_id: ""
+    update_interval_seconds: 60
+    title: "🌿 MAKONG NETWORK"
+    # INFO: How long after a server's first heartbeat of a fresh connect/
+    # INFO: reconnect it's still shown 🟡 Starting instead of 🟢 Online - a
+    # INFO: rough stand-in for "the process is up but probably still
+    # INFO: loading", since a Minecraft server has no real boot-phase signal
+    # INFO: to report.
+    starting_grace_seconds: 30
+    # INFO: One entry per server to show, in display order. server_id must
+    # INFO: match that server's own website.server_id (config.yml) exactly -
+    # INFO: that's how a row is matched to its live online/player-count data.
+    # INFO: The proxy (MakongVelocity, kind "velocity") is detected
+    # INFO: automatically wherever it appears in this list and used as the
+    # INFO: "Network Players" total instead of summing every row, since it's
+    # INFO: the one true count of unique connected players. maintenance:
+    # INFO: true always shows 🟠 Maintenance regardless of actual online
+    # INFO: state - a manual switch for taking a gamemode down on purpose,
+    # INFO: not something detected automatically.
+    servers:
+      - server_id: "velocity"
+        label: "Proxy"
+        emoji: "🛡️"
+      - server_id: "lobby"
+        label: "Lobby"
+        emoji: "🏠"
+      - server_id: "boxpvp"
+        label: "BoxPvP"
+        emoji: "⚔️"
+      - server_id: "ecosmp"
+        label: "EcoSMP"
+        emoji: "🌱"
+      - server_id: "hyperclash"
+        label: "HyperClash"
+        emoji: "🔥"
+      - server_id: "plotcity"
+        label: "PlotCity"
+        emoji: "🏘️"
+      - server_id: "arcade"
+        label: "Arcade"
+        emoji: "🎮"
+        maintenance: false
 
 # ---- every server ----
 telegram:

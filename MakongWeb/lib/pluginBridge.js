@@ -25,20 +25,36 @@ function enabled() {
 function entry(serverId) {
   let e = servers.get(serverId);
   if (!e) {
-    e = { kind: "paper", lastSeen: 0, commands: [], pings: [], pongs: [], profileRequests: [], profileAnswers: [] };
+    e = { kind: "paper", lastSeen: 0, onlineSince: 0, playerCount: 0, commands: [], pings: [], pongs: [], profileRequests: [], profileAnswers: [] };
     servers.set(serverId, e);
   }
   return e;
 }
 
-function register(serverId, kind) {
-  const e = entry(serverId);
-  e.kind = kind === "velocity" ? "velocity" : "paper";
-  e.lastSeen = Date.now();
+// onlineSince tracks when THIS run of continuous polling started - reset to
+// "now" whenever a heartbeat arrives for a server that was previously stale
+// (or never seen before). Used by the Discord status embed (see
+// AccountLinkService#buildStatusEmbed on the MakongCore side) to show
+// "Starting" for a short grace period right after a server reconnects,
+// before settling into "Online".
+function markSeen(e, playerCount) {
+  const now = Date.now();
+  const wasOnline = now - e.lastSeen < ONLINE_WINDOW_MS;
+  e.lastSeen = now;
+  if (!wasOnline) e.onlineSince = now;
+  if (typeof playerCount === "number" && Number.isFinite(playerCount)) {
+    e.playerCount = Math.max(0, Math.trunc(playerCount));
+  }
 }
 
-function heartbeat(serverId) {
-  entry(serverId).lastSeen = Date.now();
+function register(serverId, kind, playerCount) {
+  const e = entry(serverId);
+  e.kind = kind === "velocity" ? "velocity" : "paper";
+  markSeen(e, playerCount);
+}
+
+function heartbeat(serverId, playerCount) {
+  markSeen(entry(serverId), playerCount);
 }
 
 function isOnline(serverId) {
@@ -53,6 +69,8 @@ function listServers() {
     kind: e.kind,
     online: now - e.lastSeen < ONLINE_WINDOW_MS,
     lastSeen: e.lastSeen,
+    onlineSince: e.onlineSince,
+    playerCount: e.playerCount,
   }));
 }
 

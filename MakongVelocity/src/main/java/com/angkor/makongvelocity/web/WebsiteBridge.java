@@ -68,9 +68,15 @@ public final class WebsiteBridge {
   // never self-correct until this plugin itself restarts, permanently
   // breaking anything that specifically looks for the "velocity" server
   // (like MakongCore's /profile network lookup).
-  /** The repeating heartbeat/work call - also doubles as a liveness ping. */
-  public PollResult poll() {
-    Map<String, Object> res = get("/api/plugin/poll?serverId=" + urlEncode(serverId) + "&kind=" + urlEncode(kind));
+  /**
+   * The repeating heartbeat/work call - also doubles as a liveness ping.
+   * `playerCount` (this proxy's own current online-player count) rides
+   * along on every poll so the website can report live counts back in
+   * poll()'s own `servers` list - see ServerInfo.playerCount, used by the
+   * Discord network status embed/command on the MakongCore side.
+   */
+  public PollResult poll(int playerCount) {
+    Map<String, Object> res = get("/api/plugin/poll?serverId=" + urlEncode(serverId) + "&kind=" + urlEncode(kind) + "&players=" + Math.max(0, playerCount));
     if (res == null) return null;
     PollResult result = new PollResult();
     result.servers = parseServers(listOf(res.get("servers")));
@@ -225,6 +231,14 @@ public final class WebsiteBridge {
     return Boolean.TRUE.equals(o.get(key));
   }
 
+  private static long longVal(Map<String, Object> o, String key) {
+    return o.get(key) instanceof Number n ? n.longValue() : 0L;
+  }
+
+  private static int intVal(Map<String, Object> o, String key) {
+    return o.get(key) instanceof Number n ? n.intValue() : 0;
+  }
+
   private static List<ServerInfo> parseServers(List<Object> arr) {
     List<ServerInfo> list = new ArrayList<>();
     for (Object el : arr) {
@@ -233,6 +247,8 @@ public final class WebsiteBridge {
       s.serverId = str(o, "serverId");
       s.kind = str(o, "kind");
       s.online = bool(o, "online");
+      s.playerCount = intVal(o, "playerCount");
+      s.onlineSince = longVal(o, "onlineSince");
       list.add(s);
     }
     return list;
@@ -313,6 +329,10 @@ public final class WebsiteBridge {
     public String serverId;
     public String kind;
     public boolean online;
+    /** That server's own last-reported online-player count. */
+    public int playerCount;
+    /** Epoch millis this server's current unbroken online streak began (0 if never seen). */
+    public long onlineSince;
   }
 
   public static final class QueuedCommand {

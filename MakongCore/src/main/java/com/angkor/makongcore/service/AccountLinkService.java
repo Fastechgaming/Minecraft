@@ -5,6 +5,7 @@ import com.angkor.makongcore.data.Database;
 import com.angkor.makongcore.hook.FloodgateHook;
 import com.angkor.makongcore.model.Team;
 import com.angkor.makongcore.util.ProfileCard;
+import com.angkor.makongcore.web.WebsiteBridge;
 import net.dv8tion.jda.api.*;
 import net.dv8tion.jda.api.entities.*;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
@@ -73,7 +74,7 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
     // linking.request_cooldown_seconds in displayOptionalCode() below.
     private final Map<UUID,Long> lastVerifyRequest=new ConcurrentHashMap<>();
     private final HttpClient http=HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
-    private JDA jda; private ScheduledExecutorService telegram; private org.bukkit.scheduler.BukkitTask reminderTask;
+    private JDA jda; private ScheduledExecutorService telegram; private org.bukkit.scheduler.BukkitTask reminderTask; private org.bukkit.scheduler.BukkitTask statusTask;
     private static final Pattern CODE=Pattern.compile("^\\d{6}$");
 
     public AccountLinkService(MakongCore p,Database d,FloodgateHook f,org.bukkit.configuration.file.FileConfiguration c){plugin=p;db=d;floodgate=f;cfg=new FileConfigurationBridge(c);}
@@ -97,7 +98,7 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
     // file closed" instead of a clean shutdown. Blocking here until JDA
     // actually finishes (bounded, so a stuck shutdown can't hang the server)
     // avoids the race.
-    public void stop(){if(reminderTask!=null){reminderTask.cancel();reminderTask=null;}if(jda!=null){JDA j=jda;jda=null;j.shutdownNow();try{j.awaitShutdown(5,TimeUnit.SECONDS);}catch(InterruptedException e){Thread.currentThread().interrupt();}}if(telegram!=null){telegram.shutdownNow();telegram=null;}}
+    public void stop(){if(reminderTask!=null){reminderTask.cancel();reminderTask=null;}if(statusTask!=null){statusTask.cancel();statusTask=null;}if(jda!=null){JDA j=jda;jda=null;j.shutdownNow();try{j.awaitShutdown(5,TimeUnit.SECONDS);}catch(InterruptedException e){Thread.currentThread().interrupt();}}if(telegram!=null){telegram.shutdownNow();telegram=null;}}
     // A player can finish verifying via a DIFFERENT server's Discord/Telegram
     // connection than the one they're frozen on (see verifyDiscord/
     // verifyTelegram's db.findPending fallback) - that other server can't
@@ -146,8 +147,8 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
         p.sendMessage(message);
     }
     private void startDiscord(){String token=cfg.s("discord.bot_token","");if(token.isBlank()||token.startsWith("PUT_")){plugin.getLogger().warning("Discord enabled but bot_token is not configured.");return;}try{jda=JDABuilder.createDefault(token).addEventListeners(this).build();plugin.getLogger().info("Discord hook starting...");}catch(Exception e){plugin.getLogger().severe("Discord hook failed: "+e.getMessage());}}
-    @Override public void onReady(ReadyEvent e){registerCommands();sendVerificationPanel();plugin.getLogger().info("Discord hook connected as "+e.getJDA().getSelfUser().getName()+".");}
-    private void registerCommands(){if(jda==null)return; jda.updateCommands().addCommands(Commands.slash("ban","Ban a Minecraft player").addOption(OptionType.STRING,"name","Minecraft name",true).addOption(OptionType.STRING,"duration","Duration (choose a preset or type your own)",true,true).addOption(OptionType.STRING,"reason","Reason",true),Commands.slash("unban","Unban a Minecraft player").addOption(OptionType.STRING,"name","Minecraft name",true).addOption(OptionType.STRING,"reason","Reason",true),Commands.slash("profile","Show a linked player's Makong Network profile").addOption(OptionType.USER,"user","The Discord user to look up (defaults to you)",false),linkCommand("link"),linkCommand("verify"),Commands.slash("topteam","Top 10 teams by Stars"),Commands.slash("topplayer","Top 10 players by MaTier Stars"),Commands.slash("editprofile","Choose which of your linked accounts is Main, Alt#1 or Alt#2")).queue();}
+    @Override public void onReady(ReadyEvent e){registerCommands();sendVerificationPanel();startStatusPanel();plugin.getLogger().info("Discord hook connected as "+e.getJDA().getSelfUser().getName()+".");}
+    private void registerCommands(){if(jda==null)return; jda.updateCommands().addCommands(Commands.slash("ban","Ban a Minecraft player").addOption(OptionType.STRING,"name","Minecraft name",true).addOption(OptionType.STRING,"duration","Duration (choose a preset or type your own)",true,true).addOption(OptionType.STRING,"reason","Reason",true),Commands.slash("unban","Unban a Minecraft player").addOption(OptionType.STRING,"name","Minecraft name",true).addOption(OptionType.STRING,"reason","Reason",true),Commands.slash("profile","Show a linked player's Makong Network profile").addOption(OptionType.USER,"user","The Discord user to look up (defaults to you)",false),linkCommand("link"),linkCommand("verify"),Commands.slash("topteam","Top 10 teams by Stars"),Commands.slash("topplayer","Top 10 players by MaTier Stars"),Commands.slash("editprofile","Choose which of your linked accounts is Main, Alt#1 or Alt#2"),Commands.slash("status","Live Makong Network server status")).queue();}
     // /link and /verify are identical aliases - a slash-command shortcut for
     // someone who'd rather not go find the verification channel and click
     // its button. With no `code` given, opens the same modal the "Verify
@@ -171,6 +172,91 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
 
     private void sendVerificationPanel(){String channelId=cfg.s("discord.verification.channel_id","");if(channelId.isBlank()||jda==null)return;TextChannel ch=jda.getTextChannelById(channelId);if(ch==null)return;var embed=new net.dv8tion.jda.api.EmbedBuilder().setTitle("🔐 Makong Minecraft Verification").setDescription("Link your Minecraft account to Discord securely.\n\n**How to verify:**\n1. Join the Makong Minecraft server.\n2. Use the verification command to receive your **6-digit code**.\n3. Click **Verify Code** below and enter your code - or, from anywhere, run **/link** (or **/verify**) and either fill in the same form or add `code:` to skip it entirely.\n\n> 🔒 Your Discord account will be linked to your Minecraft account after successful verification.").setColor(new java.awt.Color(0x58,0xA6,0xFF)).build();String configured=cfg.s("discord.verification.panel_message_id","");if(!configured.isBlank()){editPanel(ch,configured,embed);return;}db.meta("discord_verification_panel_message_id").thenAccept(id->{if(id!=null&&!id.isBlank())editPanel(ch,id,embed);else ch.sendMessageEmbeds(embed).setComponents(ActionRow.of(Button.primary("makong:verify","Verify Code"))).queue(msg->db.setMeta("discord_verification_panel_message_id",msg.getId()));});}
     private void editPanel(TextChannel ch,String id,net.dv8tion.jda.api.entities.MessageEmbed embed){ch.retrieveMessageById(id).queue(msg->msg.editMessageEmbeds(embed).setComponents(ActionRow.of(Button.primary("makong:verify","Verify Code"))).queue(),err->ch.sendMessageEmbeds(embed).setComponents(ActionRow.of(Button.primary("makong:verify","Verify Code"))).queue(msg->db.setMeta("discord_verification_panel_message_id",msg.getId())));}
+
+    // discord.status - a live network status embed that keeps re-editing
+    // itself in discord.status.channel_id every update_interval_seconds
+    // (same self-editing-message trick as sendVerificationPanel/editPanel
+    // above, its own message id persisted under a different meta key so the
+    // two panels never collide), plus /status which anyone can run for the
+    // same embed on demand. Both read the exact same data: this server's
+    // WebsiteBridgeService#knownServers() (every server the website bridge
+    // saw as of this hub's last poll tick, online status + player count +
+    // how long each has been continuously online) matched up against
+    // discord.status.servers (which serverId maps to which display label/
+    // emoji - the network's actual gamemode servers aren't something this
+    // plugin could ever infer on its own, so it has to be configured).
+    private void startStatusPanel(){
+        if(!cfg.b("discord.status.enabled",false))return;
+        long intervalTicks=Math.max(15,cfg.l("discord.status.update_interval_seconds",60))*20L;
+        updateStatusPanel();
+        statusTask=plugin.getServer().getScheduler().runTaskTimerAsynchronously(plugin,this::updateStatusPanel,intervalTicks,intervalTicks);
+    }
+    private void updateStatusPanel(){
+        if(jda==null)return;
+        String channelId=cfg.s("discord.status.channel_id","");
+        if(channelId.isBlank())return;
+        TextChannel ch=jda.getTextChannelById(channelId);
+        if(ch==null)return;
+        var embed=buildStatusEmbed();
+        String configured=cfg.s("discord.status.panel_message_id","");
+        if(!configured.isBlank()){editStatusPanel(ch,configured,embed);return;}
+        db.meta("discord_status_panel_message_id").thenAccept(id->{
+            if(id!=null&&!id.isBlank())editStatusPanel(ch,id,embed);
+            else ch.sendMessageEmbeds(embed).queue(msg->db.setMeta("discord_status_panel_message_id",msg.getId()));
+        });
+    }
+    private void editStatusPanel(TextChannel ch,String id,net.dv8tion.jda.api.entities.MessageEmbed embed){ch.retrieveMessageById(id).queue(msg->msg.editMessageEmbeds(embed).queue(),err->ch.sendMessageEmbeds(embed).queue(msg->db.setMeta("discord_status_panel_message_id",msg.getId())));}
+
+    // Grace period (discord.status.starting_grace_seconds) a server shows
+    // "Starting" instead of "Online" right after its FIRST heartbeat of a
+    // fresh connect/reconnect - see WebsiteBridge.ServerInfo#onlineSince and
+    // MakongWeb/lib/pluginBridge.js's markSeen(). A rough stand-in for "the
+    // process is up but the world probably hasn't finished loading yet",
+    // since the plugin has no real boot-phase signal to report - not exact,
+    // but self-correcting within one grace window either way.
+    private net.dv8tion.jda.api.entities.MessageEmbed buildStatusEmbed(){
+        String title=cfg.s("discord.status.title","🌿 MAKONG NETWORK");
+        long graceMs=Math.max(0,cfg.l("discord.status.starting_grace_seconds",30))*1000L;
+        List<FileConfigurationBridge.StatusServerEntry> configured=cfg.statusServers("discord.status.servers");
+        List<WebsiteBridge.ServerInfo> known=plugin.websiteBridge()==null?List.of():plugin.websiteBridge().knownServers();
+        long now=System.currentTimeMillis();
+
+        int labelWidth="Website".length();
+        for(var se:configured)labelWidth=Math.max(labelWidth,se.label().length());
+        int statusWidth="Maintenance".length();
+
+        StringBuilder body=new StringBuilder("━━━━━━━━━━━━━━━━━━━━\n\n```\n");
+        boolean websiteOnline=plugin.websiteBridge()!=null&&plugin.websiteBridge().isConnected();
+        body.append(statusRow("🌐","Website",labelWidth,websiteOnline?"🟢":"🔴",websiteOnline?"Online":"Offline",statusWidth,null)).append('\n');
+
+        long proxyCount=-1,backendTotal=0;
+        for(var se:configured){
+            WebsiteBridge.ServerInfo info=null;
+            for(WebsiteBridge.ServerInfo s:known)if(se.serverId().equals(s.serverId)){info=s;break;}
+            String statusEmoji,statusText;Long count=null;
+            if(se.maintenance()){statusEmoji="🟠";statusText="Maintenance";}
+            else if(info==null){statusEmoji="⚪";statusText="Unknown";}
+            else if(!info.online){statusEmoji="🔴";statusText="Offline";}
+            else if(info.onlineSince>0&&now-info.onlineSince<graceMs){statusEmoji="🟡";statusText="Starting";count=(long)info.playerCount;}
+            else{statusEmoji="🟢";statusText="Online";count=(long)info.playerCount;}
+            if(info!=null&&info.online&&!se.maintenance()){
+                if("velocity".equals(info.kind))proxyCount=info.playerCount;
+                else backendTotal+=info.playerCount;
+            }
+            body.append(statusRow(se.emoji(),se.label(),labelWidth,statusEmoji,statusText,statusWidth,count)).append('\n');
+        }
+        body.append("```\n━━━━━━━━━━━━━━━━━━━━\n");
+        body.append("👥 **Network Players:** ").append(proxyCount>=0?proxyCount:backendTotal).append("\n\n");
+        body.append("🟢 Online\n🟡 Starting\n🟠 Maintenance\n🔴 Offline\n⚪ Unknown");
+
+        return new net.dv8tion.jda.api.EmbedBuilder().setTitle(title).setDescription(body.toString()).setColor(0x2ECC71).build();
+    }
+    private String statusRow(String emoji,String label,int labelWidth,String statusEmoji,String statusText,int statusWidth,Long count){
+        StringBuilder sb=new StringBuilder().append(emoji).append(' ').append(pad(label,labelWidth)).append("  ").append(statusEmoji).append(' ').append(pad(statusText,statusWidth));
+        if(count!=null)sb.append(" • ").append(count);
+        return sb.toString();
+    }
+    private String pad(String s,int width){StringBuilder sb=new StringBuilder(s);while(sb.length()<width)sb.append(' ');return sb.toString();}
     @Override public void onButtonInteraction(ButtonInteractionEvent e){
         if(e.getComponentId().equals("makong:verify")){TextInput code=TextInput.create("code",TextInputStyle.SHORT).setPlaceholder("123456").setMinLength(6).setMaxLength(6).build();e.replyModal(Modal.create("makong:verify","Minecraft Verification").addComponents(Label.of("Verification Code",code)).build()).queue();return;}
         if(e.getComponentId().startsWith("makong:modreq:"))onModRequestButton(e);
@@ -369,6 +455,7 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
         if(e.getName().equals("topteam")){handleTopTeam(e);return;}
         if(e.getName().equals("topplayer")){handleTopPlayer(e);return;}
         if(e.getName().equals("editprofile")){handleEditProfile(e);return;}
+        if(e.getName().equals("status")){e.replyEmbeds(buildStatusEmbed()).queue();return;}
         if(!e.getName().equals("ban")&&!e.getName().equals("unban"))return;
         boolean ban=e.getName().equals("ban");
         if(!cfg.b("discord.commands."+e.getName()+".enabled",true)){e.reply("❌ This Discord command is disabled.").setEphemeral(true).queue();return;}
@@ -876,6 +963,27 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
                 long member=m.get("minimum_membership_days") instanceof Number n?n.longValue():0L;
                 long max=m.get("max_accounts") instanceof Number n?n.longValue():1L;
                 out.add(new long[]{age,member,max});
+            }
+            return out;
+        }
+        // discord.status.servers - one entry per network server shown in the
+        // status embed. server_id must match that server's website.server_id
+        // (config.yml), which is how it's matched against
+        // WebsiteBridgeService#knownServers(). maintenance is a manual
+        // override (not detected automatically - a Minecraft server has no
+        // "I'm in maintenance" signal to report): true always shows 🟠
+        // Maintenance regardless of actual online state, for taking a
+        // gamemode down on purpose without it looking like an outage.
+        record StatusServerEntry(String serverId,String label,String emoji,boolean maintenance){}
+        List<StatusServerEntry> statusServers(String p){
+            List<StatusServerEntry> out=new ArrayList<>();
+            for(java.util.Map<?,?> m:c.getMapList(p)){
+                String id=String.valueOf(m.getOrDefault("server_id","")).trim();
+                if(id.isBlank())continue;
+                String label=String.valueOf(m.getOrDefault("label",id));
+                String emoji=String.valueOf(m.getOrDefault("emoji","🔷"));
+                boolean maintenance=Boolean.TRUE.equals(m.get("maintenance"));
+                out.add(new StatusServerEntry(id,label,emoji,maintenance));
             }
             return out;
         }

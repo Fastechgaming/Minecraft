@@ -188,7 +188,7 @@ public final class MakongVelocity {
             connected = true;
             logger.info("Connected to the Makong Network website as '" + config.serverId() + "'.");
         }
-        WebsiteBridge.PollResult result = bridge.poll();
+        WebsiteBridge.PollResult result = bridge.poll(server.getPlayerCount());
         if (result == null) return; // network hiccup - just retry next tick
         knownServers = result.servers;
 
