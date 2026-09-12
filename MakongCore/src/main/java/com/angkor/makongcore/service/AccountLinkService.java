@@ -978,10 +978,13 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
         List<StatusServerEntry> statusServers(String p){
             List<StatusServerEntry> out=new ArrayList<>();
             for(java.util.Map<?,?> m:c.getMapList(p)){
-                String id=String.valueOf(m.getOrDefault("server_id","")).trim();
+                Object idObj=m.get("server_id");
+                String id=idObj==null?"":String.valueOf(idObj).trim();
                 if(id.isBlank())continue;
-                String label=String.valueOf(m.getOrDefault("label",id));
-                String emoji=String.valueOf(m.getOrDefault("emoji","🔷"));
+                Object labelObj=m.get("label");
+                String label=labelObj==null?id:String.valueOf(labelObj);
+                Object emojiObj=m.get("emoji");
+                String emoji=emojiObj==null?"🔷":String.valueOf(emojiObj);
                 boolean maintenance=Boolean.TRUE.equals(m.get("maintenance"));
                 out.add(new StatusServerEntry(id,label,emoji,maintenance));
             }
