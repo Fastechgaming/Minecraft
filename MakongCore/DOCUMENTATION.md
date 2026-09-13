@@ -440,7 +440,9 @@ open to everyone in the channel, not staff-gated. `user` is optional
 *(added 1.2.34)* - omit it to look up yourself. Shows the Main account by
 default; *(added 1.2.41)* if that Discord user has alt accounts linked, a
 dropdown below the card lets you switch between Main/Alt#1/Alt#2 - see
-[§9.6](#96-alt-accounts-and-editprofile).
+[§9.6](#96-alt-accounts-and-editprofile). Looking someone up by their
+in-game name instead of a Discord account? See `/playerinfo`,
+[§9.8](#98-playerinfo).
 
 If the target isn't linked yet, the reply (publicly visible, not
 ephemeral *(changed 1.2.34)*) points them at how to fix it: run `/verify`
@@ -622,6 +624,32 @@ entries for a typical setup (`velocity`/Proxy, `lobby`, `boxpvp`,
 `ecosmp`, `hyperclash`, `plotcity`, `arcade`) - edit the list to match
 your own `website.server_id`s, and `discord.status.enabled` stays `false`
 until you do.
+
+### 9.8 `/playerinfo`
+
+*(added 1.2.46)* `/playerinfo <player>` posts the exact same profile card
+`/profile` does (§9.3 above - same fields, same skin render, same
+whole-network online/registered/last-login data through the website
+bridge), just looked up a different way: a Minecraft player name typed
+straight into the command, instead of a Discord `user` mention. Open to
+everyone, not staff-gated, guild-only like every other command here.
+
+- `player` resolves via `Bukkit.getOfflinePlayer(String)` - the same
+  name→UUID lookup `/malink status <player>` already uses - so it works
+  for anyone who's ever been seen on this server, exactly as typed
+  (case-corrected to their real name once resolved).
+- **Works whether or not that player has ever linked Discord at all** -
+  `/profile` needs a Discord account to even start from, but
+  `/playerinfo` starts from the Minecraft account directly
+  (`Database#getAccountLink(UUID)`, which returns `null` for an unlinked
+  player rather than failing). Team/MaTier/skin/online-status all come
+  from the same UUID-keyed sources `/profile` uses, so an unlinked player
+  still gets a real card - **Account type** just shows "Unknown" instead
+  of Premium/Cracked/Bedrock, the same fallback `displayAccountType(null)`
+  already gives a linked-but-untyped row.
+- No alt-switcher dropdown - a typed player name already picks exactly
+  one specific account, and there's no Discord identity here to switch
+  between alts of the way `/profile`'s dropdown does.
 
 ---
 

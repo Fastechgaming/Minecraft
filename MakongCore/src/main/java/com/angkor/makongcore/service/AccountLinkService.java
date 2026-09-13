@@ -148,7 +148,7 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
     }
     private void startDiscord(){String token=cfg.s("discord.bot_token","");if(token.isBlank()||token.startsWith("PUT_")){plugin.getLogger().warning("Discord enabled but bot_token is not configured.");return;}try{jda=JDABuilder.createDefault(token).addEventListeners(this).build();plugin.getLogger().info("Discord hook starting...");}catch(Exception e){plugin.getLogger().severe("Discord hook failed: "+e.getMessage());}}
     @Override public void onReady(ReadyEvent e){registerCommands();sendVerificationPanel();startStatusPanel();plugin.getLogger().info("Discord hook connected as "+e.getJDA().getSelfUser().getName()+".");}
-    private void registerCommands(){if(jda==null)return; jda.updateCommands().addCommands(Commands.slash("ban","Ban a Minecraft player").addOption(OptionType.STRING,"name","Minecraft name",true).addOption(OptionType.STRING,"duration","Duration (choose a preset or type your own)",true,true).addOption(OptionType.STRING,"reason","Reason",true),Commands.slash("unban","Unban a Minecraft player").addOption(OptionType.STRING,"name","Minecraft name",true).addOption(OptionType.STRING,"reason","Reason",true),Commands.slash("profile","Show a linked player's Makong Network profile").addOption(OptionType.USER,"user","The Discord user to look up (defaults to you)",false),linkCommand("link"),linkCommand("verify"),Commands.slash("topteam","Top 10 teams by Stars"),Commands.slash("topplayer","Top 10 players by MaTier Stars"),Commands.slash("editprofile","Choose which of your linked accounts is Main, Alt#1 or Alt#2"),Commands.slash("status","Live Makong Network server status")).queue();}
+    private void registerCommands(){if(jda==null)return; jda.updateCommands().addCommands(Commands.slash("ban","Ban a Minecraft player").addOption(OptionType.STRING,"name","Minecraft name",true).addOption(OptionType.STRING,"duration","Duration (choose a preset or type your own)",true,true).addOption(OptionType.STRING,"reason","Reason",true),Commands.slash("unban","Unban a Minecraft player").addOption(OptionType.STRING,"name","Minecraft name",true).addOption(OptionType.STRING,"reason","Reason",true),Commands.slash("profile","Show a linked player's Makong Network profile").addOption(OptionType.USER,"user","The Discord user to look up (defaults to you)",false),linkCommand("link"),linkCommand("verify"),Commands.slash("topteam","Top 10 teams by Stars"),Commands.slash("topplayer","Top 10 players by MaTier Stars"),Commands.slash("editprofile","Choose which of your linked accounts is Main, Alt#1 or Alt#2"),Commands.slash("status","Live Makong Network server status"),Commands.slash("playerinfo","Show a Minecraft player's Makong Network profile").addOption(OptionType.STRING,"player","Minecraft player name",true)).queue();}
     // /link and /verify are identical aliases - a slash-command shortcut for
     // someone who'd rather not go find the verification channel and click
     // its button. With no `code` given, opens the same modal the "Verify
@@ -456,6 +456,7 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
         if(e.getName().equals("topplayer")){handleTopPlayer(e);return;}
         if(e.getName().equals("editprofile")){handleEditProfile(e);return;}
         if(e.getName().equals("status")){e.replyEmbeds(buildStatusEmbed()).queue();return;}
+        if(e.getName().equals("playerinfo")){handlePlayerInfo(e);return;}
         if(!e.getName().equals("ban")&&!e.getName().equals("unban"))return;
         boolean ban=e.getName().equals("ban");
         if(!cfg.b("discord.commands."+e.getName()+".enabled",true)){e.reply("❌ This Discord command is disabled.").setEphemeral(true).queue();return;}
@@ -629,6 +630,56 @@ public final class AccountLinkService extends ListenerAdapter implements Listene
             if(chosen==null){e.reply("❌ That account is no longer linked.").setEphemeral(true).queue();return;}
             e.deferEdit().queue();
             buildProfileCard(chosen,links,discordId,e.getHook());
+        });
+    }
+    // /playerinfo <player> - the same profile card /profile builds, but
+    // looked up by an actual in-game Minecraft name (Bukkit.getOfflinePlayer,
+    // same name->UUID resolution /malink status already uses) instead of a
+    // Discord @mention. Works for ANY player who's ever been seen on this
+    // server, linked or not - displayAccountType()/fetchSkinRender() already
+    // handle a null accountType gracefully (falls back to "Unknown"/the
+    // default Steve skin), so an unlinked player still gets a real card
+    // instead of an error. No alt-switcher dropdown here: a typed name
+    // already picks exactly one account, and there's no Discord identity in
+    // this command to switch between alts of.
+    private void handlePlayerInfo(SlashCommandInteractionEvent e){
+        String typed=e.getOption("player").getAsString().trim();
+        if(typed.isEmpty()){e.reply("❌ Enter a Minecraft player name.").setEphemeral(true).queue();return;}
+        OfflinePlayer op=Bukkit.getOfflinePlayer(typed);
+        UUID uuid=op.getUniqueId();
+        String name=op.getName()!=null?op.getName():typed;
+        e.deferReply().queue();
+        db.getAccountLink(uuid).thenAccept(link->buildPlayerInfoCard(uuid,name,link,e.getHook()));
+    }
+    private void buildPlayerInfoCard(UUID uuid,String name,Database.AccountLink link,InteractionHook hook){
+        Team t=plugin.teams().byPlayer(uuid);
+        String tier=plugin.matier().tier(uuid);
+        long stars=plugin.matier().stars(uuid);
+        Integer rank=stars>0?plugin.matier().rank(uuid):null;
+        String rawType=link==null?null:link.accountType();
+        String accountType=displayAccountType(rawType);
+        String tagline=cfg.s("discord.profile.tagline","Play. Improve. Be Better.");
+
+        CompletableFuture<BufferedImage> skinFuture=fetchSkinRender(uuid,rawType);
+        CompletableFuture<Map<String,Object>> bridgeFuture=new CompletableFuture<>();
+        plugin.websiteBridge().requestProfile(name,bridgeFuture::complete,8000);
+
+        skinFuture.thenCombineAsync(bridgeFuture,(skin,data)->{
+            boolean online=Boolean.TRUE.equals(data.get("online"));
+            Long registeredAt=asLong(data.get("registeredAt"));
+            Long lastLogin=asLong(data.get("lastLogin"));
+            ProfileCard.Input input=new ProfileCard.Input(name,online,rank,tier,stars,
+                    t==null?null:t.name(),accountType,registeredAt,lastLogin,skin);
+            try{return ProfileCard.render(input,tagline);}
+            catch(Exception ex){throw new CompletionException(ex);}
+        }).whenComplete((png,err)->{
+            if(err!=null||png==null){
+                plugin.getLogger().warning("/playerinfo card render failed for "+name+": "+(err==null?"unknown error":err.getMessage()));
+                hook.editOriginal("❌ Failed to build the profile card - check this server's console.").queue();
+                return;
+            }
+            var embed=new net.dv8tion.jda.api.EmbedBuilder().setTitle(name).setImage("attachment://profile.png").setColor(0x2ECC71).build();
+            hook.editOriginalAttachments(FileUpload.fromData(png,"profile.png")).setEmbeds(embed).setComponents().queue();
         });
     }
     // /editprofile - pick which linked account should be Main; the rest

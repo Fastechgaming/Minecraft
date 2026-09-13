@@ -253,3 +253,9 @@ Added a live Discord network status feature (`module/verification.yml`'s new `di
 - `discord.status.servers` maps each network server's `website.server_id` to a display label/emoji (ships with example entries for a typical Proxy/Lobby/BoxPvP/EcoSMP/HyperClash/PlotCity/Arcade setup - edit to match your own). The proxy (`kind: "velocity"`) is detected automatically and used as the "Network Players" total instead of summing every row.
 - `maintenance: true` on a server entry always shows 🟠 Maintenance regardless of actual state - a manual switch for a planned outage, not automatic. A server never seen at all shows ⚪ Unknown; one recently (re)connected shows 🟡 Starting for `starting_grace_seconds` (default 30) before settling into 🟢 Online.
 - Every server now reports its own live player count on each website-bridge poll tick (both MakongCore and MakongVelocity) - this is what powers the counts shown above, and is available to anything else reading the bridge's server list too.
+
+## 1.2.46 changes
+Added `/playerinfo <player>` (Discord slash command) - the same profile card `/profile` posts, but looked up by an actual in-game Minecraft name instead of a Discord `@mention`. Not staff-gated, open to everyone.
+- Resolves the name the same way `/malink status <player>` does (`Bukkit.getOfflinePlayer`), so it works for anyone ever seen on this server.
+- Unlike `/profile`, doesn't require the player to have linked Discord at all - Team/MaTier/skin/whole-network online status all come straight from their Minecraft UUID either way; Account Type just shows "Unknown" instead of Premium/Cracked/Bedrock if they've never linked.
+- No alt-account dropdown (a typed player name already names one specific account, and there's no Discord identity here to switch between alts of).
